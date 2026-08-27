@@ -36,6 +36,7 @@ body{
   -webkit-font-smoothing:antialiased;
   transition:background-color .15s ease, color .15s ease;
 }
+
 button{
   font-family:inherit;
   cursor:pointer;
@@ -487,4 +488,10 @@ footer{
   main{padding:0 16px;}
   footer{padding:20px 16px 48px;}
   .page-title{font-size:22px;}
+}
+
+/* Other */
+
+.alert{
+  color:var(--danger) !important
 }

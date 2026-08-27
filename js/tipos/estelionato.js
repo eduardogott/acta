@@ -10,7 +10,7 @@
 // Artigo possessivo por parentesco (concordância de gênero em "se passou
 // por seu/sua ___"). Mantido local ao módulo — não precisa de infra
 // genérica pra isso.
-const FP_ARTIGOS = {
+const FP_PRONOME = {
   irmao: "seu",
   irma: "sua",
   pai: "seu",
@@ -20,6 +20,20 @@ const FP_ARTIGOS = {
   conjuge: "seu",
   amigo: "seu(sua)",
   outro_familiar: "seu(sua)",
+};
+
+// Pronome demonstrativo pra "foto de perfil deste/desta" — concordando
+// com quem foi imitado, não com quem está registrando a ocorrência.
+const FP_PRON_POSS = {
+  irmao: "deste",
+  irma: "desta",
+  pai: "deste",
+  mae: "desta",
+  filho: "deste",
+  filha: "desta",
+  conjuge: "deste",
+  amigo: "deste(a)",
+  outro_familiar: "deste(a)",
 };
 
 registrarTipoOcorrencia("estelionato", {
@@ -45,12 +59,25 @@ registrarTipoOcorrencia("estelionato", {
 
     // ---------------------------------------------------- FALSO PARENTE ---
     {
-      id: "fp_numero_contato",
-      tipo: "texto",
-      texto: "Número de telefone utilizado pelo golpista",
-      placeholder: "Ex.: 51 980393575",
+      id: "fp_numeros_contato",
+      tipo: "multiplo-input",
+      texto: "Número(s) de telefone utilizado(s) pelo golpista para contato",
+      itemLabel: "Telefone",
       exibirSe: { pergunta: "tipo_estelionato", igual: "falso_parente" },
+      campos: [{ id: "numero", tipo: "texto", texto: "Número telefônico" }],
       template: () => "", // entra combinado na frase de fp_usou_foto_perfil
+    },
+    {
+      id: "fp_tipo_contato",
+      tipo: "multipla",
+      texto: "Qual foi o tipo de contato utilizado?",
+      exibirSe: { pergunta: "tipo_estelionato", igual: "falso_parente" },
+      opcoes: [
+        { valor: "mensagem_whats", texto: "mensagens via WhatsApp" },
+        { valor: "outro_mensageiro", texto: "mensagens em aplicativo de mensagem" },
+        { valor: "ligacao", texto: "ligações telefônicas" },
+      ],
+      template: () => "", // idem
     },
     {
       id: "fp_parentesco",
@@ -86,24 +113,68 @@ registrarTipoOcorrencia("estelionato", {
         { valor: "sim", texto: "Sim" },
         { valor: "nao", texto: "Não" },
       ],
-      // Combina numero_contato + parentesco + nome_alegado + esta
-      // resposta numa frase só — é por isso que as três perguntas acima
+      // Combina numeros_contato + tipo_contato + parentesco + nome_alegado
+      // + esta resposta numa frase só — é por isso que as perguntas acima
       // não têm texto próprio.
       template: (r, respostas, h) => {
         const parentesco = h.textoOpcaoEm("fp_parentesco", respostas.fp_parentesco);
-        const artigo = FP_ARTIGOS[respostas.fp_parentesco] || "seu(sua)";
-        const foto = r === "sim" ? ", utilizando, inclusive, foto de perfil desta" : "";
-        return `Comunica que recebeu mensagem do número telefônico ${respostas.fp_numero_contato}, de um indivíduo que se passou por ${artigo} ${parentesco}, ${respostas.fp_nome_alegado}${foto}.`;
+        const artigo = FP_PRONOME[respostas.fp_parentesco] || "seu(sua)";
+        const possessivo = FP_PRON_POSS[respostas.fp_parentesco] || "deste(a)";
+
+        let foto = "";
+        if (r === "sim") foto = `, utilizando, inclusive, foto de perfil ${possessivo}`;
+
+        const tipoContato = h.textoOpcaoEm("fp_tipo_contato", respostas.fp_tipo_contato);
+        const numeros = (respostas.fp_numeros_contato || []).map((item) => item.numero);
+        const numerosTexto = h.juntarLista(numeros);
+        const prefixoNumero = numeros.length > 1 ? "dos números telefônicos" : "do número telefônico";
+
+        return `Comunica que recebeu ${tipoContato} ${prefixoNumero} ${numerosTexto}, de um indivíduo que se passou por ${artigo} ${parentesco}, ${respostas.fp_nome_alegado}${foto}.`;
       },
+    },
+    {
+      id: "fp_sabia_outros_dados",
+      tipo: "multipla",
+      texto: "O golpista demonstrou conhecer outros dados pessoais da pessoa que estava imitando, além do nome?",
+      exibirSe: { pergunta: "tipo_estelionato", igual: "falso_parente" },
+      opcoes: [
+        { valor: "sim", texto: "Sim" },
+        { valor: "nao", texto: "Não" },
+      ],
+      template: () => "", // detalhe entra via fp_dados_utilizados
+    },
+    {
+      id: "fp_dados_utilizados",
+      tipo: "selecao",
+      texto: "Quais dados pessoais da pessoa pela qual estava se passando o golpista demonstrou conhecer?",
+      exibirSe: { pergunta: "fp_sabia_outros_dados", igual: "sim" },
+      opcoes: [
+        { valor: "nome_completo", texto: "nome completo" },
+        { valor: "numero_cpf", texto: "número do CPF" },
+        { valor: "endereco", texto: "endereço" },
+        { valor: "informacoes_intimas", texto: "outras informações pessoais" },
+        { valor: "outro", texto: "outro dado" },
+      ],
+      template: (r, _, h) =>
+        `Acrescenta que o suspeito também demonstrou conhecer ${h.juntarLista(
+          r.map((v) => h.textoOpcaoEm("fp_dados_utilizados", v))
+        )} da pessoa pela qual se passava.`,
+    },
+    {
+      id: "fp_dados_utilizados_outro",
+      tipo: "texto",
+      texto: "Descreva o(s) outro(s) dado(s) que o golpista demonstrou conhecer",
+      exibirSe: { pergunta: "fp_dados_utilizados", incluiValor: "outro" },
+      template: (r) => `Relata que o suspeito também sabia ${r}.`,
     },
     {
       id: "fp_justificativa_pedido",
       tipo: "texto",
       texto: "Qual foi a justificativa dada pelo golpista para pedir o dinheiro?",
       placeholder:
-        "afirmou que estava tentando efetuar o pagamento de um boleto, entretanto, o aplicativo bancário não permitia a realização do pagamento",
+        "que estava tentando efetuar o pagamento de um boleto, entretanto, o aplicativo bancário não permitia a realização do pagamento",
       exibirSe: { pergunta: "tipo_estelionato", igual: "falso_parente" },
-      template: (r) => `Informa que o indivíduo solicitou dinheiro, afirmando que ${r}.`,
+      template: (r) => `Informa que o indivíduo solicitou dinheiro, afirmando ${r}.`,
     },
     {
       id: "fp_pagamentos",
