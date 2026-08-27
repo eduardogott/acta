@@ -1,0 +1,490 @@
+/* =========================================================
+   Shared design tokens + components
+   (from the existing gttr.com.br style system)
+   ========================================================= */
+:root{
+  --bg:#f6f5f2;
+  --panel:#ffffff;
+  --border:#ddd9d1;
+  --text:#1c1c1a;
+  --text-read:#3a3a36;
+  --text-muted:#8f8a7e;
+  --accent:#2d4a63;
+  --accent-soft:rgba(45,74,99,0.08);
+  --danger:#b3492f;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
+}
+:root[data-theme="dark"]{
+  --bg:#1b1c1a;
+  --panel:#232420;
+  --border:#3a3b36;
+  --text:#ece9e2;
+  --text-read:#cfcbc0;
+  --text-muted:#9a958a;
+  --accent:#7fb2d6;
+  --accent-soft:rgba(127,178,214,0.14);
+  --danger:#e08b6a;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+  transition:background-color .15s ease, color .15s ease;
+}
+button{
+  font-family:inherit;
+  cursor:pointer;
+  border:none;
+  background:none;
+  color:inherit;
+}
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+button:disabled{cursor:not-allowed;}
+.theme-toggle{
+  font-size:15px;
+  color:var(--text-muted);
+  padding:6px 10px;
+  border-radius:6px;
+}
+.theme-toggle:hover{color:var(--accent); background:var(--accent-soft);}
+
+/* =========================================================
+   Header
+   ========================================================= */
+.site-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  height:56px;
+  padding:0 28px;
+  border-bottom:1px solid var(--border);
+  background:var(--panel);
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+.site-title{
+  font-family:var(--sans);
+  font-size:15px;
+  letter-spacing:-0.005em;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+  font-weight:500;
+}
+.site-title .brand-mark{
+  color:var(--accent);
+  font-size:13px;
+}
+.site-title .dim{
+  color:var(--text-muted);
+  font-weight:400;
+}
+
+main{
+  max-width:900px;
+  margin:0 auto;
+  padding:0 24px;
+}
+
+/* =========================================================
+   Intro / hero
+   ========================================================= */
+.intro{
+  padding:48px 0 8px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:32px;
+}
+.page-title{
+  font-family:var(--sans);
+  font-size:20px;
+  font-weight:600;
+  letter-spacing:-0.005em;
+  margin:0 0 10px;
+}
+.page-lead{
+  font-size:14px;
+  line-height:1.6;
+  color:var(--text-read);
+  max-width:62ch;
+  margin:0 0 18px;
+}
+
+.aviso-privacidade{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  font-size:13px;
+  line-height:1.55;
+  color:var(--text-muted);
+  background:var(--accent-soft);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:11px 14px;
+  max-width:62ch;
+  margin:0 0 28px;
+}
+
+.progresso{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--text-muted);
+  margin:0 0 16px;
+}
+
+/* =========================================================
+   Perguntas (form cards)
+   ========================================================= */
+#perguntas{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-bottom:0;
+}
+
+.pergunta{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:18px 20px;
+  transition:border-color .15s ease;
+}
+.pergunta:focus-within{border-color:var(--accent);}
+
+.pergunta-texto{
+  display:block;
+  font-family:var(--sans);
+  font-size:14px;
+  font-weight:500;
+  color:var(--text);
+  margin-bottom:10px;
+}
+
+.pergunta-ajuda{
+  margin:-5px 0 10px;
+  font-size:13px;
+  color:var(--text-muted);
+}
+
+/* Mensagens de erro inline (pergunta e campos de multiplo-input) */
+.pergunta-erro,
+.campo-erro{
+  margin:8px 0 0;
+  font-size:12.5px;
+  color:var(--danger);
+  display:none;
+}
+.pergunta-erro.visivel,
+.campo-erro.visivel{
+  display:block;
+}
+
+/* Opções (multipla / seleção) */
+.opcoes{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.opcao-item{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 13px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  font-size:13.5px;
+  cursor:pointer;
+  background:var(--bg);
+  color:var(--text-read);
+  transition:border-color .12s ease, background .12s ease, color .12s ease;
+}
+.opcao-item:hover{border-color:var(--accent);}
+.opcao-item:has(input:checked){
+  border-color:var(--accent);
+  background:var(--accent-soft);
+  color:var(--text);
+}
+.opcao-item input{
+  accent-color:var(--accent);
+  margin:0;
+}
+
+/* Inputs de texto / número */
+.input-texto,
+.input-numero,
+input[type="text"],
+input[type="number"]{
+  width:100%;
+  font-family:var(--sans);
+  font-size:14.5px;
+  padding:9px 11px;
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:var(--bg);
+  color:var(--text);
+}
+.input-texto{
+  resize:vertical;
+  min-height:44px;
+  font-family:inherit;
+}
+.input-texto::placeholder,
+.input-numero::placeholder,
+input::placeholder{
+  color:var(--text-muted);
+}
+.input-texto:focus,
+.input-numero:focus,
+input:focus{
+  outline:2px solid var(--accent);
+  outline-offset:1px;
+}
+
+/* Dinheiro */
+.input-dinheiro{
+  display:flex;
+  align-items:stretch;
+  border:1px solid var(--border);
+  border-radius:6px;
+  overflow:hidden;
+  background:var(--bg);
+  max-width:220px;
+}
+.input-dinheiro span{
+  background:var(--accent-soft);
+  padding:9px 10px;
+  font-family:var(--mono);
+  font-size:13px;
+  color:var(--accent);
+  border-right:1px solid var(--border);
+}
+.input-dinheiro input{
+  border:none;
+  padding:9px 10px;
+  font-family:var(--mono);
+  text-align:right;
+  flex:1;
+  min-width:0;
+  background:transparent;
+  color:var(--text);
+}
+.input-dinheiro input:focus{outline:none;}
+
+/* Múltiplo-input */
+.multiplo-input-lista{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-bottom:10px;
+}
+.multiplo-input-item{
+  border:1px dashed var(--border);
+  border-radius:6px;
+  padding:14px;
+  background:var(--bg);
+}
+.multiplo-input-cabecalho{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-family:var(--mono);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  color:var(--text-muted);
+  margin-bottom:10px;
+}
+.campo-inline{
+  margin-bottom:8px;
+}
+.campo-inline label{
+  display:block;
+  font-size:12.5px;
+  color:var(--text-muted);
+  margin-bottom:4px;
+}
+.campo-inline:last-child{margin-bottom:0;}
+
+.btn-remover{
+  color:var(--danger);
+  font-size:12px;
+  text-decoration:underline;
+  padding:0;
+}
+.btn-remover:hover{opacity:0.8;}
+
+.btn-adicionar{
+  border:1px solid var(--border);
+  background:var(--panel);
+  color:var(--text-read);
+  font-size:13.5px;
+  font-weight:500;
+  padding:8px 14px;
+  border-radius:6px;
+  transition:border-color .12s ease, color .12s ease;
+}
+.btn-adicionar:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+}
+
+/* Aviso do linter — só aparece se o schema tiver erro estrutural
+   (ver js/core/linter.js). Não é parte da UI normal do formulário. */
+.linter-banner{
+  position:fixed;
+  right:16px;
+  bottom:16px;
+  max-width:320px;
+  font-size:12.5px;
+  line-height:1.5;
+  background:var(--danger);
+  color:#fff;
+  padding:12px 14px;
+  border-radius:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.2);
+  z-index:100;
+}
+
+/* =========================================================
+   Checklist de pendências
+   ========================================================= */
+.pendencias{
+  margin-top:18px;
+  padding:14px 16px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--accent-soft);
+}
+.pendencias.escondido{display:none;}
+.pendencias-titulo{
+  margin:0 0 8px;
+  font-size:13px;
+  font-weight:600;
+  color:var(--text);
+}
+.pendencias-lista{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.pendencia-chip{
+  font-size:12.5px;
+  padding:5px 11px;
+  border-radius:999px;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  background:var(--panel);
+}
+.pendencia-chip:hover{
+  background:var(--accent);
+  color:var(--panel);
+}
+
+/* =========================================================
+   Barra de ações / botões principais
+   ========================================================= */
+.acoes{
+  display:flex;
+  gap:10px;
+  margin-top:24px;
+  padding-top:20px;
+  border-top:1px solid var(--border);
+}
+
+.btn-primary{
+  background:var(--accent);
+  color:var(--panel);
+  border:1px solid var(--accent);
+  padding:11px 20px;
+  border-radius:6px;
+  font-weight:600;
+  font-size:14px;
+  transition:opacity .12s ease;
+}
+.btn-primary:hover:not(:disabled){opacity:0.88;}
+.btn-primary:disabled{
+  background:var(--border);
+  border-color:var(--border);
+  color:var(--text-muted);
+}
+
+.btn-secondary{
+  background:var(--panel);
+  border:1px solid var(--border);
+  color:var(--text-muted);
+  padding:11px 16px;
+  border-radius:6px;
+  font-size:14px;
+  transition:border-color .12s ease, color .12s ease;
+}
+.btn-secondary:hover{
+  border-color:var(--danger);
+  color:var(--danger);
+}
+
+/* =========================================================
+   Saída (texto gerado)
+   ========================================================= */
+#saida-wrapper{
+  margin-top:32px;
+  padding-top:24px;
+  border-top:1px solid var(--border);
+}
+#saida-wrapper.escondido{display:none;}
+#saida-wrapper h2{
+  font-family:var(--sans);
+  font-size:15px;
+  font-weight:600;
+  margin:0 0 12px;
+  color:var(--text);
+}
+#saida-texto{
+  width:100%;
+  min-height:240px;
+  font-family:var(--mono);
+  font-size:13.5px;
+  line-height:1.65;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--panel);
+  color:var(--text);
+  white-space:pre-wrap;
+  resize:vertical;
+}
+.saida-acoes{
+  margin-top:10px;
+  display:flex;
+  gap:10px;
+}
+
+/* =========================================================
+   Footer
+   ========================================================= */
+footer{
+  max-width:900px;
+  margin:0 auto;
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--text-muted);
+  padding:24px 24px 60px;
+}
+
+@media (max-width:560px){
+  .site-header{padding:0 16px;}
+  main{padding:0 16px;}
+  footer{padding:20px 16px 48px;}
+  .page-title{font-size:22px;}
+}

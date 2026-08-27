@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gerador de Ocorrências</title>
+<link rel="stylesheet" href="css/style.css" />
+<script src="js/theme.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <p class="site-title">
+    <span class="brand-mark">●</span>
+    Gerador de Ocorrências
+    <span class="dim">/ uso interno</span>
+  </p>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">☾</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1 class="page-title">Gerador de Texto de Ocorrência</h1>
+    <p class="page-lead">Responda o questionário abaixo. As perguntas seguintes se ajustam
+    conforme suas respostas. Ao final, o texto da narrativa é montado automaticamente
+    a partir dos dados informados — revise antes de usar.</p>
+    <p class="aviso-privacidade">
+      <span aria-hidden="true">🔒</span>
+      Esta ferramenta roda inteiramente no seu navegador. Nenhuma resposta preenchida
+      aqui é enviada, registrada ou compartilhada com qualquer servidor — inclusive o
+      texto final só existe localmente, até você copiá-lo. O acesso a esta página é
+      restrito via Cloudflare Access.
+    </p>
+  </section>
+
+  <p class="progresso">Preenchimento</p>
+
+  <form id="perguntas" onsubmit="return false;"></form>
+
+  <div id="pendencias" class="pendencias escondido"></div>
+
+  <div class="acoes">
+    <button type="button" class="btn-primary" id="btn-gerar" disabled>Gerar texto</button>
+    <button type="button" class="btn-secondary" id="btn-reiniciar">Reiniciar</button>
+  </div>
+
+  <div id="saida-wrapper" class="escondido">
+    <h2>Texto gerado</h2>
+    <textarea id="saida-texto" spellcheck="false"></textarea>
+    <div class="saida-acoes">
+      <button type="button" class="btn-secondary" id="btn-copiar">Copiar texto</button>
+    </div>
+  </div>
+</main>
+
+<footer>Texto gerado automaticamente a partir das respostas — revisão humana obrigatória antes do registro oficial.</footer>
+
+<!-- núcleo: estado, visibilidade, texto, validadores, renderers -->
+<script src="js/core/estado.js"></script>
+<script src="js/core/visibilidade.js"></script>
+<script src="js/core/texto-helpers.js"></script>
+<script src="js/core/validadores.js"></script>
+<script src="js/core/renderers-registry.js"></script>
+
+<!-- um arquivo por tipo de pergunta -->
+<script src="js/renderers/multipla.js"></script>
+<script src="js/renderers/selecao.js"></script>
+<script src="js/renderers/texto.js"></script>
+<script src="js/renderers/numero.js"></script>
+<script src="js/renderers/dinheiro.js"></script>
+<script src="js/renderers/multiplo-input.js"></script>
+
+<!-- registro dos tipos de ocorrência -->
+<script src="js/registry.js"></script>
+<script src="js/tipos/estelionato.js"></script>
+<script src="js/tipos/furto.js"></script>
+<script src="js/tipos/maria_penha.js"></script>
+<script src="js/tipos/descumprimento_mpu.js"></script>
+
+<script src="js/schema.js"></script>
+<script src="js/core/linter.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/generator.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
