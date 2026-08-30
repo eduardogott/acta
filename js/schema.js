@@ -73,12 +73,27 @@ const PERGUNTAS_FINAIS = [
   {
     id: "deseja_representar",
     tipo: "multipla",
-    texto: "A vítima deseja representar criminalmente contra o autor?",
+    texto: "A ação penal é condicionada? Se sim, a vítima deseja representar criminalmente contra o autor?",
     opcoes: [
-      { valor: "sim", texto: "Sim" },
-      { valor: "nao", texto: "Não" },
+      { valor: "incondicionada", texto: "É crime de ação penal incondicionada (padrão, tudo que não for condicionada ou privada)." },
+      { valor: "representa", texto: "É crime de ação penal condicionada (ameaça, estelionato, lesao leve, vazar vídeo intimo, etc) e representa criminalmente." },
+      { valor: "naorepresenta", texto: "É crime de ação penal condicionada e NÃO DESEJA representar." },
+      { valor: "acaoprivada", texto: "É crime de ação penal privada (calúnia, difamação e injúria simples, além de dano) e moverá queixa-crime." },
     ],
-    template: (r) => (r === "sim" ? "Manifesta desejo em representar criminalmente." : ""),
+    // Nem todo crime condicionado tem prazo decadencial de representação
+    // (ex.: Maria da Penha costuma ser incondicionada), então o aviso do
+    // "naorepresenta" é uma simplificação deliberada. Se um tipo de
+    // ocorrência específico não deve carregar esse aviso, dá pra
+    // sobrescrever localmente no módulo do tipo.
+    template: (r) => {
+      const FRASES = {
+        representa: "Manifesta desejo em representar criminalmente.",
+        naorepresenta:
+          "Cientificado(a) acerca do prazo decadencial de seis meses, não deseja representar criminalmente.",
+        acaoprivada: "É crime de ação penal privada e a vítima informou que moverá queixa-crime.",
+      };
+      return FRASES[r] || "";
+    },
   },
 ];
 

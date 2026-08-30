@@ -74,6 +74,21 @@ const TextoHelpers = (() => {
     return /[.!?]$/.test(t) ? t : `${t}.`;
   }
 
+  // Ordinal por extenso em português ("a primeira transferência", "o
+  // segundo pagamento"...), usado pra enumerar itens de multiplo-input.
+  // `num` é 1-based (ordinal(1, "f") -> "primeira"). `genero` é "f" ou
+  // "m" (default "f"). Além do décimo, cai num fallback numérico
+  // (11º/11ª...) — mais que isso na prática seria incomum, mas não
+  // quebra se acontecer.
+  const ORDINAIS = {
+    f: ["primeira", "segunda", "terceira", "quarta", "quinta", "sexta", "sétima", "oitava", "nona", "décima"],
+    m: ["primeiro", "segundo", "terceiro", "quarto", "quinto", "sexto", "sétimo", "oitavo", "nono", "décimo"],
+  };
+  function ordinal(num, genero = "f") {
+    const lista = ORDINAIS[genero] || ORDINAIS.f;
+    return lista[num - 1] || `${num}º${genero === "m" ? "" : "ª"}`;
+  }
+
   return {
     textoOpcao,
     textoOpcaoEm: textoOpcaoEmAtual,
@@ -81,5 +96,6 @@ const TextoHelpers = (() => {
     juntarLista,
     juntarClausulas,
     garantirPonto,
+    ordinal,
   };
 })();
