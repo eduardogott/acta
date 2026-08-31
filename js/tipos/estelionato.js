@@ -285,7 +285,7 @@ registrarTipoOcorrencia("estelionato", {
         const numerosTexto = h.juntarLista(numeros);
         const prefixoNumero = numeros.length > 1 ? "dos números telefônicos" : "do número telefônico";
 
-        return `Comunica que recebeu ${tipoContato} ${prefixoNumero} ${numerosTexto}, de um indivíduo que se passou por ${artigo} ${parentesco}, ${respostas.fp_nome_alegado}${foto}.`;
+        return `Informa que recebeu ${tipoContato} ${prefixoNumero} ${numerosTexto}, de um indivíduo que se passou por ${artigo} ${parentesco}, ${respostas.fp_nome_alegado}${foto}.`;
       },
     },
     {
