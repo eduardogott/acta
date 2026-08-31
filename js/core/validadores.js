@@ -140,4 +140,42 @@ registrarValidador("numeroPositivo", (valor) => {
   return !Number.isNaN(n) && n > 0 ? true : "Informe um número maior que zero.";
 });
 
+// IMEI: 15 dígitos, com dígito verificador calculado pelo algoritmo de
+// Luhn sobre os 14 primeiros (mesmo algoritmo usado em cartões de
+// crédito). Dobra o dígito, da direita pra esquerda, alternando a partir
+// do dígito imediatamente anterior ao verificador.
+registrarValidador("imei", (valor) => {
+  const digitos = String(valor || "").replace(/\D/g, "");
+  if (digitos.length !== 15) {
+    return "O IMEI deve conter 15 algarismos, sem espaços ou pontuação.";
+  }
+
+  let soma = 0;
+  let dobrar = true;
+  for (let i = digitos.length - 2; i >= 0; i--) {
+    let d = Number(digitos[i]);
+    if (dobrar) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    soma += d;
+    dobrar = !dobrar;
+  }
+  const dv = (10 - (soma % 10)) % 10;
+  if (dv !== Number(digitos[14])) {
+    return "IMEI inválido: dígito verificador incorreto.";
+  }
+  return true;
+});
+
+// Placa veicular: formato antigo (AAA9999) ou Mercosul (AAA9A99) —
+// checagem só de formato, não existe dígito verificador em placas.
+registrarValidador("placa", (valor) => {
+  const v = String(valor || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  if (!/^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(v)) {
+    return "Informe uma placa válida, no formato antigo (ABC1234) ou Mercosul (ABC1D23).";
+  }
+  return true;
+});
+
 window.resolverValidador = resolverValidador;

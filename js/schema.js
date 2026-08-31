@@ -45,19 +45,17 @@ const PERGUNTAS_FINAIS = [
     opcoes: [
       { valor: "preservar_direitos", texto: "Preservar direitos" },
       { valor: "estorno_bancario", texto: "Preservar direitos e solicitar estorno bancário" },
-      { valor: "providencias_cabiveis", texto: "Solicitar as providências cabíveis" },
       { valor: "seguro", texto: "Acionar seguro" },
-      { valor: "conhecimento", texto: "Apenas para conhecimento dos fatos" },
+      { valor: "segundavia", texto: "Solicitar segunda via"},
       { valor: "outro", texto: "Outro motivo" },
     ],
     template: (r) => {
       const FRASES = {
-        preservar_direitos: "Registra a presente ocorrência para preservar seus direitos.",
+        preservar_direitos: "Registra para preservar seus direitos.",
         estorno_bancario:
           "Registra para preservar seus direitos e solicitar ao banco o estorno dos valores transferidos.",
-        providencias_cabiveis: "Registra para solicitar as providências cabíveis.",
         seguro: "Registra para fins de acionamento de seguro.",
-        conhecimento: "Registra a presente ocorrência para conhecimento dos fatos.",
+        segundavia: "Registra para solicitar segunda via."
       };
       return FRASES[r] || "";
     },
@@ -66,9 +64,9 @@ const PERGUNTAS_FINAIS = [
     id: "motivo_registro_outro",
     tipo: "texto",
     texto: "Descreva a finalidade do registro",
-    placeholder: "para...",
+    placeholder: "Registra para...",
     exibirSe: { pergunta: "motivo_registro", igual: "outro" },
-    template: (r) => `Registra a presente ocorrência ${r}.`,
+    template: (r, _, h) => `${h.garantirPonto(r)}`,
   },
   {
     id: "deseja_representar",
@@ -79,21 +77,43 @@ const PERGUNTAS_FINAIS = [
       { valor: "representa", texto: "É crime de ação penal condicionada (ameaça, estelionato, lesao leve, vazar vídeo intimo, etc) e representa criminalmente." },
       { valor: "naorepresenta", texto: "É crime de ação penal condicionada e NÃO DESEJA representar." },
       { valor: "acaoprivada", texto: "É crime de ação penal privada (calúnia, difamação e injúria simples, além de dano) e moverá queixa-crime." },
+      { valor: "atipico", texto: "É fato atípico, portanto, não há tipicidade penal ou representação." },
     ],
     // Nem todo crime condicionado tem prazo decadencial de representação
     // (ex.: Maria da Penha costuma ser incondicionada), então o aviso do
     // "naorepresenta" é uma simplificação deliberada. Se um tipo de
     // ocorrência específico não deve carregar esse aviso, dá pra
     // sobrescrever localmente no módulo do tipo.
+    // "Cientificado(a)" em vez de concordarGenero: esta pergunta é
+    // compartilhada por TODOS os tipos, e o gênero do comunicante nem
+    // sempre está disponível aqui (ex.: só é perguntado dentro de
+    // estelionato) — a notação com barra evita depender disso.
     template: (r) => {
       const FRASES = {
         representa: "Manifesta desejo em representar criminalmente.",
-        naorepresenta:
-          "Cientificado(a) acerca do prazo decadencial de seis meses, não deseja representar criminalmente.",
+        naorepresenta: "Cientificado(a) acerca do prazo decadencial de seis meses, não deseja representar criminalmente.",
         acaoprivada: "É crime de ação penal privada e a vítima informou que moverá queixa-crime.",
       };
       return FRASES[r] || "";
     },
+  },
+  {
+    id: "outra_orientacao_houve",
+    tipo: "multipla",
+    texto: "Foi dada alguma outra orientação à vítima (ex.: Conselho Tutelar, contatar alguma instituição, cancelar acessos, etc)?",
+    opcoes: [
+      { valor: "sim", texto: "Sim" },
+      { valor: "nao", texto: "Não" },
+    ],
+    template: () => "",
+  },
+  {
+    id: "outra_orientacao",
+    tipo: "texto",
+    texto: "Descreva a orientação dada",
+    placeholder: "Comunicante orientado(a) a ...",
+    exibirSe: { pergunta: "outra_orientacao_houve", igual: "sim" },
+    template: (r, _, h) => h.garantirPonto(r),
   },
 ];
 

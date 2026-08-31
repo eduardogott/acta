@@ -48,6 +48,20 @@ registrarTipoOcorrencia("estelionato", {
   label: "Estelionato",
 
   perguntas: [
+    // Só usada dentro deste tipo (fa_orientado_cancelar_acessos) — nos
+    // demais tipos o gênero da vítima ou é irrelevante ou já é conhecido
+    // (ex.: Maria da Penha, onde a vítima é sempre mulher).
+    {
+      id: "comunicante_genero",
+      tipo: "multipla",
+      texto: "Qual é o gênero da vítima/comunicante?",
+      opcoes: [
+        { valor: "masc", texto: "Masculino" },
+        { valor: "fem", texto: "Feminino" },
+        { valor: "neutro", texto: "Neutro/outro" },
+      ],
+      template: () => "",
+    },
     {
       id: "tipo_estelionato",
       tipo: "multipla",
@@ -461,9 +475,13 @@ registrarTipoOcorrencia("estelionato", {
         { valor: "sim", texto: "Sim" },
         { valor: "nao", texto: "Não" },
       ],
-      template: (r) =>
+      template: (r, respostas, h) =>
         r === "sim"
-          ? "Foi orientado(a) a contatar o banco e providenciar o cancelamento dos acessos à conta e aos cartões bancários."
+          ? `Foi ${h.concordarGenero(
+              respostas.comunicante_genero,
+              "orientado",
+              "orientada"
+            )} a contatar o banco e providenciar o cancelamento dos acessos à conta e aos cartões bancários.`
           : "",
     },
   ],

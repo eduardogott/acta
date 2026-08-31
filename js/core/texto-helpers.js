@@ -74,6 +74,14 @@ const TextoHelpers = (() => {
     return /[.!?]$/.test(t) ? t : `${t}.`;
   }
 
+  // Concorda um par masculino/feminino com um valor de gênero (ex.:
+  // resposta de "comunicante_genero", onde existir essa pergunta —
+  // atualmente só dentro de estelionato). "neutro/outro" ou não
+  // informado cai no masculino, como padrão.
+  function concordarGenero(genero, masculino, feminino) {
+    return genero === "fem" ? feminino : masculino;
+  }
+
   // Ordinal por extenso em português ("a primeira transferência", "o
   // segundo pagamento"...), usado pra enumerar itens de multiplo-input.
   // `num` é 1-based (ordinal(1, "f") -> "primeira"). `genero` é "f" ou
@@ -97,5 +105,6 @@ const TextoHelpers = (() => {
     juntarClausulas,
     garantirPonto,
     ordinal,
+    concordarGenero,
   };
 })();
