@@ -1,0 +1,61 @@
+// Cloudflare Pages Function — HTTP Basic Auth gate for the whole site.
+// Runs on every request before any static asset is served.
+//
+// Set these in the Pages project dashboard:
+//   Settings → Environment variables → add BASIC_AUTH_USER and BASIC_AUTH_PASS
+// (mark BASIC_AUTH_PASS as "encrypted"). No values are hardcoded here.
+
+function unauthorized() {
+  return new Response("Autenticação necessária.", {
+    status: 401,
+    headers: {
+      "WWW-Authenticate": 'Basic realm="Acta", charset="UTF-8"',
+    },
+  });
+}
+
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+export async function onRequest(context) {
+  const { request, env, next } = context;
+
+  const expectedUser = env.BASIC_AUTH_USER;
+  const expectedPass = env.BASIC_AUTH_PASS;
+
+  if (!expectedUser || !expectedPass) {
+    // Vars not configured — fail closed rather than serving the site unprotected.
+    return unauthorized();
+  }
+
+  const authHeader = request.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Basic ")) {
+    return unauthorized();
+  }
+
+  let user = "";
+  let pass = "";
+  try {
+    const decoded = atob(authHeader.slice(6));
+    const idx = decoded.indexOf(":");
+    user = decoded.slice(0, idx);
+    pass = decoded.slice(idx + 1);
+  } catch {
+    return unauthorized();
+  }
+
+  const ok =
+    timingSafeEqual(user, expectedUser) && timingSafeEqual(pass, expectedPass);
+
+  if (!ok) {
+    return unauthorized();
+  }
+
+  return next();
+}
