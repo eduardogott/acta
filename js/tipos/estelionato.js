@@ -68,10 +68,7 @@ registrarTipoOcorrencia("estelionato", {
       texto: "Qual o tipo de estelionato?",
       opcoes: [
         { valor: "falso_advogado", texto: "Falso Advogado" },
-        { valor: "falso_funcionario_banco", texto: "Falso Funcionário de Banco" },
         { valor: "falso_parente", texto: "Falso Parente/Conhecido (golpe do WhatsApp)" },
-        { valor: "golpe_pix", texto: "Golpe do Pix / Falsa Central" },
-        { valor: "venda_nao_entregue", texto: "Venda pela Internet não Entregue" },
       ],
       // Sem template por padrão (a classificação já fica registrada em
       // outro campo do sistema) — mas alguns subtipos não têm, no resto
@@ -393,51 +390,6 @@ registrarTipoOcorrencia("estelionato", {
         }
         const comOrdinal = lista.map((item, i) => `o ${h.ordinal(i + 1, "m")} ${clausula(item)}`);
         return `Relata que efetuou ${lista.length} pagamentos, sendo ${h.juntarLista(comOrdinal)}.`;
-      },
-    },
-
-    // -------------------------------------------------------- GOLPE PIX ---
-    {
-      id: "golpe_pix_recebeu_ligacao",
-      tipo: "multipla",
-      texto: "A vítima recebeu ligação telefônica se passando por atendente do banco?",
-      exibirSe: { pergunta: "tipo_estelionato", igual: "golpe_pix" },
-      opcoes: [
-        { valor: "sim", texto: "Sim" },
-        { valor: "nao", texto: "Não" },
-      ],
-      template: (r) =>
-        r === "sim"
-          ? "Informa que recebeu ligação telefônica de um indivíduo que se apresentou como funcionário de instituição bancária."
-          : "Informa que não houve contato telefônico prévio, apenas por mensagem.",
-    },
-    {
-      id: "transferencias_pix",
-      tipo: "multiplo-input",
-      texto: "Transferências PIX realizadas pela vítima",
-      itemLabel: "Transferência",
-      exibirSe: { pergunta: "tipo_estelionato", igual: "golpe_pix" },
-      campos: [
-        { id: "valor", tipo: "dinheiro", texto: "Valor" },
-        // Chave Pix também pode ser e-mail/telefone/aleatória — troque
-        // por outro validador (ou remova) se aceitar outros formatos.
-        { id: "chave", tipo: "texto", texto: "Chave Pix (CPF/CNPJ)", validador: "cpfOuCnpj" },
-        { id: "recebedor", tipo: "texto", texto: "Nome do recebedor (se identificado)", obrigatoria: false },
-        { id: "instituicao", tipo: "texto", texto: "Instituição financeira", obrigatoria: false },
-      ],
-      template: (lista, _, h) => {
-        const clausula = (item) => {
-          let c = `no valor de ${h.formatMoney(item.valor)} para a chave "${item.chave}"`;
-          if (item.recebedor) c += `, em nome de ${item.recebedor}`;
-          if (item.instituicao) c += `, junto à instituição ${item.instituicao}`;
-          return c;
-        };
-
-        if (lista.length === 1) {
-          return `Relata que efetuou 1 transferência via Pix, ${clausula(lista[0])}.`;
-        }
-        const comOrdinal = lista.map((item, i) => `a ${h.ordinal(i + 1, "f")} ${clausula(item)}`);
-        return `Relata que efetuou ${lista.length} transferências via Pix, sendo ${h.juntarLista(comOrdinal)}.`;
       },
     },
 

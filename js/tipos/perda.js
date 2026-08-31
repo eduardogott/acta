@@ -7,6 +7,19 @@
  * ---------------------------------------------------------------------------
  */
 
+// Monta a frase do celular perdido a partir de marca/modelo/operadora/
+// número (sempre presentes) + IMEI (opcional — omite a cláusula inteira
+// quando não informado). Número é condensado (sem espaço/hífen) pro
+// texto final independente de como foi digitado; IMEI idem.
+function montarFraseCelular(respostas, h, imei) {
+  const { perda_cel_marca: marca, perda_cel_modelo: modelo, perda_cel_operadora: operadora, perda_cel_numero: numero } =
+    respostas;
+  const clausulaImei = imei ? `, IMEI ${h.normalizarImei(imei)}` : "";
+  return `Comunica que perdeu seu telefone celular. Informa que o celular consiste de um ${marca} ${modelo}, operadora ${operadora}, número telefônico ${h.normalizarTelefone(
+    numero
+  )}${clausulaImei}.`;
+}
+
 registrarTipoOcorrencia("perda", {
   label: "Perda",
 
@@ -56,8 +69,23 @@ registrarTipoOcorrencia("perda", {
       tipo: "texto",
       texto: "Número telefônico",
       placeholder: "51 987654321",
+      validador: "telefone",
       exibirSe: { pergunta: "perda_o_que", igual: "celular" },
       template: () => "", // idem
+    },
+    {
+      id: "perda_cel_sabe_imei",
+      tipo: "multipla",
+      texto: "Sabe o IMEI do telefone perdido?",
+      exibirSe: { pergunta: "perda_o_que", igual: "celular" },
+      opcoes: [
+        { valor: "sim", texto: "Sim" },
+        { valor: "nao", texto: "Não" },
+      ],
+      // Se não sabe, a frase já sai completa aqui, sem a pergunta do IMEI
+      // (que só é exibida no caso "sim") — por isso as quatro perguntas
+      // acima não têm texto próprio.
+      template: (r, respostas, h) => (r === "nao" ? montarFraseCelular(respostas, h) : ""),
     },
     {
       id: "perda_cel_imei",
@@ -65,14 +93,11 @@ registrarTipoOcorrencia("perda", {
       texto: "IMEI do aparelho",
       placeholder: "123456789098765",
       validador: "imei",
-      exibirSe: { pergunta: "perda_o_que", igual: "celular" },
+      exibirSe: { pergunta: "perda_cel_sabe_imei", igual: "sim" },
       // Combina marca + modelo + operadora + número + este IMEI numa
-      // frase só — por isso as quatro perguntas acima não têm texto próprio.
-      template: (r, respostas) => {
-        const { perda_cel_marca: marca, perda_cel_modelo: modelo, perda_cel_operadora: operadora, perda_cel_numero: numero } =
-          respostas;
-        return `Comunica que perdeu seu telefone celular. Informa que o celular consiste de um ${marca} ${modelo}, operadora ${operadora}, número telefônico ${numero}, IMEI ${r}.`;
-      },
+      // frase só (caso "sabe o IMEI" = sim, ver perda_cel_sabe_imei acima
+      // pro caso "não").
+      template: (r, respostas, h) => montarFraseCelular(respostas, h, r),
     },
 
     // --------------------------------------------------- DOCUMENTO PESSOAL ---
@@ -107,10 +132,10 @@ registrarTipoOcorrencia("perda", {
       placeholder: "ABC1234",
       validador: "placa",
       exibirSe: { pergunta: "perda_o_que", igual: "documento_veicular" },
-      template: (r) =>
-        `Comunica a perda do Certificado do Registro do Veículo (CRV/DUT) do veículo de placas ${String(
+      template: (r, _, h) =>
+        `Comunica a perda do Certificado do Registro do Veículo (CRV/DUT) do veículo de placas ${h.normalizarPlaca(
           r
-        ).toUpperCase()}, abaixo qualificado.`,
+        )}, abaixo qualificado.`,
     },
 
     // ------------------------------------------------------ PLACA VEICULAR ---
@@ -135,10 +160,11 @@ registrarTipoOcorrencia("perda", {
       exibirSe: { pergunta: "perda_o_que", igual: "placa_veicular" },
       template: (r, respostas, h) => {
         const qual = h.textoOpcaoEm("perda_placa_qual", respostas.perda_placa_qual);
+        const placa = h.normalizarPlaca(r);
         if (qual === "ambas") {
-          return `Comunica a perda de ambas placas do veículo de placas ${String(r).toUpperCase()}, abaixo qualificado.`;
+          return `Comunica a perda de ambas placas do veículo de placas ${placa}, abaixo qualificado.`;
         }
-        return `Comunica a perda da placa ${qual} do veículo de placas ${String(r).toUpperCase()}, abaixo qualificado.`;
+        return `Comunica a perda da placa ${qual} do veículo de placas ${placa}, abaixo qualificado.`;
       },
     },
   ],

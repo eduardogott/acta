@@ -1,6 +1,7 @@
-# Gerador de Ocorrências
+# Acta
 
-Ferramenta de uso interno que transforma um questionário dinâmico em um
+**Acta** (do latim *Acta Diurna*, os registros públicos diários de Roma) é
+uma ferramenta de uso interno que transforma um questionário dinâmico em um
 parágrafo de narrativa (estilo depoimento em 3ª pessoa: "Comunica que...",
 "Informa que...", "Relata que...") para uso no registro de ocorrências
 policiais. Roda inteiramente no navegador — HTML/CSS/JS puro, sem build
@@ -25,7 +26,7 @@ vez de `file://` dependendo do navegador).
 O fluxo é: **schema → engine → generator**.
 
 - **`js/registry.js`** — cadastro central dos "tipos de ocorrência"
-  (estelionato, furto, Maria da Penha, etc). Cada arquivo em
+  (estelionato, perda, etc). Cada arquivo em
   `js/tipos/*.js` se registra aqui via `registrarTipoOcorrencia(...)`.
 - **`js/schema.js`** — define as perguntas fixas que aparecem antes
   (`PERGUNTAS_INICIAIS`, incluindo o seletor "Qual é o fato da

@@ -100,7 +100,7 @@ const PERGUNTAS_FINAIS = [
   {
     id: "outra_orientacao_houve",
     tipo: "multipla",
-    texto: "Foi dada alguma outra orientação à vítima (ex.: Conselho Tutelar, contatar alguma instituição, cancelar acessos, etc)?",
+    texto: "Foi dada alguma outra orientação à vítima (ex.: Conselho Tutelar, contatar alguma instituição, etc)?",
     opcoes: [
       { valor: "sim", texto: "Sim" },
       { valor: "nao", texto: "Não" },

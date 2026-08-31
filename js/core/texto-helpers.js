@@ -82,6 +82,29 @@ const TextoHelpers = (() => {
     return genero === "fem" ? feminino : masculino;
   }
 
+  // Condensa uma placa veicular pro formato final (sem espaço/hífen,
+  // maiúscula): "abc-1234" ou "abc 1234" -> "ABC1234". Usar sempre que a
+  // placa for para o texto final — o campo aceita o valor como o usuário
+  // digitou, quem normaliza é o template.
+  function normalizarPlaca(valor) {
+    return String(valor || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  }
+
+  // Condensa um IMEI pro formato final (só dígitos, sem espaço/hífen).
+  function normalizarImei(valor) {
+    return String(valor || "").replace(/\D/g, "");
+  }
+
+  // Condensa um telefone pro formato final "DDD número" (ex.: "51
+  // 987654321"), aceitando entrada com parênteses/espaço/hífen em
+  // qualquer combinação — usar sempre que o telefone for para o texto
+  // final.
+  function normalizarTelefone(valor) {
+    const digitos = String(valor || "").replace(/\D/g, "");
+    if (digitos.length <= 2) return digitos;
+    return `${digitos.slice(0, 2)} ${digitos.slice(2)}`;
+  }
+
   // Ordinal por extenso em português ("a primeira transferência", "o
   // segundo pagamento"...), usado pra enumerar itens de multiplo-input.
   // `num` é 1-based (ordinal(1, "f") -> "primeira"). `genero` é "f" ou
@@ -106,5 +129,8 @@ const TextoHelpers = (() => {
     garantirPonto,
     ordinal,
     concordarGenero,
+    normalizarPlaca,
+    normalizarImei,
+    normalizarTelefone,
   };
 })();

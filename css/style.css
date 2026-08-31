@@ -481,6 +481,29 @@ footer{
   font-size:11px;
   color:var(--text-muted);
   padding:24px 24px 60px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+footer p{
+  margin:0;
+}
+
+footer .footer-etymology{
+  opacity:0.7;
+}
+
+footer .footer-etymology em{
+  font-style:italic;
+}
+
+footer .footer-credit{
+  opacity:0.9;
+}
+
+footer .footer-link{
+  color:inherit
 }
 
 @media (max-width:560px){

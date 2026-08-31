@@ -168,6 +168,19 @@ registrarValidador("imei", (valor) => {
   return true;
 });
 
+// Telefone: DDD (2 dígitos) + número (8 dígitos fixo ou 9 dígitos
+// celular) = 10 ou 11 dígitos no total. Aceita qualquer formatação de
+// entrada (parênteses, espaço, hífen) — só a quantidade de dígitos
+// importa aqui; a normalização pro texto final é feita por
+// h.normalizarTelefone (texto-helpers.js), não por este validador.
+registrarValidador("telefone", (valor) => {
+  const digitos = String(valor || "").replace(/\D/g, "");
+  if (!(digitos.length === 10 || digitos.length === 11)) {
+    return "Informe um telefone válido, com DDD (10 ou 11 dígitos, ex.: 51 987654321).";
+  }
+  return true;
+});
+
 // Placa veicular: formato antigo (AAA9999) ou Mercosul (AAA9A99) —
 // checagem só de formato, não existe dígito verificador em placas.
 registrarValidador("placa", (valor) => {
