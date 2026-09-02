@@ -111,6 +111,7 @@ registrarTipoOcorrencia("perda", {
         { valor: "cnh", texto: "Carteira de Habilitação (CNH)" },
         { valor: "cartao_sus", texto: "Cartão do SUS" },
         { valor: "cartao_idoso", texto: "Cartão do Idoso" },
+        { valor: "cartao_onibus", texto: "Cartão do Ônibus" },
         { valor: "cartao_estacionamento_idoso", texto: "Cartão de Estacionamento do Idoso" },
         { valor: "ctps", texto: "Carteira de Trabalho" },
         { valor: "titulo_eleitor", texto: "Título de Eleitor" },
