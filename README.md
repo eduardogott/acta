@@ -132,7 +132,10 @@ navegador** via
 
   O sample rate é uma escolha fechada (original / 32k / 24k / 16k) em vez
   de campo livre, para não haver como digitar um valor que o encoder
-  recuse. Nos campos cujo rótulo diz "vazio = original" (largura e fps), o
+  recuse. Nos presets de áudio, `compressionLevel` faz o papel que o
+  `preset` faz no vídeo: o libmp3lame não conhece `-preset` (isso é do
+  x264), e o equivalente é `-compression_level`, a escala de qualidade do
+  LAME, em que 0 é o mais lento e caprichado e 9 o mais apressado. Nos campos cujo rótulo diz "vazio = original" (largura e fps), o
   botão "original" limpa o campo em vez de escrever um número: gravar 30
   num vídeo de 29,97 seria reamostrar disfarçado de "sem mudança".
 - **`js/zip.js`** — escritor de ZIP mínimo (método STORE, sem ZIP64) usado

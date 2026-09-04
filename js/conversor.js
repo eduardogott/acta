@@ -37,42 +37,55 @@
     ".mpg4": ".mp4",
   };
 
+  // Compressão de vídeo (opção 9 quando o arquivo é um vídeo). "maxFps" é
+  // teto, não alvo: um vídeo que já esteja abaixo dele passa intacto.
   const LEVEL_VIDEO = {
-    "1": { nome: "Baixa", crf: 24, scale: null, maxFps: null, preset: "medium" },
-    "2": { nome: "Média", crf: 28, scale: null, maxFps: null, preset: "medium" },
-    "3": { nome: "Alta", crf: 30, scale: 0.75, maxFps: 24, preset: "medium" },
-    "4": { nome: "Extrema", crf: 32, scale: 0.5, maxFps: 20, preset: "slow" },
+    "1": { nome: "Baixa",   crf: 26, scale: null, maxFps: 30, preset: "medium" },
+    "2": { nome: "Média",   crf: 30, scale: null, maxFps: 24, preset: "medium" },
+    "3": { nome: "Alta",    crf: 32, scale: 0.75, maxFps: 24, preset: "slow" },
+    "4": { nome: "Extrema", crf: 34, scale: 0.5,  maxFps: 19, preset: "slower" },
   };
 
+  // Faixa de áudio dentro do vídeo (AAC). Bitrate e sample rate são tetos:
+  // montarAudio() nunca sobe acima do que o arquivo já tem.
   const LEVEL_AUDIO = {
-    "1": { bitrate: 128, samplerate: null, mono: false },
-    "2": { bitrate: 96, samplerate: 16000, mono: true },
-    "3": { bitrate: 64, samplerate: 16000, mono: true },
-    "4": { bitrate: 48, samplerate: 16000, mono: true },
+    "1": { bitrate: 128, samplerate: null,  mono: false },
+    "2": { bitrate: 96,  samplerate: 24000, mono: true },
+    "3": { bitrate: 64,  samplerate: 22050, mono: true },
+    "4": { bitrate: 32,  samplerate: 16000, mono: true },
   };
 
   // Compressão de arquivos de áudio (opção 9 quando o arquivo é um áudio).
   // Saída sempre MP3; bitrate/sample rate nunca sobem acima do original.
+  //
+  // O libmp3lame não conhece -preset (isso é do x264): o equivalente é
+  // -compression_level, a escala de qualidade do LAME, em que 0 é o mais
+  // lento e caprichado e 9 o mais apressado. Daí 1 fazer as vezes de
+  // "slower" e 0 as de "veryslow".
+  //
+  // Os quatro pares bitrate/sample rate são combinações válidas de MP3:
+  // 128 kbps a 32 kHz cai em MPEG-1, e os demais em MPEG-2 (16–24 kHz),
+  // cuja faixa de bitrate vai de 8 a 160 kbps.
   const LEVEL_AUDIO_ONLY = {
-    "1": { nome: "Baixa",   bitrate: 160, samplerate: null,  mono: false },
-    "2": { nome: "Média",   bitrate: 96,  samplerate: 44100, mono: false },
-    "3": { nome: "Alta",    bitrate: 64,  samplerate: 32000, mono: true },
-    "4": { nome: "Extrema", bitrate: 32,  samplerate: 22050, mono: true },
+    "1": { nome: "Baixa",   bitrate: 128, samplerate: 32000, mono: false, compressionLevel: 1 },
+    "2": { nome: "Média",   bitrate: 80,  samplerate: 24000, mono: true,  compressionLevel: 1 },
+    "3": { nome: "Alta",    bitrate: 48,  samplerate: 24000, mono: true,  compressionLevel: 0 },
+    "4": { nome: "Extrema", bitrate: 24,  samplerate: 16000, mono: true,  compressionLevel: 0 },
   };
 
   const RESUMO_VIDEO = {
-    "1": "CRF 24 · resolução e FPS originais · áudio AAC 128 kbps",
-    "2": "CRF 28 · resolução e FPS originais · áudio AAC 96 kbps mono 16 kHz",
-    "3": "CRF 30 · 75% da resolução · até 24 fps · áudio AAC 64 kbps mono 16 kHz",
-    "4": "CRF 32 · 50% da resolução · até 20 fps · áudio AAC 48 kbps mono 16 kHz",
+    "1": "CRF 26 · até 30 fps · resolução original · áudio AAC 128 kbps",
+    "2": "CRF 30 · até 24 fps · resolução original · áudio AAC 96 kbps mono 24 kHz",
+    "3": "CRF 32 · até 24 fps · 75% da resolução · áudio AAC 64 kbps mono 22,05 kHz · preset slow",
+    "4": "CRF 34 · até 19 fps · 50% da resolução · áudio AAC 32 kbps mono 16 kHz · preset slower",
     "5": "Você define cada parâmetro abaixo.",
   };
 
   const RESUMO_AUDIO = {
-    "1": "MP3 160 kbps · canais e sample rate originais",
-    "2": "MP3 96 kbps · canais originais · até 44,1 kHz",
-    "3": "MP3 64 kbps · mono · até 32 kHz",
-    "4": "MP3 32 kbps · mono · até 22,05 kHz",
+    "1": "MP3 128 kbps · canais originais · até 32 kHz",
+    "2": "MP3 80 kbps · mono · até 24 kHz",
+    "3": "MP3 48 kbps · mono · até 24 kHz",
+    "4": "MP3 24 kbps · mono · até 16 kHz",
     "5": "Você define cada parâmetro abaixo.",
   };
 
@@ -349,34 +362,62 @@
     return null;
   }
 
+  /**
+   * Extrai o que interessa do log do `ffmpeg -i`.
+   *
+   * Trabalha uma linha de cada vez em vez de uma regex só. A versão anterior
+   * tentava alcançar o fps a partir da resolução na mesma expressão, e só
+   * funcionava quando havia exatamente um campo entre os dois — o ffmpeg
+   * costuma intercalar dois ou três (`[SAR 1:1 DAR 16:9]`, `4988 kb/s`),
+   * então o fps quase nunca era encontrado.
+   */
   function parseMediaInfo(log) {
     const info = {
       width: null, height: null, fps: null,
       hasAudio: false, aBitrate: null, aSampleRate: null, aChannels: null,
     };
-    const videoMatch = log.match(/Video:.*?(\d{2,5})x(\d{2,5})(?:[^,\n]*,\s*([\d.]+)\s*fps)?/);
-    if (videoMatch) {
-      info.width = parseInt(videoMatch[1], 10);
-      info.height = parseInt(videoMatch[2], 10);
-      if (videoMatch[3]) info.fps = parseFloat(videoMatch[3]);
-    }
-    const audioMatch = log.match(/Audio:.*?(\d+)\s*Hz,\s*([a-zA-Z0-9.() ]+?),/);
-    if (audioMatch) {
-      info.hasAudio = true;
-      info.aSampleRate = parseInt(audioMatch[1], 10);
-      const chanStr = audioMatch[2].trim();
-      if (/mono/i.test(chanStr)) info.aChannels = 1;
-      else if (/stereo/i.test(chanStr)) info.aChannels = 2;
-      else {
-        const chanNum = chanStr.match(/(\d+)/);
-        info.aChannels = chanNum ? parseInt(chanNum[1], 10) : 2;
+
+    const linhaVideo = (log.match(/^.*\bVideo:.*$/m) || [])[0];
+    if (linhaVideo) {
+      // a resolução precisa ser um token isolado: assim "0x31637661" (a tag
+      // do codec) não é confundida com dimensões
+      const dim = linhaVideo.match(/(?:^|[\s,(\[])(\d{2,5})x(\d{2,5})(?:[\s,)\]]|$)/);
+      if (dim) {
+        info.width = parseInt(dim[1], 10);
+        info.height = parseInt(dim[2], 10);
       }
-    } else if (/Stream #\d+:\d+.*?: Audio:/.test(log)) {
-      // stream de áudio existe mas não bateu com o formato esperado da linha
-      info.hasAudio = true;
+      // "29.97 fps" é o valor real; "tbr" é a base de tempo e serve de
+      // segunda opção quando o fps não vem declarado
+      const fps = linhaVideo.match(/([\d.]+)\s*fps\b/) || linhaVideo.match(/([\d.]+)\s*tbr\b/);
+      if (fps) {
+        const valor = parseFloat(fps[1]);
+        if (Number.isFinite(valor) && valor > 0) info.fps = valor;
+      }
     }
-    const bitrateMatch = log.match(/Audio:.*?(\d+)\s*kb\/s/);
-    if (bitrateMatch) info.aBitrate = parseInt(bitrateMatch[1], 10);
+
+    const linhaAudio = (log.match(/^.*\bAudio:.*$/m) || [])[0];
+    if (linhaAudio) {
+      info.hasAudio = true;
+      const hz = linhaAudio.match(/(\d+)\s*Hz\b/);
+      if (hz) info.aSampleRate = parseInt(hz[1], 10);
+
+      if (/\bmono\b/i.test(linhaAudio)) info.aChannels = 1;
+      else if (/\bstereo\b/i.test(linhaAudio)) info.aChannels = 2;
+      else {
+        // formatos como "5.1", "7.1" ou "6 channels"
+        const canais = linhaAudio.match(/(\d+)(?:\.(\d+))?\s*channels?\b/) ||
+                       linhaAudio.match(/\b(\d)\.(\d)\b(?!\s*(?:kb|Hz))/);
+        if (canais) {
+          const principais = parseInt(canais[1], 10) || 0;
+          const graves = canais[2] ? parseInt(canais[2], 10) : 0;
+          info.aChannels = principais + graves || null;
+        }
+      }
+
+      const kbps = linhaAudio.match(/(\d+)\s*kb\/s/);
+      if (kbps) info.aBitrate = parseInt(kbps[1], 10);
+    }
+
     return info;
   }
 
@@ -803,7 +844,9 @@
     await ffmpeg.writeFile(inName, await fileToUint8(file));
 
     const alvo = level === "5"
-      ? { bitrate: custom.bitrate, samplerate: custom.samplerate, mono: custom.mono }
+      ? { bitrate: custom.bitrate, samplerate: custom.samplerate, mono: custom.mono,
+          // no nivel manual vale o ajuste mais caprichado do LAME
+          compressionLevel: 0 }
       : LEVEL_AUDIO_ONLY[level];
 
     // Nunca sobe acima do original: recomprimir para cima só aumenta o arquivo.
@@ -816,6 +859,9 @@
     const args = ["-i", inName, "-vn", "-c:a", "libmp3lame", "-b:a", bitrate + "k",
                   "-ac", mono ? "1" : String(info.aChannels || 2)];
     if (samplerate) args.push("-ar", String(samplerate));
+    if (alvo.compressionLevel !== undefined && alvo.compressionLevel !== null) {
+      args.push("-compression_level", String(alvo.compressionLevel));
+    }
     args.push(outName);
 
     progressCallback = onProgress || null;
