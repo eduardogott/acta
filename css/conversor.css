@@ -14,7 +14,7 @@
   display:flex;
   flex-direction:column;
   align-items:flex-start;
-  gap:4px;
+  gap:5px;
   text-align:left;
   background:var(--panel);
   border:1px solid var(--border);
@@ -26,11 +26,6 @@
 .opcao-conversor.ativo{
   border-color:var(--accent);
   background:var(--accent-soft);
-}
-.opcao-conversor .opcao-num{
-  font-family:var(--mono);
-  font-size:11px;
-  color:var(--accent);
 }
 .opcao-conversor .opcao-titulo{
   font-size:14px;
@@ -82,6 +77,24 @@
   gap:10px;
 }
 .lista-selecionados .tam{color:var(--text-muted); flex-shrink:0;}
+
+/* Cabeçalho do painel de compressão: tipo detectado + resumo do preset */
+.tipo-detectado{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-left:8px;
+}
+.tipo-detectado.invalido{color:var(--danger);}
+
+.nivel-resumo{
+  font-size:12.5px;
+  color:var(--text-muted);
+  margin:10px 0 0;
+}
+.nivel-resumo:empty{display:none;}
 
 .campos-personalizada{
   margin-top:16px;
@@ -183,3 +196,97 @@
 @media (max-width:560px){
   .opcoes-conversor{grid-template-columns:1fr 1fr;}
 }
+
+/* =========================================================
+   Zona de arrastar e soltar
+   ========================================================= */
+.painel-arquivos{
+  transition:border-color .12s ease, background .12s ease;
+}
+.painel-arquivos.arrastando{
+  border-color:var(--accent);
+  border-style:dashed;
+  background:var(--accent-soft);
+}
+.dica-arrastar{
+  align-self:center;
+  font-size:12.5px;
+  color:var(--text-muted);
+}
+
+/* Aviso de arquivo grande demais para o heap do WebAssembly */
+.aviso-memoria{
+  margin:12px 0 0;
+  font-size:12.5px;
+  line-height:1.5;
+  color:var(--danger);
+  border-left:2px solid var(--danger);
+  padding-left:10px;
+}
+
+/* Estimativa de tamanho da saída (opção 9) */
+.estimativa{
+  margin:8px 0 0;
+  font-size:12.5px;
+  line-height:1.5;
+  color:var(--text-read);
+}
+
+/* =========================================================
+   Barra de progresso do download do motor ffmpeg
+   ========================================================= */
+.barra-motor{
+  height:4px;
+  background:var(--border);
+  border-radius:2px;
+  overflow:hidden;
+  margin-top:10px;
+}
+.barra-motor-preenchida{
+  height:100%;
+  width:0%;
+  background:var(--accent);
+  transition:width .15s linear;
+}
+
+/* =========================================================
+   Cabeçalho e ações em massa dos resultados
+   ========================================================= */
+.resultados-cabecalho{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  margin-bottom:12px;
+}
+#resultados-wrapper .resultados-cabecalho h2{margin:0;}
+
+.progresso-lote{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--text-muted);
+}
+
+.acoes-resultados{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+/* Comparação de tamanhos por resultado */
+.resultado-tamanhos{
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--text-muted);
+  margin-top:3px;
+}
+.resultado-tamanhos:empty{display:none;}
+.resultado-tamanhos.menor{color:var(--accent);}
+.resultado-tamanhos.maior{color:var(--danger);}
+
+/* .escondido é definida em style.css, que carrega antes deste arquivo; sem o
+   !important qualquer regra de display daqui (.btn-arquivo, por exemplo)
+   venceria por ordem de cascata e o elemento continuaria visível. */
+.escondido{display:none !important;}

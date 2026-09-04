@@ -9,7 +9,9 @@
  *   4 - Todas as conversões (1, 2 e 3)
  *   5 - Padronizar extensões (jpeg->jpg, mpeg->mpg, etc)
  *   8 - Efetuar todos (4 e 5)
- *   9 - Comprimir um vídeo (baixa/média/alta/extrema/personalizada)
+ *   9 - Comprimir um arquivo de vídeo OU de áudio
+ *       (baixa/média/alta/extrema/personalizada; o tipo é detectado
+ *        automaticamente pela extensão do arquivo escolhido)
  *
  * As opções 1/2/3 não recomprimem: vídeo tenta remux (-c copy, sem perda);
  * áudio usa VBR de qualidade máxima; imagem usa qualidade JPEG máxima.
@@ -24,7 +26,9 @@
 
   const AUDIO_EXTS = [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus", ".aiff", ".au"];
   const VIDEO_EXTS = [".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".mpg", ".mpeg", ".m4v", ".3gp", ".ts"];
-  const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic"];
+  // .heic ficou de fora de propósito: o build padrão do ffmpeg.wasm não traz
+  // decodificador HEIC, então esses arquivos só produziriam um erro obscuro.
+  const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp"];
 
   const EXTENSION_MAP = {
     ".jpeg": ".jpg",
@@ -47,10 +51,45 @@
     "4": { bitrate: 48, samplerate: 16000, mono: true },
   };
 
+  // Compressão de arquivos de áudio (opção 9 quando o arquivo é um áudio).
+  // Saída sempre MP3; bitrate/sample rate nunca sobem acima do original.
+  const LEVEL_AUDIO_ONLY = {
+    "1": { nome: "Baixa",   bitrate: 160, samplerate: null,  mono: false },
+    "2": { nome: "Média",   bitrate: 96,  samplerate: 44100, mono: false },
+    "3": { nome: "Alta",    bitrate: 64,  samplerate: 32000, mono: true },
+    "4": { nome: "Extrema", bitrate: 32,  samplerate: 22050, mono: true },
+  };
+
+  const RESUMO_VIDEO = {
+    "1": "CRF 24 · resolução e FPS originais · áudio AAC 128 kbps",
+    "2": "CRF 28 · resolução e FPS originais · áudio AAC 96 kbps mono 16 kHz",
+    "3": "CRF 30 · 75% da resolução · até 24 fps · áudio AAC 64 kbps mono 16 kHz",
+    "4": "CRF 32 · 50% da resolução · até 20 fps · áudio AAC 48 kbps mono 16 kHz",
+    "5": "Você define cada parâmetro abaixo.",
+  };
+
+  const RESUMO_AUDIO = {
+    "1": "MP3 160 kbps · canais e sample rate originais",
+    "2": "MP3 96 kbps · canais originais · até 44,1 kHz",
+    "3": "MP3 64 kbps · mono · até 32 kHz",
+    "4": "MP3 32 kbps · mono · até 22,05 kHz",
+    "5": "Você define cada parâmetro abaixo.",
+  };
+
   const CORE_BASE = "js/vendor/ffmpeg/core-mt";
   // ffmpeg-core.wasm (~31 MB) é maior que o limite de 25 MiB por arquivo do
   // Cloudflare Pages, então fica vendorizado em partes e é remontado aqui.
   const WASM_PARTS = ["ffmpeg-core.wasm.part0", "ffmpeg-core.wasm.part1", "ffmpeg-core.wasm.part2"];
+  const CACHE_MOTOR = "acta-ffmpeg-v1";
+
+  // O ffmpeg.wasm carrega o arquivo inteiro no heap do WebAssembly; acima
+  // disso é comum a aba ficar sem memória com um erro pouco informativo.
+  const LIMITE_AVISO_MEMORIA = 500 * 1024 * 1024;
+
+  // Bits por pixel do x264 (preset medium) em CRF 23, usado só na estimativa
+  // de tamanho. Cada 6 pontos de CRF dobram ou reduzem o bitrate pela metade.
+  const BPP_CRF23 = 0.07;
+  const FPS_PRESUMIDO = 30;
 
   // ---------------------------------------------------------------------
   // Utilitários
@@ -83,19 +122,20 @@
     return bytes.toFixed(1) + " " + units[i];
   }
 
+  /** Caminho a exibir: arquivos vindos de pasta (input ou arrasto) mostram o caminho. */
+  function caminhoDe(file) {
+    return file.caminhoRelativo || file.webkitRelativePath || file.name;
+  }
+
   async function fileToUint8(file) {
     return new Uint8Array(await file.arrayBuffer());
   }
 
-  async function montarWasmBlobURL(onStatus) {
-    const buffers = [];
-    for (const part of WASM_PARTS) {
-      const resp = await fetch(`${CORE_BASE}/${part}`);
-      if (!resp.ok) throw new Error(`Falha ao baixar ${part} (${resp.status})`);
-      buffers.push(await resp.arrayBuffer());
-    }
-    const blob = new Blob(buffers, { type: "application/wasm" });
-    return URL.createObjectURL(blob);
+  function tipoDoArquivo(file) {
+    const ext = extOf(file.name);
+    if (VIDEO_EXTS.includes(ext)) return "video";
+    if (AUDIO_EXTS.includes(ext)) return "audio";
+    return null;
   }
 
   function parseMediaInfo(log) {
@@ -129,14 +169,92 @@
     return info;
   }
 
+  /**
+   * Lê duração e dimensões pelo próprio elemento <video>/<audio> do navegador.
+   * É instantâneo e não depende do ffmpeg — serve para estimar o tamanho da
+   * saída antes de o usuário baixar os 30 MB do motor. Devolve null quando o
+   * navegador não sabe demuxar o formato (.avi, .mkv, .wmv…).
+   */
+  function lerMetadadosNativos(file) {
+    return new Promise((resolve) => {
+      const media = document.createElement(tipoDoArquivo(file) === "audio" ? "audio" : "video");
+      const url = URL.createObjectURL(file);
+      let resolvido = false;
+      const terminar = (info) => {
+        if (resolvido) return;
+        resolvido = true;
+        clearTimeout(timer);
+        media.removeAttribute("src");
+        URL.revokeObjectURL(url);
+        resolve(info);
+      };
+      const timer = setTimeout(() => terminar(null), 5000);
+      media.preload = "metadata";
+      media.muted = true;
+      media.addEventListener("loadedmetadata", () => {
+        terminar({
+          duracao: isFinite(media.duration) && media.duration > 0 ? media.duration : null,
+          largura: media.videoWidth || null,
+          altura: media.videoHeight || null,
+        });
+      });
+      media.addEventListener("error", () => terminar(null));
+      media.src = url;
+    });
+  }
+
+  /** Estimativa grosseira do tamanho da saída, em bytes. null = não dá para estimar. */
+  function estimarTamanho(tipo, meta, nivel, custom) {
+    if (!meta || !meta.duracao) return null;
+
+    if (tipo === "audio") {
+      const alvo = nivel === "5" ? custom : LEVEL_AUDIO_ONLY[nivel];
+      if (!alvo || !alvo.bitrate) return null;
+      return ((alvo.bitrate * 1000) / 8) * meta.duracao;
+    }
+
+    if (!meta.largura || !meta.altura) return null;
+    let crf;
+    let largura = meta.largura;
+    let altura = meta.altura;
+    let fps = FPS_PRESUMIDO;
+    let audioKbps;
+
+    if (nivel === "5") {
+      crf = custom.crf;
+      if (custom.width) {
+        altura = Math.round((custom.width * meta.altura) / meta.largura);
+        largura = custom.width;
+      }
+      if (custom.fps) fps = Math.min(fps, custom.fps);
+      audioKbps = custom.removeAudio ? 0 : custom.audioBitrate;
+    } else {
+      const v = LEVEL_VIDEO[nivel];
+      if (!v) return null;
+      crf = v.crf;
+      if (v.scale) {
+        largura = Math.round(largura * v.scale);
+        altura = Math.round(altura * v.scale);
+      }
+      if (v.maxFps) fps = Math.min(fps, v.maxFps);
+      audioKbps = LEVEL_AUDIO[nivel].bitrate;
+    }
+
+    const bpp = BPP_CRF23 * Math.pow(2, (23 - crf) / 6);
+    const bytesPorSegundo = (bpp * largura * altura * fps) / 8 + (audioKbps * 1000) / 8;
+    return bytesPorSegundo * meta.duracao;
+  }
+
   // ---------------------------------------------------------------------
-  // Motor ffmpeg (instância única, carregada sob demanda)
+  // Motor ffmpeg (instância única, carregada sob demanda e cacheada)
   // ---------------------------------------------------------------------
 
   let ffmpegInstance = null;
   let ffmpegLoadingPromise = null;
+  let ffmpegEmConstrucao = null;
   let logSink = null;
   let progressCallback = null;
+  let cancelado = false;
 
   function attachSinks(ffmpeg) {
     ffmpeg.on("log", ({ message }) => {
@@ -147,7 +265,98 @@
     });
   }
 
-  async function getFFmpeg(onStatus) {
+  async function abrirCache() {
+    if (!("caches" in window)) return null;
+    try {
+      return await caches.open(CACHE_MOTOR);
+    } catch (e) {
+      return null; // modo privado / storage bloqueado: segue sem cache
+    }
+  }
+
+  /** Lê o corpo de uma Response reportando cada pedaço recebido. */
+  async function lerCorpo(resp, onDelta) {
+    if (!resp.body || typeof resp.body.getReader !== "function") {
+      const buf = await resp.arrayBuffer();
+      onDelta(buf.byteLength);
+      return buf;
+    }
+    const leitor = resp.body.getReader();
+    const pedacos = [];
+    let tamanho = 0;
+    for (;;) {
+      const { done, value } = await leitor.read();
+      if (done) break;
+      pedacos.push(value);
+      tamanho += value.length;
+      onDelta(value.length);
+    }
+    const out = new Uint8Array(tamanho);
+    let pos = 0;
+    for (const p of pedacos) {
+      out.set(p, pos);
+      pos += p.length;
+    }
+    return out.buffer;
+  }
+
+  /**
+   * Baixa (ou recupera do cache) as partes do .wasm, remonta e devolve uma
+   * blob URL, reportando o progresso em bytes.
+   */
+  async function montarWasmBlobURL(onProgresso) {
+    const cache = await abrirCache();
+    const urls = WASM_PARTS.map((p) => `${CORE_BASE}/${p}`);
+
+    // Resolve as três respostas antes de ler qualquer corpo: assim os
+    // Content-Length somados dão o denominador da barra, e as partes que
+    // faltam baixam em paralelo em vez de uma depois da outra.
+    const fontes = await Promise.all(
+      urls.map(async (url) => {
+        let doCache = null;
+        if (cache) {
+          try { doCache = await cache.match(url); } catch (e) { doCache = null; }
+        }
+        if (doCache) return { url, resp: doCache, veioDoCache: true };
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`Falha ao baixar ${url} (${resp.status})`);
+        return { url, resp, veioDoCache: false };
+      })
+    );
+
+    const todasEmCache = fontes.every((f) => f.veioDoCache);
+    let total = 0;
+    for (const f of fontes) {
+      const n = Number(f.resp.headers.get("content-length"));
+      if (Number.isFinite(n) && n > 0) {
+        total += n;
+      } else {
+        total = 0; // sem Content-Length em alguma parte: barra indeterminada
+        break;
+      }
+    }
+
+    let recebido = 0;
+    const buffers = [];
+    for (const f of fontes) {
+      const buf = await lerCorpo(f.resp, (delta) => {
+        recebido += delta;
+        if (onProgresso) onProgresso(recebido, total, todasEmCache);
+      });
+      if (!f.veioDoCache && cache) {
+        try {
+          await cache.put(f.url, new Response(buf, { headers: { "Content-Type": "application/wasm" } }));
+        } catch (e) {
+          // cota estourada ou storage bloqueado: só perde o cache
+        }
+      }
+      buffers.push(buf);
+    }
+
+    return URL.createObjectURL(new Blob(buffers, { type: "application/wasm" }));
+  }
+
+  async function getFFmpeg(onStatus, onProgresso) {
     if (ffmpegInstance) return ffmpegInstance;
     if (!ffmpegLoadingPromise) {
       ffmpegLoadingPromise = (async () => {
@@ -157,22 +366,43 @@
             "não pode ser carregado. Verifique o arquivo _headers do Cloudflare Pages."
           );
         }
-        if (onStatus) onStatus("Carregando o motor de conversão (ffmpeg, ~30 MB, só na primeira vez)…");
+        if (onStatus) onStatus("Carregando o motor de conversão (ffmpeg)…");
         const { FFmpeg } = window.FFmpegWASM;
         const ffmpeg = new FFmpeg();
+        ffmpegEmConstrucao = ffmpeg;
         attachSinks(ffmpeg);
-        const wasmURL = await montarWasmBlobURL();
+        const wasmURL = await montarWasmBlobURL(onProgresso);
+        if (onStatus) onStatus("Inicializando o motor de conversão…");
         await ffmpeg.load({
           coreURL: `${CORE_BASE}/ffmpeg-core.js`,
           wasmURL,
           workerURL: `${CORE_BASE}/ffmpeg-core.worker.js`,
         });
+        ffmpegEmConstrucao = null;
         ffmpegInstance = ffmpeg;
         if (onStatus) onStatus("");
         return ffmpeg;
       })();
+      // permite uma nova tentativa depois de um erro ou de um cancelamento
+      ffmpegLoadingPromise.catch(() => {
+        ffmpegLoadingPromise = null;
+        ffmpegEmConstrucao = null;
+      });
     }
     return ffmpegLoadingPromise;
+  }
+
+  /** Mata o worker do ffmpeg; a instância recarrega (do cache) na próxima vez. */
+  function derrubarMotor() {
+    const alvo = ffmpegInstance || ffmpegEmConstrucao;
+    if (alvo) {
+      try { alvo.terminate(); } catch (e) {}
+    }
+    ffmpegInstance = null;
+    ffmpegLoadingPromise = null;
+    ffmpegEmConstrucao = null;
+    progressCallback = null;
+    logSink = null;
   }
 
   async function probeMediaInfo(ffmpeg, file) {
@@ -194,16 +424,18 @@
   // Operações (opções 1, 2, 3, 5)
   // ---------------------------------------------------------------------
 
-  async function convertAudioFile(ffmpeg, file) {
+  async function convertAudioFile(ffmpeg, file, onProgress) {
     const ext = extOf(file.name);
     if (ext === ".mp3") return { skipped: true, reason: "já é mp3" };
     const inName = "in" + ext;
     const outName = baseName(file.name) + ".mp3";
     await ffmpeg.writeFile(inName, await fileToUint8(file));
+    progressCallback = onProgress || null;
     let code;
     try {
       code = await ffmpeg.exec(["-i", inName, "-vn", "-codec:a", "libmp3lame", "-q:a", "0", outName]);
     } finally {
+      progressCallback = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
     if (code) throw new Error("ffmpeg retornou erro ao converter áudio");
@@ -212,12 +444,13 @@
     return { blob: new Blob([data.buffer], { type: "audio/mpeg" }), outName };
   }
 
-  async function convertVideoFile(ffmpeg, file) {
+  async function convertVideoFile(ffmpeg, file, onProgress) {
     const ext = extOf(file.name);
     if (ext === ".mp4") return { skipped: true, reason: "já é mp4" };
     const inName = "in" + ext;
     const outName = baseName(file.name) + ".mp4";
     await ffmpeg.writeFile(inName, await fileToUint8(file));
+    progressCallback = onProgress || null;
     let code;
     try {
       // tenta remuxar primeiro: copia os streams, sem recodificar (sem perda).
@@ -230,6 +463,7 @@
         ]);
       }
     } finally {
+      progressCallback = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
     if (code) throw new Error("ffmpeg retornou erro ao converter vídeo");
@@ -238,16 +472,18 @@
     return { blob: new Blob([data.buffer], { type: "video/mp4" }), outName };
   }
 
-  async function convertImageFile(ffmpeg, file) {
+  async function convertImageFile(ffmpeg, file, onProgress) {
     const ext = extOf(file.name);
     if (ext === ".jpg") return { skipped: true, reason: "já é jpg" };
     const inName = "in" + ext;
     const outName = baseName(file.name) + ".jpg";
     await ffmpeg.writeFile(inName, await fileToUint8(file));
+    progressCallback = onProgress || null;
     let code;
     try {
       code = await ffmpeg.exec(["-i", inName, "-q:v", "2", outName]);
     } finally {
+      progressCallback = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
     if (code) throw new Error("ffmpeg retornou erro ao converter imagem");
@@ -265,8 +501,45 @@
   }
 
   // ---------------------------------------------------------------------
-  // Compressão de vídeo (opção 9)
+  // Compressão (opção 9) — vídeo ou áudio, conforme o arquivo escolhido
   // ---------------------------------------------------------------------
+
+  async function compressAudioFile(ffmpeg, file, level, custom, onProgress) {
+    const info = await probeMediaInfo(ffmpeg, file);
+    const ext = extOf(file.name);
+    const inName = "ain" + ext;
+    const outName = baseName(file.name) + "_comprimido.mp3";
+    await ffmpeg.writeFile(inName, await fileToUint8(file));
+
+    const alvo = level === "5"
+      ? { bitrate: custom.bitrate, samplerate: custom.samplerate, mono: custom.mono }
+      : LEVEL_AUDIO_ONLY[level];
+
+    // Nunca sobe acima do original: recomprimir para cima só aumenta o arquivo.
+    let bitrate = alvo.bitrate;
+    if (info.aBitrate && info.aBitrate < bitrate) bitrate = info.aBitrate;
+    let samplerate = alvo.samplerate;
+    if (samplerate && info.aSampleRate && info.aSampleRate < samplerate) samplerate = info.aSampleRate;
+    const mono = alvo.mono || info.aChannels === 1;
+
+    const args = ["-i", inName, "-vn", "-c:a", "libmp3lame", "-b:a", bitrate + "k",
+                  "-ac", mono ? "1" : String(info.aChannels || 2)];
+    if (samplerate) args.push("-ar", String(samplerate));
+    args.push(outName);
+
+    progressCallback = onProgress || null;
+    let code;
+    try {
+      code = await ffmpeg.exec(args);
+    } finally {
+      progressCallback = null;
+      try { await ffmpeg.deleteFile(inName); } catch (e) {}
+    }
+    if (code) throw new Error("ffmpeg retornou erro ao comprimir o áudio");
+    const data = await ffmpeg.readFile(outName);
+    await ffmpeg.deleteFile(outName);
+    return { blob: new Blob([data.buffer], { type: "audio/mpeg" }), outName };
+  }
 
   async function compressVideoFile(ffmpeg, file, level, custom, onProgress) {
     const info = await probeMediaInfo(ffmpeg, file);
@@ -285,7 +558,7 @@
       let samplerate = samplerateAlvo;
       if (samplerate && info.aSampleRate && info.aSampleRate < samplerate) samplerate = info.aSampleRate;
       const mono = monoAlvo || info.aChannels === 1;
-      const args = ["-c:a", "aac", "-b:a", `${bitrate}k`, "-ac", mono ? "1" : String(info.aChannels || 2)];
+      const args = ["-c:a", "aac", "-b:a", bitrate + "k", "-ac", mono ? "1" : String(info.aChannels || 2)];
       if (samplerate) args.push("-ar", String(samplerate));
       return args;
     }
@@ -320,7 +593,7 @@
 
     const vArgs = ["-c:v", "libx264", "-crf", String(crf), "-preset", preset, "-pix_fmt", "yuv420p"];
     if (newW && newH && info.width && info.height && (newW !== info.width || newH !== info.height)) {
-      vArgs.push("-vf", `scale=${newW}:${newH}`);
+      vArgs.push("-vf", "scale=" + newW + ":" + newH);
     }
     if (targetFps) vArgs.push("-r", String(targetFps));
 
@@ -345,6 +618,15 @@
   const estado = {
     opcao: null,
     arquivos: [],
+    // Opção 9: "video" | "audio" | null — detectado pela extensão do arquivo.
+    tipoCompressao: null,
+    // Duração/dimensões do arquivo da opção 9, lidas sem o ffmpeg.
+    meta: null,
+    // Descarta leituras de metadados de seleções que já foram trocadas.
+    tokenMeta: 0,
+    // Saídas geradas na última execução, para "Baixar tudo".
+    saidas: [],
+    rodando: false,
   };
 
   const el = {
@@ -353,26 +635,80 @@
     rotuloArquivos: document.getElementById("rotulo-arquivos"),
     inputArquivos: document.getElementById("input-arquivos"),
     inputPasta: document.getElementById("input-pasta"),
+    labelPasta: document.getElementById("label-pasta"),
     listaSelecionados: document.getElementById("lista-selecionados"),
+    avisoMemoria: document.getElementById("aviso-memoria"),
     painelCompressao: document.getElementById("painel-compressao"),
-    personalizadaCampos: document.getElementById("personalizada-campos"),
+    tipoDetectado: document.getElementById("tipo-detectado"),
+    nivelResumo: document.getElementById("nivel-resumo"),
+    estimativa: document.getElementById("estimativa"),
+    personalizadaVideo: document.getElementById("personalizada-video"),
+    personalizadaAudioOnly: document.getElementById("personalizada-audio-only"),
     personalizadaAudio: document.getElementById("personalizada-audio"),
     pRemoverAudio: document.getElementById("p-remover-audio"),
     btnIniciar: document.getElementById("btn-iniciar"),
+    btnCancelar: document.getElementById("btn-cancelar"),
     btnLimpar: document.getElementById("btn-limpar"),
     statusMotor: document.getElementById("status-motor"),
+    statusMotorTexto: document.getElementById("status-motor-texto"),
+    barraMotor: document.getElementById("barra-motor"),
+    barraMotorPreenchida: document.getElementById("barra-motor-preenchida"),
     resultadosWrapper: document.getElementById("resultados-wrapper"),
+    progressoLote: document.getElementById("progresso-lote"),
+    acoesResultados: document.getElementById("acoes-resultados"),
+    btnBaixarTudo: document.getElementById("btn-baixar-tudo"),
+    btnSalvarPasta: document.getElementById("btn-salvar-pasta"),
     listaResultados: document.getElementById("lista-resultados"),
   };
 
   function setStatus(texto) {
     if (!texto) {
       el.statusMotor.classList.add("escondido");
-      el.statusMotor.textContent = "";
+      el.statusMotorTexto.textContent = "";
+      setBarraMotor(null);
     } else {
       el.statusMotor.classList.remove("escondido");
-      el.statusMotor.textContent = texto;
+      el.statusMotorTexto.textContent = texto;
     }
+  }
+
+  /** fracao null esconde a barra; 0..1 preenche. */
+  function setBarraMotor(fracao) {
+    if (fracao === null || fracao === undefined) {
+      el.barraMotor.classList.add("escondido");
+      el.barraMotorPreenchida.style.width = "0%";
+      return;
+    }
+    el.barraMotor.classList.remove("escondido");
+    el.barraMotorPreenchida.style.width = Math.round(Math.min(1, fracao) * 100) + "%";
+  }
+
+  function onProgressoMotor(recebido, total, todasEmCache) {
+    if (todasEmCache) {
+      setStatus("Recuperando o motor de conversão do cache do navegador…");
+      setBarraMotor(total ? recebido / total : 1);
+      return;
+    }
+    if (total) {
+      const pct = Math.round((recebido / total) * 100);
+      setStatus(
+        "Baixando o motor de conversão — " + humanSize(recebido) + " de " +
+        humanSize(total) + " (" + pct + "%). Só na primeira visita."
+      );
+      setBarraMotor(recebido / total);
+    } else {
+      setStatus("Baixando o motor de conversão — " + humanSize(recebido) + " recebidos…");
+      setBarraMotor(null);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Seleção de arquivos (inputs + arrastar e soltar)
+  // ---------------------------------------------------------------------
+
+  function definirArquivos(lista) {
+    estado.arquivos = lista;
+    atualizarListaSelecionados();
   }
 
   function atualizarListaSelecionados() {
@@ -380,7 +716,7 @@
     estado.arquivos.forEach((f) => {
       const li = document.createElement("li");
       const nome = document.createElement("span");
-      nome.textContent = f.webkitRelativePath || f.name;
+      nome.textContent = caminhoDe(f);
       const tam = document.createElement("span");
       tam.className = "tam";
       tam.textContent = humanSize(f.size);
@@ -388,14 +724,229 @@
       li.appendChild(tam);
       el.listaSelecionados.appendChild(li);
     });
+    atualizarAvisoMemoria();
+    atualizarPainelCompressao();
+    carregarMetadados();
     atualizarBotaoIniciar();
   }
 
+  /** Avisa quando algum arquivo é grande o bastante para estourar a memória da aba. */
+  function atualizarAvisoMemoria() {
+    if (estado.arquivos.length === 0) {
+      el.avisoMemoria.classList.add("escondido");
+      return;
+    }
+    let maior = estado.arquivos[0];
+    for (const f of estado.arquivos) if (f.size > maior.size) maior = f;
+    if (maior.size < LIMITE_AVISO_MEMORIA) {
+      el.avisoMemoria.classList.add("escondido");
+      el.avisoMemoria.textContent = "";
+      return;
+    }
+    el.avisoMemoria.classList.remove("escondido");
+    el.avisoMemoria.textContent =
+      "⚠ O arquivo " + maior.name + " tem " + humanSize(maior.size) +
+      ". O ffmpeg carrega o arquivo inteiro na memória do navegador, e acima de " +
+      "~500 MB é comum a aba ficar sem memória no meio do processo. Se falhar, " +
+      "corte o arquivo em partes menores antes.";
+  }
+
+  /** Percorre uma entrada arrastada (arquivo ou pasta) acumulando os arquivos. */
+  function percorrerEntrada(entrada, prefixo, saida) {
+    return new Promise((resolve) => {
+      if (entrada.isFile) {
+        entrada.file(
+          (f) => {
+            // o input de pasta preenche webkitRelativePath, que é só-leitura;
+            // aqui o caminho vai num campo próprio
+            try {
+              Object.defineProperty(f, "caminhoRelativo", { value: prefixo + f.name });
+            } catch (e) {}
+            saida.push(f);
+            resolve();
+          },
+          () => resolve()
+        );
+        return;
+      }
+      if (!entrada.isDirectory) return resolve();
+
+      const leitor = entrada.createReader();
+      const filhos = [];
+      const lerLote = () => {
+        leitor.readEntries(
+          async (entradas) => {
+            if (entradas.length === 0) {
+              for (const filho of filhos) {
+                await percorrerEntrada(filho, prefixo + entrada.name + "/", saida);
+              }
+              return resolve();
+            }
+            // readEntries devolve no máximo 100 por chamada: repete até esvaziar
+            filhos.push(...entradas);
+            lerLote();
+          },
+          () => resolve()
+        );
+      };
+      lerLote();
+    });
+  }
+
+  async function arquivosDoArrasto(dataTransfer) {
+    const itens = Array.from(dataTransfer.items || []);
+    const raizes = itens
+      .map((it) => (typeof it.webkitGetAsEntry === "function" ? it.webkitGetAsEntry() : null))
+      .filter(Boolean);
+    if (raizes.length === 0) return Array.from(dataTransfer.files || []);
+    const arquivos = [];
+    for (const raiz of raizes) await percorrerEntrada(raiz, "", arquivos);
+    return arquivos;
+  }
+
+  ["dragenter", "dragover"].forEach((evt) => {
+    el.painelArquivos.addEventListener(evt, (ev) => {
+      ev.preventDefault();
+      if (estado.rodando) return;
+      ev.dataTransfer.dropEffect = "copy";
+      el.painelArquivos.classList.add("arrastando");
+    });
+  });
+
+  ["dragleave", "dragend"].forEach((evt) => {
+    el.painelArquivos.addEventListener(evt, (ev) => {
+      if (ev.target !== el.painelArquivos) return;
+      el.painelArquivos.classList.remove("arrastando");
+    });
+  });
+
+  el.painelArquivos.addEventListener("drop", async (ev) => {
+    ev.preventDefault();
+    el.painelArquivos.classList.remove("arrastando");
+    if (estado.rodando) return;
+    const arquivos = await arquivosDoArrasto(ev.dataTransfer);
+    if (arquivos.length === 0) return;
+    el.inputArquivos.value = "";
+    el.inputPasta.value = "";
+    definirArquivos(arquivos);
+  });
+
+  // Impede que soltar um arquivo fora da zona faça o navegador abri-lo.
+  window.addEventListener("dragover", (ev) => ev.preventDefault());
+  window.addEventListener("drop", (ev) => ev.preventDefault());
+
+  // ---------------------------------------------------------------------
+  // Painel de compressão (opção 9)
+  // ---------------------------------------------------------------------
+
   function atualizarBotaoIniciar() {
+    if (estado.rodando) {
+      el.btnIniciar.disabled = true;
+      return;
+    }
     let ok = estado.opcao && estado.arquivos.length > 0;
-    if (estado.opcao === "9" && estado.arquivos.length !== 1) ok = false;
+    if (estado.opcao === "9" && (estado.arquivos.length !== 1 || !estado.tipoCompressao)) ok = false;
     el.btnIniciar.disabled = !ok;
   }
+
+  function nivelSelecionado() {
+    const marcado = document.querySelector('input[name="nivel"]:checked');
+    return marcado ? marcado.value : "1";
+  }
+
+  /**
+   * Mostra o painel de compressão só quando há exatamente um arquivo de
+   * vídeo ou de áudio selecionado, e exibe apenas os campos manuais do tipo
+   * detectado — e ainda assim somente no nível "Personalizada".
+   */
+  function atualizarPainelCompressao() {
+    if (estado.opcao !== "9") {
+      estado.tipoCompressao = null;
+      el.painelCompressao.classList.add("escondido");
+      return;
+    }
+
+    estado.tipoCompressao =
+      estado.arquivos.length === 1 ? tipoDoArquivo(estado.arquivos[0]) : null;
+
+    if (estado.arquivos.length === 0) {
+      el.painelCompressao.classList.add("escondido");
+      return;
+    }
+
+    if (!estado.tipoCompressao) {
+      el.painelCompressao.classList.remove("escondido");
+      el.tipoDetectado.textContent =
+        estado.arquivos.length > 1
+          ? "selecione um único arquivo"
+          : "tipo não reconhecido — escolha um vídeo ou um áudio";
+      el.tipoDetectado.className = "tipo-detectado invalido";
+      el.nivelResumo.textContent = "";
+      el.estimativa.classList.add("escondido");
+      el.personalizadaVideo.classList.add("escondido");
+      el.personalizadaAudioOnly.classList.add("escondido");
+      return;
+    }
+
+    const nivel = nivelSelecionado();
+    const ehVideo = estado.tipoCompressao === "video";
+
+    el.painelCompressao.classList.remove("escondido");
+    el.tipoDetectado.textContent = ehVideo ? "vídeo detectado" : "áudio detectado";
+    el.tipoDetectado.className = "tipo-detectado";
+    el.nivelResumo.textContent = (ehVideo ? RESUMO_VIDEO : RESUMO_AUDIO)[nivel] || "";
+
+    const personalizada = nivel === "5";
+    el.personalizadaVideo.classList.toggle("escondido", !(personalizada && ehVideo));
+    el.personalizadaAudioOnly.classList.toggle("escondido", !(personalizada && !ehVideo));
+
+    atualizarEstimativa();
+  }
+
+  /** Lê os metadados nativos do arquivo da opção 9 e atualiza a estimativa. */
+  function carregarMetadados() {
+    estado.meta = null;
+    const token = ++estado.tokenMeta;
+    if (estado.opcao !== "9" || estado.arquivos.length !== 1 || !estado.tipoCompressao) {
+      atualizarEstimativa();
+      return;
+    }
+    lerMetadadosNativos(estado.arquivos[0]).then((meta) => {
+      if (token !== estado.tokenMeta) return; // a seleção mudou nesse meio-tempo
+      estado.meta = meta;
+      atualizarEstimativa();
+    });
+  }
+
+  function atualizarEstimativa() {
+    if (estado.opcao !== "9" || !estado.tipoCompressao || !estado.meta) {
+      el.estimativa.classList.add("escondido");
+      el.estimativa.textContent = "";
+      return;
+    }
+    const nivel = nivelSelecionado();
+    const ehVideo = estado.tipoCompressao === "video";
+    const custom = nivel !== "5"
+      ? null
+      : ehVideo ? lerNivelPersonalizado() : lerNivelPersonalizadoAudio();
+    const bytes = estimarTamanho(estado.tipoCompressao, estado.meta, nivel, custom);
+    if (!bytes) {
+      el.estimativa.classList.add("escondido");
+      el.estimativa.textContent = "";
+      return;
+    }
+    const original = estado.arquivos[0].size;
+    const variacao = Math.round((1 - bytes / original) * 100);
+    const sinal = variacao >= 0 ? "−" + variacao + "%" : "+" + -variacao + "%";
+    el.estimativa.classList.remove("escondido");
+    el.estimativa.textContent =
+      "Estimativa: " + humanSize(original) + " → ~" + humanSize(bytes) + " (" + sinal + "). " +
+      "É um cálculo aproximado — o resultado real depende do conteúdo do arquivo.";
+  }
+
+  // ---------------------------------------------------------------------
+  // Eventos da seleção de operação e dos campos
+  // ---------------------------------------------------------------------
 
   function selecionarOpcao(opcao) {
     estado.opcao = opcao;
@@ -403,11 +954,13 @@
       btn.classList.toggle("ativo", btn.dataset.op === opcao);
     });
     el.painelArquivos.classList.remove("escondido");
-    el.painelCompressao.classList.toggle("escondido", opcao !== "9");
     el.rotuloArquivos.textContent =
       opcao === "9"
-        ? "Selecione um único arquivo de vídeo"
-        : "Selecione o(s) arquivo(s) ou a pasta";
+        ? "2. Selecione um único arquivo de vídeo ou de áudio"
+        : "2. Selecione o(s) arquivo(s) ou a pasta";
+    el.labelPasta.classList.toggle("escondido", opcao === "9");
+    atualizarPainelCompressao();
+    carregarMetadados();
     atualizarBotaoIniciar();
   }
 
@@ -418,20 +971,25 @@
   });
 
   el.inputArquivos.addEventListener("change", () => {
-    estado.arquivos = Array.from(el.inputArquivos.files);
     el.inputPasta.value = "";
-    atualizarListaSelecionados();
+    definirArquivos(Array.from(el.inputArquivos.files));
   });
 
   el.inputPasta.addEventListener("change", () => {
-    estado.arquivos = Array.from(el.inputPasta.files);
     el.inputArquivos.value = "";
-    atualizarListaSelecionados();
+    definirArquivos(Array.from(el.inputPasta.files));
   });
 
   document.getElementById("niveis-compressao").addEventListener("change", (ev) => {
     if (ev.target.name !== "nivel") return;
-    el.personalizadaCampos.classList.toggle("escondido", ev.target.value !== "5");
+    atualizarPainelCompressao();
+  });
+
+  // Mexer nos campos da personalizada recalcula a estimativa na hora.
+  ["personalizada-video", "personalizada-audio-only"].forEach((id) => {
+    const bloco = document.getElementById(id);
+    bloco.addEventListener("input", atualizarEstimativa);
+    bloco.addEventListener("change", atualizarEstimativa);
   });
 
   el.pRemoverAudio.addEventListener("change", () => {
@@ -444,16 +1002,32 @@
   el.btnLimpar.addEventListener("click", () => {
     estado.opcao = null;
     estado.arquivos = [];
+    estado.tipoCompressao = null;
+    estado.meta = null;
+    estado.tokenMeta++;
+    limparSaidas();
     el.inputArquivos.value = "";
     el.inputPasta.value = "";
     document.querySelectorAll(".opcao-conversor").forEach((btn) => btn.classList.remove("ativo"));
     el.painelArquivos.classList.add("escondido");
     el.painelCompressao.classList.add("escondido");
     el.listaSelecionados.innerHTML = "";
+    el.avisoMemoria.classList.add("escondido");
+    el.estimativa.classList.add("escondido");
     el.resultadosWrapper.classList.add("escondido");
     el.listaResultados.innerHTML = "";
+    el.progressoLote.textContent = "";
+    setStatus("");
     atualizarBotaoIniciar();
   });
+
+  function lerNivelPersonalizadoAudio() {
+    return {
+      bitrate: parseInt(document.getElementById("pa-bitrate").value, 10) || 96,
+      samplerate: parseInt(document.getElementById("pa-samplerate").value, 10) || null,
+      mono: document.getElementById("pa-mono").checked,
+    };
+  }
 
   function lerNivelPersonalizado() {
     return {
@@ -471,36 +1045,140 @@
   // Resultados (uma linha por arquivo, com botão de download individual)
   // ---------------------------------------------------------------------
 
-  function criarLinhaResultado(nomeOriginal) {
+  function limparSaidas() {
+    for (const s of estado.saidas) {
+      if (s.url) URL.revokeObjectURL(s.url);
+    }
+    estado.saidas = [];
+    el.acoesResultados.classList.add("escondido");
+  }
+
+  function criarLinhaResultado(nomeOriginal, tamanhoOriginal) {
     const li = document.createElement("li");
     li.className = "resultado-item";
-    li.innerHTML = `
-      <div class="resultado-info">
-        <div class="resultado-nome">${nomeOriginal}</div>
-        <div class="resultado-status">Aguardando…</div>
-        <div class="resultado-barra"><div class="resultado-barra-preenchida"></div></div>
-      </div>
-    `;
+
+    const info = document.createElement("div");
+    info.className = "resultado-info";
+
+    const nome = document.createElement("div");
+    nome.className = "resultado-nome";
+    nome.textContent = nomeOriginal;
+
+    const status = document.createElement("div");
+    status.className = "resultado-status";
+    status.textContent = "Aguardando…";
+
+    const tamanhos = document.createElement("div");
+    tamanhos.className = "resultado-tamanhos";
+
+    const barra = document.createElement("div");
+    barra.className = "resultado-barra";
+    const preenchida = document.createElement("div");
+    preenchida.className = "resultado-barra-preenchida";
+    barra.appendChild(preenchida);
+
+    info.appendChild(nome);
+    info.appendChild(status);
+    info.appendChild(tamanhos);
+    info.appendChild(barra);
+    li.appendChild(info);
     el.listaResultados.appendChild(li);
+
     return {
       setStatus(texto, classe) {
-        const s = li.querySelector(".resultado-status");
-        s.textContent = texto;
-        s.className = "resultado-status" + (classe ? " " + classe : "");
+        status.textContent = texto;
+        status.className = "resultado-status" + (classe ? " " + classe : "");
       },
       setProgresso(fracao) {
-        li.querySelector(".resultado-barra-preenchida").style.width = Math.round(fracao * 100) + "%";
+        preenchida.style.width = Math.round(fracao * 100) + "%";
+      },
+      esconderBarra() {
+        barra.classList.add("escondido");
       },
       adicionarDownload(blob, outName) {
-        li.querySelector(".resultado-barra").remove();
+        barra.classList.add("escondido");
+
+        // Comparação de tamanhos: é o número que interessa numa compressão.
+        const variacao = Math.round((1 - blob.size / tamanhoOriginal) * 100);
+        const rotulo = variacao >= 0 ? "−" + variacao + "%" : "+" + -variacao + "%";
+        tamanhos.textContent =
+          humanSize(tamanhoOriginal) + " → " + humanSize(blob.size) + " (" + rotulo + ")";
+        tamanhos.classList.add(variacao > 0 ? "menor" : "maior");
+
+        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.className = "btn-secondary resultado-download";
-        a.href = URL.createObjectURL(blob);
+        a.href = url;
         a.download = outName;
-        a.textContent = "Baixar " + outName;
+        a.textContent = "Baixar";
+        a.title = "Baixar " + outName;
         li.appendChild(a);
+
+        estado.saidas.push({ nome: outName, blob: blob, url: url });
+        el.acoesResultados.classList.remove("escondido");
       },
     };
+  }
+
+  // ---------------------------------------------------------------------
+  // "Baixar tudo" — zip client-side ou gravação direta numa pasta
+  // ---------------------------------------------------------------------
+
+  el.btnBaixarTudo.addEventListener("click", async () => {
+    if (estado.saidas.length === 0) return;
+    const textoOriginal = el.btnBaixarTudo.textContent;
+    el.btnBaixarTudo.disabled = true;
+    try {
+      const zip = await window.ActaZip.criarZip(
+        estado.saidas.map((s) => ({ nome: s.nome, blob: s.blob })),
+        (feito, total) => {
+          el.btnBaixarTudo.textContent = "Compactando " + feito + "/" + total + "…";
+        }
+      );
+      const url = URL.createObjectURL(zip);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "acta-convertidos.zip";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      setStatus("Não foi possível montar o zip: " + err.message);
+    } finally {
+      el.btnBaixarTudo.textContent = textoOriginal;
+      el.btnBaixarTudo.disabled = false;
+    }
+  });
+
+  if (typeof window.showDirectoryPicker === "function") {
+    el.btnSalvarPasta.classList.remove("escondido");
+    el.btnSalvarPasta.addEventListener("click", async () => {
+      if (estado.saidas.length === 0) return;
+      let pasta;
+      try {
+        pasta = await window.showDirectoryPicker({ mode: "readwrite" });
+      } catch (err) {
+        return; // usuário fechou o seletor
+      }
+      const textoOriginal = el.btnSalvarPasta.textContent;
+      el.btnSalvarPasta.disabled = true;
+      try {
+        let i = 0;
+        for (const saida of estado.saidas) {
+          i++;
+          el.btnSalvarPasta.textContent = "Gravando " + i + "/" + estado.saidas.length + "…";
+          const handle = await pasta.getFileHandle(saida.nome, { create: true });
+          const escrita = await handle.createWritable();
+          await escrita.write(saida.blob);
+          await escrita.close();
+        }
+        setStatus(estado.saidas.length + " arquivo(s) gravados na pasta escolhida.");
+      } catch (err) {
+        setStatus("Falha ao gravar na pasta: " + err.message);
+      } finally {
+        el.btnSalvarPasta.textContent = textoOriginal;
+        el.btnSalvarPasta.disabled = false;
+      }
+    });
   }
 
   // ---------------------------------------------------------------------
@@ -511,80 +1189,136 @@
     const ext = extOf(file.name);
     const tarefas = [];
     if (opcao === "1" || opcao === "4" || opcao === "8") {
-      if (AUDIO_EXTS.includes(ext)) tarefas.push(["áudio", () => convertAudioFile(ffmpeg, file)]);
+      if (AUDIO_EXTS.includes(ext)) tarefas.push(["áudio", (p) => convertAudioFile(ffmpeg, file, p)]);
     }
     if (opcao === "2" || opcao === "4" || opcao === "8") {
-      if (VIDEO_EXTS.includes(ext)) tarefas.push(["vídeo", () => convertVideoFile(ffmpeg, file)]);
+      if (VIDEO_EXTS.includes(ext)) tarefas.push(["vídeo", (p) => convertVideoFile(ffmpeg, file, p)]);
     }
     if (opcao === "3" || opcao === "4" || opcao === "8") {
-      if (IMAGE_EXTS.includes(ext)) tarefas.push(["imagem", () => convertImageFile(ffmpeg, file)]);
+      if (IMAGE_EXTS.includes(ext)) tarefas.push(["imagem", (p) => convertImageFile(ffmpeg, file, p)]);
     }
     if (opcao === "5" || opcao === "8") {
       tarefas.push(["extensão", () => Promise.resolve(standardizeExtensionFile(file))]);
     }
 
     if (tarefas.length === 0) {
+      linha.esconderBarra();
       linha.setStatus("Tipo não reconhecido para esta operação — ignorado.", "erro");
       return;
     }
 
-    let algumSucesso = false;
-    for (const [rotulo, executar] of tarefas) {
+    for (const tarefa of tarefas) {
+      const rotulo = tarefa[0];
+      const executar = tarefa[1];
+      if (cancelado) return;
       try {
-        linha.setStatus(`Processando (${rotulo})…`);
-        const resultado = await executar();
+        linha.setStatus("Processando (" + rotulo + ")…");
+        const resultado = await executar((p) => linha.setProgresso(p));
         if (resultado.skipped) {
-          linha.setStatus(`Sem alteração (${resultado.reason}).`, "ok");
+          linha.esconderBarra();
+          linha.setStatus("Sem alteração (" + resultado.reason + ").", "ok");
           continue;
         }
-        linha.setStatus(`Concluído (${rotulo}).`, "ok");
+        linha.setStatus("Concluído (" + rotulo + ").", "ok");
         linha.adicionarDownload(resultado.blob, resultado.outName);
-        algumSucesso = true;
       } catch (err) {
-        linha.setStatus(`Falha ao processar (${rotulo}): ${err.message}`, "erro");
+        if (cancelado) return;
+        linha.esconderBarra();
+        linha.setStatus("Falha ao processar (" + rotulo + "): " + err.message, "erro");
       }
-    }
-    if (!algumSucesso && tarefas.length > 0) {
-      // já reportado por linha (sem alteração ou falha); nada mais a fazer.
     }
   }
 
-  async function iniciar() {
+  function entrarModoExecucao() {
+    estado.rodando = true;
+    cancelado = false;
     el.btnIniciar.disabled = true;
+    el.btnCancelar.classList.remove("escondido");
+    el.btnCancelar.disabled = false;
+    el.btnLimpar.disabled = true;
+  }
+
+  function sairModoExecucao() {
+    estado.rodando = false;
+    el.btnCancelar.classList.add("escondido");
+    el.btnLimpar.disabled = false;
+    el.progressoLote.textContent = "";
+    atualizarBotaoIniciar();
+  }
+
+  el.btnCancelar.addEventListener("click", () => {
+    if (!estado.rodando) return;
+    cancelado = true;
+    el.btnCancelar.disabled = true;
+    setStatus(
+      "Cancelando… O motor de conversão é encerrado; na próxima execução ele " +
+      "volta do cache do navegador."
+    );
+    setBarraMotor(null);
+    derrubarMotor();
+  });
+
+  async function iniciar() {
+    entrarModoExecucao();
+    limparSaidas();
     el.resultadosWrapper.classList.remove("escondido");
     el.listaResultados.innerHTML = "";
 
     let ffmpeg;
     try {
-      ffmpeg = await getFFmpeg(setStatus);
+      ffmpeg = await getFFmpeg(setStatus, onProgressoMotor);
     } catch (err) {
-      setStatus("Erro ao carregar o motor de conversão: " + err.message);
-      el.btnIniciar.disabled = false;
+      setStatus(
+        cancelado
+          ? "Cancelado antes de o motor terminar de carregar."
+          : "Erro ao carregar o motor de conversão: " + err.message
+      );
+      setBarraMotor(null);
+      sairModoExecucao();
+      return;
+    }
+    if (cancelado) {
+      setStatus("Cancelado.");
+      sairModoExecucao();
       return;
     }
     setStatus("");
 
-    if (estado.opcao === "9") {
-      const file = estado.arquivos[0];
-      const linha = criarLinhaResultado(file.name);
-      const nivel = document.querySelector('input[name="nivel"]:checked').value;
-      const custom = nivel === "5" ? lerNivelPersonalizado() : null;
-      try {
-        linha.setStatus("Analisando o vídeo…");
-        const resultado = await compressVideoFile(ffmpeg, file, nivel, custom, (p) => linha.setProgresso(p));
-        linha.setStatus("Concluído.", "ok");
-        linha.adicionarDownload(resultado.blob, resultado.outName);
-      } catch (err) {
-        linha.setStatus("Falha: " + err.message, "erro");
+    try {
+      if (estado.opcao === "9") {
+        const file = estado.arquivos[0];
+        const ehVideo = estado.tipoCompressao === "video";
+        const linha = criarLinhaResultado(caminhoDe(file), file.size);
+        const nivel = nivelSelecionado();
+        const custom = nivel !== "5"
+          ? null
+          : ehVideo ? lerNivelPersonalizado() : lerNivelPersonalizadoAudio();
+        try {
+          linha.setStatus(ehVideo ? "Analisando o vídeo…" : "Analisando o áudio…");
+          const comprimir = ehVideo ? compressVideoFile : compressAudioFile;
+          const resultado = await comprimir(ffmpeg, file, nivel, custom, (p) => linha.setProgresso(p));
+          linha.setStatus("Concluído.", "ok");
+          linha.adicionarDownload(resultado.blob, resultado.outName);
+        } catch (err) {
+          linha.esconderBarra();
+          linha.setStatus(cancelado ? "Cancelado." : "Falha: " + err.message, "erro");
+        }
+      } else {
+        const total = estado.arquivos.length;
+        for (let i = 0; i < total; i++) {
+          if (cancelado) break;
+          const file = estado.arquivos[i];
+          el.progressoLote.textContent = "arquivo " + (i + 1) + " de " + total;
+          const linha = criarLinhaResultado(caminhoDe(file), file.size);
+          await processarArquivoConversao(ffmpeg, file, estado.opcao, linha);
+        }
       }
-    } else {
-      for (const file of estado.arquivos) {
-        const linha = criarLinhaResultado(file.webkitRelativePath || file.name);
-        await processarArquivoConversao(ffmpeg, file, estado.opcao, linha);
+    } finally {
+      if (cancelado) {
+        setStatus("Cancelado. Os arquivos já concluídos continuam disponíveis abaixo.");
       }
+      sairModoExecucao();
     }
-
-    el.btnIniciar.disabled = false;
   }
 
   el.btnIniciar.addEventListener("click", iniciar);

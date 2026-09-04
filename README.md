@@ -82,7 +82,6 @@ O fluxo é: **schema → engine → generator**.
    `tipo_ocorrencia`, isso já é implícito. Mas podem usar `exibirSe`
    entre si, para ramificações internas do próprio tipo (ex.: subtipo de
    estelionato → golpe do Pix → lista de transferências).
-
 3. Inclua o arquivo em `index.html`, antes de `js/schema.js`:
 
    ```html
@@ -110,7 +109,8 @@ texto de casos que ainda não foram gerados.
 ## Conversor de mídia (`conversor.html`)
 
 Segunda ferramenta do site, acessível pela nav-bar no topo. Converte
-áudio/vídeo/imagem e comprime vídeo, tudo processado **no navegador** via
+áudio/vídeo/imagem e comprime vídeo ou áudio, tudo processado **no
+navegador** via
 [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) — nenhum arquivo
 é enviado a servidor algum, igual ao gerador de ocorrências.
 
@@ -118,12 +118,20 @@ Segunda ferramenta do site, acessível pela nav-bar no topo. Converte
   markup, estilo e lógica da página. `js/conversor.js` reimplementa as
   mesmas regras do script Python homônimo (conversão sem recompressão nas
   opções 1/2/3, tabela de crf/resolução/fps/áudio por nível na opção 9,
-  etc).
+  etc). A opção 9 aceita vídeo **ou** áudio: o tipo é detectado pela
+  extensão e só os campos daquele tipo aparecem, e apenas no nível
+  "Personalizada".
+- **`js/zip.js`** — escritor de ZIP mínimo (método STORE, sem ZIP64) usado
+  pelo botão "Baixar tudo". Não usa biblioteca externa: os arquivos de
+  saída já são comprimidos, então deflate não traria ganho.
 - **`js/vendor/ffmpeg/`** — build UMD do `@ffmpeg/ffmpeg` (`ffmpeg.js` +
   `814.ffmpeg.js`) e, em `core-mt/`, o core multi-thread
   `@ffmpeg/core-mt` (`ffmpeg-core.js`, `.wasm`, `.worker.js`). Vendorizado
   no repo (não vem de CDN) para funcionar mesmo em rede restrita — ver
   "Atualizando o ffmpeg.wasm" abaixo.
+- O `.wasm` do motor é guardado no Cache API sob a chave
+  `acta-ffmpeg-v1`, então só é baixado na primeira visita. Ao trocar a
+  versão do ffmpeg, mude também esse nome de cache para invalidar o antigo.
 - **`_headers`** — habilita `Cross-Origin-Opener-Policy`/
   `Cross-Origin-Embedder-Policy` (`same-origin`/`require-corp`) **apenas**
   na rota `/conversor.html`, necessário para o core multi-thread
@@ -132,7 +140,15 @@ Segunda ferramenta do site, acessível pela nav-bar no topo. Converte
 Limitações herdadas de rodar no navegador (sem acesso a disco): a opção 5
 (padronizar extensões) não renomeia o arquivo original no disco do
 usuário — ela gera uma cópia com o nome corrigido, disponível para
-download, como todas as outras opções.
+download, como todas as outras opções. Em navegadores com a File System
+Access API (Chromium), o botão "Salvar numa pasta…" grava as saídas
+direto numa pasta escolhida; nos demais resta o "Baixar tudo (.zip)".
+
+Outras limitações: `.heic` **não** está na lista de imagens suportadas
+porque o build padrão do `@ffmpeg/core-mt` não traz decodificador HEIC. E
+o ffmpeg.wasm carrega o arquivo inteiro no heap do WebAssembly, então
+arquivos acima de ~500 MB podem estourar a memória da aba — a página
+avisa quando isso é provável.
 
 ### Atualizando o ffmpeg.wasm
 

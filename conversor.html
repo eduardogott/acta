@@ -26,14 +26,15 @@
   <section class="intro">
     <h1 class="page-title"><b>Conversor</b> de Mídia</h1>
     <p class="page-lead">Converte áudios, vídeos e imagens, padroniza extensões e
-    comprime vídeos — tudo processado localmente no seu navegador com ffmpeg,
+    comprime vídeos e áudios — tudo processado localmente no seu navegador com ffmpeg,
     sem enviar nada a servidor algum.</p>
     <p class="aviso-privacidade">
       <span aria-hidden="true">🔒</span>
       Todo o processamento roda no seu navegador (WebAssembly). Os arquivos
       originais e convertidos nunca saem do seu computador. Na primeira
-      conversão, o motor ffmpeg (~30&nbsp;MB) é carregado uma única vez —
-      pode demorar alguns segundos.
+      conversão, o motor ffmpeg (~30&nbsp;MB) é baixado uma única vez e fica
+      guardado no cache do navegador — nas próximas visitas ele carrega na
+      hora.
     </p>
   </section>
 
@@ -41,39 +42,32 @@
 
   <div class="opcoes-conversor" id="opcoes-conversor">
     <button type="button" class="opcao-conversor" data-op="1">
-      <span class="opcao-num">1</span>
       <span class="opcao-titulo">Converter áudios</span>
       <span class="opcao-desc">Qualquer áudio → MP3</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="2">
-      <span class="opcao-num">2</span>
       <span class="opcao-titulo">Converter vídeos</span>
       <span class="opcao-desc">Qualquer vídeo → MP4</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="3">
-      <span class="opcao-num">3</span>
       <span class="opcao-titulo">Converter imagens</span>
       <span class="opcao-desc">Qualquer imagem → JPG</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="4">
-      <span class="opcao-num">4</span>
       <span class="opcao-titulo">Converter tudo</span>
-      <span class="opcao-desc">Opções 1, 2 e 3 juntas</span>
+      <span class="opcao-desc">Áudios, vídeos e imagens de uma vez</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="5">
-      <span class="opcao-num">5</span>
       <span class="opcao-titulo">Padronizar extensões</span>
       <span class="opcao-desc">jpeg→jpg, mpeg→mpg, tiff→tif…</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="8">
-      <span class="opcao-num">8</span>
       <span class="opcao-titulo">Efetuar todos</span>
-      <span class="opcao-desc">Opções 4 e 5 juntas</span>
+      <span class="opcao-desc">Converter tudo + padronizar extensões</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="9">
-      <span class="opcao-num">9</span>
-      <span class="opcao-titulo">Comprimir vídeo</span>
-      <span class="opcao-desc">Aceita um único arquivo</span>
+      <span class="opcao-titulo">Comprimir arquivo</span>
+      <span class="opcao-desc">Vídeo ou áudio, um por vez</span>
     </button>
   </div>
 
@@ -88,12 +82,17 @@
         Selecionar pasta
         <input type="file" id="input-pasta" webkitdirectory hidden />
       </label>
+      <span class="dica-arrastar">ou arraste os arquivos para cá</span>
     </div>
     <ul class="lista-selecionados" id="lista-selecionados"></ul>
+    <p class="aviso-memoria escondido" id="aviso-memoria"></p>
   </div>
 
   <div id="painel-compressao" class="painel-compressao escondido">
-    <p class="progresso">Nível de compressão</p>
+    <p class="progresso">
+      3. Nível de compressão
+      <span class="tipo-detectado" id="tipo-detectado"></span>
+    </p>
     <div class="opcoes" id="niveis-compressao">
       <label class="opcao-item"><input type="radio" name="nivel" value="1" checked /> Baixa</label>
       <label class="opcao-item"><input type="radio" name="nivel" value="2" /> Média</label>
@@ -101,8 +100,10 @@
       <label class="opcao-item"><input type="radio" name="nivel" value="4" /> Extrema</label>
       <label class="opcao-item"><input type="radio" name="nivel" value="5" /> Personalizada</label>
     </div>
+    <p class="nivel-resumo" id="nivel-resumo"></p>
+    <p class="estimativa escondido" id="estimativa"></p>
 
-    <div id="personalizada-campos" class="campos-personalizada escondido">
+    <div id="personalizada-video" class="campos-personalizada escondido">
       <div class="campo-inline">
         <label for="p-crf">CRF (qualidade; menor = melhor, 0–51)</label>
         <input type="number" id="p-crf" value="23" min="0" max="51" />
@@ -132,17 +133,44 @@
         </label>
       </div>
     </div>
+
+    <div id="personalizada-audio-only" class="campos-personalizada escondido">
+      <div class="campo-inline">
+        <label for="pa-bitrate">Bitrate (kbps; menor = arquivo menor)</label>
+        <input type="number" id="pa-bitrate" value="96" min="8" max="320" />
+      </div>
+      <div class="campo-inline">
+        <label for="pa-samplerate">Sample rate (Hz; vazio = original)</label>
+        <input type="number" id="pa-samplerate" placeholder="original" min="8000" />
+      </div>
+      <label class="opcao-item">
+        <input type="checkbox" id="pa-mono" /> Converter para mono
+      </label>
+    </div>
   </div>
 
   <div class="acoes">
     <button type="button" class="btn-primary" id="btn-iniciar" disabled>Iniciar</button>
+    <button type="button" class="btn-secondary escondido" id="btn-cancelar">Cancelar</button>
     <button type="button" class="btn-secondary" id="btn-limpar">Limpar seleção</button>
   </div>
 
-  <div id="status-motor" class="status-motor escondido"></div>
+  <div id="status-motor" class="status-motor escondido">
+    <span id="status-motor-texto"></span>
+    <div class="barra-motor escondido" id="barra-motor">
+      <div class="barra-motor-preenchida" id="barra-motor-preenchida"></div>
+    </div>
+  </div>
 
   <div id="resultados-wrapper" class="escondido">
-    <h2>Resultados</h2>
+    <div class="resultados-cabecalho">
+      <h2>Resultados</h2>
+      <span class="progresso-lote" id="progresso-lote"></span>
+    </div>
+    <div class="acoes-resultados escondido" id="acoes-resultados">
+      <button type="button" class="btn-secondary" id="btn-baixar-tudo">Baixar tudo (.zip)</button>
+      <button type="button" class="btn-secondary escondido" id="btn-salvar-pasta">Salvar numa pasta…</button>
+    </div>
     <ul class="lista-resultados" id="lista-resultados"></ul>
   </div>
 </main>
@@ -152,6 +180,7 @@
 </footer>
 
 <script src="js/vendor/ffmpeg/ffmpeg.js"></script>
+<script src="js/zip.js"></script>
 <script src="js/conversor.js"></script>
 </body>
 </html>
