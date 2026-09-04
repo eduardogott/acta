@@ -42,8 +42,8 @@
   const LEVEL_VIDEO = {
     "1": { nome: "Baixa",   crf: 26, scale: null, maxFps: 30, preset: "medium" },
     "2": { nome: "Média",   crf: 30, scale: null, maxFps: 24, preset: "medium" },
-    "3": { nome: "Alta",    crf: 32, scale: 0.75, maxFps: 24, preset: "slow" },
-    "4": { nome: "Extrema", crf: 34, scale: 0.5,  maxFps: 19, preset: "slower" },
+    "3": { nome: "Alta",    crf: 32, scale: 0.75, maxFps: 24, preset: "medium" },
+    "4": { nome: "Extrema", crf: 34, scale: 0.5,  maxFps: 19, preset: "slow" },
   };
 
   // Faixa de áudio dentro do vídeo (AAC). Bitrate e sample rate são tetos:
@@ -67,17 +67,17 @@
   // 128 kbps a 32 kHz cai em MPEG-1, e os demais em MPEG-2 (16–24 kHz),
   // cuja faixa de bitrate vai de 8 a 160 kbps.
   const LEVEL_AUDIO_ONLY = {
-    "1": { nome: "Baixa",   bitrate: 128, samplerate: 32000, mono: false, compressionLevel: 1 },
-    "2": { nome: "Média",   bitrate: 80,  samplerate: 24000, mono: true,  compressionLevel: 1 },
-    "3": { nome: "Alta",    bitrate: 48,  samplerate: 24000, mono: true,  compressionLevel: 0 },
+    "1": { nome: "Baixa",   bitrate: 128, samplerate: 32000, mono: false, compressionLevel: 3 },
+    "2": { nome: "Média",   bitrate: 80,  samplerate: 24000, mono: true,  compressionLevel: 2 },
+    "3": { nome: "Alta",    bitrate: 48,  samplerate: 24000, mono: true,  compressionLevel: 1 },
     "4": { nome: "Extrema", bitrate: 24,  samplerate: 16000, mono: true,  compressionLevel: 0 },
   };
 
   const RESUMO_VIDEO = {
     "1": "CRF 26 · até 30 fps · resolução original · áudio AAC 128 kbps",
     "2": "CRF 30 · até 24 fps · resolução original · áudio AAC 96 kbps mono 24 kHz",
-    "3": "CRF 32 · até 24 fps · 75% da resolução · áudio AAC 64 kbps mono 22,05 kHz · preset slow",
-    "4": "CRF 34 · até 19 fps · 50% da resolução · áudio AAC 32 kbps mono 16 kHz · preset slower",
+    "3": "CRF 32 · até 24 fps · 75% da resolução · áudio AAC 64 kbps mono 22,05 kHz",
+    "4": "CRF 34 · até 19 fps · 50% da resolução · áudio AAC 32 kbps mono 16 kHz · preset slow",
     "5": "Você define cada parâmetro abaixo.",
   };
 
@@ -946,7 +946,7 @@
       }
     } else {
       crf = custom.crf;
-      preset = "slow";
+      preset = "medium";
       if (custom.width && info.width && info.height) {
         newW = roundEven(custom.width);
         newH = roundEven((custom.width * info.height) / info.width);
