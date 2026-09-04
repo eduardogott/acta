@@ -95,6 +95,11 @@
 .campos-personalizada input[type="number"]{
   max-width:160px;
 }
+#personalizada-audio{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
 
 .status-motor{
   font-family:var(--mono);
