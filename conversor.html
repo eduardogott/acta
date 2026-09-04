@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acta — Conversor de Mídia</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/conversor.css" />
+<script src="js/theme.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <p class="site-title">
+    <span class="brand-mark">●</span>
+    Acta
+  </p>
+  <nav class="site-nav" aria-label="Navegação principal">
+    <a href="index.html" class="nav-link">Gerador de Ocorrências</a>
+    <a href="conversor.html" class="nav-link ativo">Conversor de Mídia</a>
+  </nav>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">☾</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1 class="page-title"><b>Conversor</b> de Mídia</h1>
+    <p class="page-lead">Converte áudios, vídeos e imagens, padroniza extensões e
+    comprime vídeos — tudo processado localmente no seu navegador com ffmpeg,
+    sem enviar nada a servidor algum.</p>
+    <p class="aviso-privacidade">
+      <span aria-hidden="true">🔒</span>
+      Todo o processamento roda no seu navegador (WebAssembly). Os arquivos
+      originais e convertidos nunca saem do seu computador. Na primeira
+      conversão, o motor ffmpeg (~30&nbsp;MB) é carregado uma única vez —
+      pode demorar alguns segundos.
+    </p>
+  </section>
+
+  <p class="progresso">1. Escolha uma operação</p>
+
+  <div class="opcoes-conversor" id="opcoes-conversor">
+    <button type="button" class="opcao-conversor" data-op="1">
+      <span class="opcao-num">1</span>
+      <span class="opcao-titulo">Converter áudios</span>
+      <span class="opcao-desc">Qualquer áudio → MP3</span>
+    </button>
+    <button type="button" class="opcao-conversor" data-op="2">
+      <span class="opcao-num">2</span>
+      <span class="opcao-titulo">Converter vídeos</span>
+      <span class="opcao-desc">Qualquer vídeo → MP4</span>
+    </button>
+    <button type="button" class="opcao-conversor" data-op="3">
+      <span class="opcao-num">3</span>
+      <span class="opcao-titulo">Converter imagens</span>
+      <span class="opcao-desc">Qualquer imagem → JPG</span>
+    </button>
+    <button type="button" class="opcao-conversor" data-op="4">
+      <span class="opcao-num">4</span>
+      <span class="opcao-titulo">Converter tudo</span>
+      <span class="opcao-desc">Opções 1, 2 e 3 juntas</span>
+    </button>
+    <button type="button" class="opcao-conversor" data-op="5">
+      <span class="opcao-num">5</span>
+      <span class="opcao-titulo">Padronizar extensões</span>
+      <span class="opcao-desc">jpeg→jpg, mpeg→mpg, tiff→tif…</span>
+    </button>
+    <button type="button" class="opcao-conversor" data-op="8">
+      <span class="opcao-num">8</span>
+      <span class="opcao-titulo">Efetuar todos</span>
+      <span class="opcao-desc">Opções 4 e 5 juntas</span>
+    </button>
+    <button type="button" class="opcao-conversor" data-op="9">
+      <span class="opcao-num">9</span>
+      <span class="opcao-titulo">Comprimir vídeo</span>
+      <span class="opcao-desc">Aceita um único arquivo</span>
+    </button>
+  </div>
+
+  <div id="painel-arquivos" class="painel-arquivos escondido">
+    <p class="progresso" id="rotulo-arquivos">2. Selecione o(s) arquivo(s) ou a pasta</p>
+    <div class="selecao-arquivos">
+      <label class="btn-secondary btn-arquivo">
+        Selecionar arquivo(s)
+        <input type="file" id="input-arquivos" multiple hidden />
+      </label>
+      <label class="btn-secondary btn-arquivo" id="label-pasta">
+        Selecionar pasta
+        <input type="file" id="input-pasta" webkitdirectory hidden />
+      </label>
+    </div>
+    <ul class="lista-selecionados" id="lista-selecionados"></ul>
+  </div>
+
+  <div id="painel-compressao" class="painel-compressao escondido">
+    <p class="progresso">Nível de compressão</p>
+    <div class="opcoes" id="niveis-compressao">
+      <label class="opcao-item"><input type="radio" name="nivel" value="1" checked /> Baixa</label>
+      <label class="opcao-item"><input type="radio" name="nivel" value="2" /> Média</label>
+      <label class="opcao-item"><input type="radio" name="nivel" value="3" /> Alta</label>
+      <label class="opcao-item"><input type="radio" name="nivel" value="4" /> Extrema</label>
+      <label class="opcao-item"><input type="radio" name="nivel" value="5" /> Personalizada</label>
+    </div>
+
+    <div id="personalizada-campos" class="campos-personalizada escondido">
+      <div class="campo-inline">
+        <label for="p-crf">CRF (qualidade; menor = melhor, 0–51)</label>
+        <input type="number" id="p-crf" value="23" min="0" max="51" />
+      </div>
+      <div class="campo-inline">
+        <label for="p-largura">Largura desejada em pixels (mantém a proporção; vazio = original)</label>
+        <input type="number" id="p-largura" placeholder="original" min="2" />
+      </div>
+      <div class="campo-inline">
+        <label for="p-fps">FPS desejado (vazio = original; nunca aumenta)</label>
+        <input type="number" id="p-fps" placeholder="original" min="1" />
+      </div>
+      <div id="personalizada-audio">
+        <label class="opcao-item">
+          <input type="checkbox" id="p-remover-audio" /> Remover a faixa de áudio por completo
+        </label>
+        <div class="campo-inline">
+          <label for="p-audio-bitrate">Bitrate do áudio (kbps)</label>
+          <input type="number" id="p-audio-bitrate" value="96" min="8" />
+        </div>
+        <div class="campo-inline">
+          <label for="p-audio-samplerate">Sample rate do áudio (Hz)</label>
+          <input type="number" id="p-audio-samplerate" value="24000" min="8000" />
+        </div>
+        <label class="opcao-item">
+          <input type="checkbox" id="p-audio-mono" /> Áudio em mono
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="acoes">
+    <button type="button" class="btn-primary" id="btn-iniciar" disabled>Iniciar</button>
+    <button type="button" class="btn-secondary" id="btn-limpar">Limpar seleção</button>
+  </div>
+
+  <div id="status-motor" class="status-motor escondido"></div>
+
+  <div id="resultados-wrapper" class="escondido">
+    <h2>Resultados</h2>
+    <ul class="lista-resultados" id="lista-resultados"></ul>
+  </div>
+</main>
+
+<footer>
+  <p class="footer-credit"><a class="footer-link" href="https://gttr.com.br">Eduardo Gottert</a> · 2026</p>
+</footer>
+
+<script src="js/vendor/ffmpeg/ffmpeg.js"></script>
+<script src="js/conversor.js"></script>
+</body>
+</html>

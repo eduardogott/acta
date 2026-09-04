@@ -518,3 +518,37 @@ footer .footer-link{
 .alert{
   color:var(--danger) !important
 }
+/* =========================================================
+   Navegação (nav-bar entre ferramentas do site)
+   ========================================================= */
+.site-nav{
+  display:flex;
+  align-items:center;
+  gap:22px;
+  font-size:13.5px;
+}
+.site-nav .nav-link{
+  color:var(--text-muted);
+  text-decoration:none;
+  padding:6px 2px;
+  border-bottom:2px solid transparent;
+  transition:color .12s ease, border-color .12s ease;
+}
+.site-nav .nav-link:hover{
+  color:var(--text);
+}
+.site-nav .nav-link.ativo{
+  color:var(--accent);
+  border-bottom-color:var(--accent);
+  font-weight:500;
+}
+@media (max-width:720px){
+  .site-header{flex-wrap:wrap; height:auto; row-gap:10px; padding:12px 16px;}
+  .site-nav{order:3; width:100%; gap:16px;}
+}
+@media (max-width:560px){
+  .site-nav{font-size:12.5px;}
+}
+
+/* Classe utilitária genérica de ocultar (usada por ambas as páginas) */
+.escondido{display:none;}

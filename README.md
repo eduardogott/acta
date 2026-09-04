@@ -106,3 +106,47 @@ Não há testes automatizados nem CI configurados. As funções de
 português e merecem atenção redobrada ao editar — uma mudança de
 fraseado num tipo já usado em produção pode alterar retroativamente o
 texto de casos que ainda não foram gerados.
+
+## Conversor de mídia (`conversor.html`)
+
+Segunda ferramenta do site, acessível pela nav-bar no topo. Converte
+áudio/vídeo/imagem e comprime vídeo, tudo processado **no navegador** via
+[ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) — nenhum arquivo
+é enviado a servidor algum, igual ao gerador de ocorrências.
+
+- **`conversor.html`** / **`css/conversor.css`** / **`js/conversor.js`** —
+  markup, estilo e lógica da página. `js/conversor.js` reimplementa as
+  mesmas regras do script Python homônimo (conversão sem recompressão nas
+  opções 1/2/3, tabela de crf/resolução/fps/áudio por nível na opção 9,
+  etc).
+- **`js/vendor/ffmpeg/`** — build UMD do `@ffmpeg/ffmpeg` (`ffmpeg.js` +
+  `814.ffmpeg.js`) e, em `core-mt/`, o core multi-thread
+  `@ffmpeg/core-mt` (`ffmpeg-core.js`, `.wasm`, `.worker.js`). Vendorizado
+  no repo (não vem de CDN) para funcionar mesmo em rede restrita — ver
+  "Atualizando o ffmpeg.wasm" abaixo.
+- **`_headers`** — habilita `Cross-Origin-Opener-Policy`/
+  `Cross-Origin-Embedder-Policy` (`same-origin`/`require-corp`) **apenas**
+  na rota `/conversor.html`, necessário para o core multi-thread
+  (`SharedArrayBuffer`). Não afeta `index.html`.
+
+Limitações herdadas de rodar no navegador (sem acesso a disco): a opção 5
+(padronizar extensões) não renomeia o arquivo original no disco do
+usuário — ela gera uma cópia com o nome corrigido, disponível para
+download, como todas as outras opções.
+
+### Atualizando o ffmpeg.wasm
+
+Os arquivos em `js/vendor/ffmpeg/` vieram de:
+
+```
+npm pack @ffmpeg/ffmpeg@0.12.15
+npm pack @ffmpeg/core-mt@0.12.10
+```
+
+Para atualizar, repita o `npm pack` das versões desejadas e substitua:
+
+- de `@ffmpeg/ffmpeg`: `dist/umd/ffmpeg.js` e `dist/umd/814.ffmpeg.js`
+  (o nome do segundo arquivo pode mudar de versão para versão — copie o
+  que estiver em `dist/umd/` além de `ffmpeg.js`).
+- de `@ffmpeg/core-mt`: os três arquivos de `dist/umd/` (`ffmpeg-core.js`,
+  `ffmpeg-core.wasm`, `ffmpeg-core.worker.js`).

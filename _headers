@@ -1,0 +1,7 @@
+# Cabeçalhos custom do Cloudflare Pages.
+# Escopo apenas na página do conversor: habilita COOP/COEP (isolamento de
+# origem cruzada), necessário para o ffmpeg.wasm multi-thread (SharedArrayBuffer).
+# Não se aplica ao restante do site (index.html etc).
+/conversor.html
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
