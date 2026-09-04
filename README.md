@@ -121,6 +121,20 @@ navegador** via
   etc). A opção 9 aceita vídeo **ou** áudio: o tipo é detectado pela
   extensão e só os campos daquele tipo aparecem, e apenas no nível
   "Personalizada".
+
+  Nesse nível aparece também o painel "Arquivo original" (resolução, fps,
+  sample rate e bitrate do áudio) e os atalhos 2/3, 1/2 e 1/3 ao lado dos
+  campos de largura, fps e bitrate. A resolução sai na hora, do elemento
+  `<video>` nativo; os demais exigem a sonda do ffmpeg
+  (`carregarInfoDetalhada`), então **entrar em "Personalizada" carrega o
+  motor** — é o único jeito de saber fps e bitrate reais, e a sonda fica
+  guardada em `estado.info` para a compressão não repetir o trabalho.
+
+  O sample rate é uma escolha fechada (original / 32k / 24k / 16k) em vez
+  de campo livre, para não haver como digitar um valor que o encoder
+  recuse. Nos campos cujo rótulo diz "vazio = original" (largura e fps), o
+  botão "original" limpa o campo em vez de escrever um número: gravar 30
+  num vídeo de 29,97 seria reamostrar disfarçado de "sem mudança".
 - **`js/zip.js`** — escritor de ZIP mínimo (método STORE, sem ZIP64) usado
   pelo botão "Baixar tudo". Não usa biblioteca externa: os arquivos de
   saída já são comprimidos, então deflate não traria ganho.

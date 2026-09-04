@@ -428,7 +428,7 @@
     let crf;
     let largura = meta.largura;
     let altura = meta.altura;
-    let fps = FPS_PRESUMIDO;
+    let fps = meta.fps || FPS_PRESUMIDO;
     let audioKbps;
 
     if (nivel === "5") {
@@ -795,8 +795,8 @@
   // Compressão (opção 9) — vídeo ou áudio, conforme o arquivo escolhido
   // ---------------------------------------------------------------------
 
-  async function compressAudioFile(ffmpeg, file, level, custom, onProgress) {
-    const info = await probeMediaInfo(ffmpeg, file);
+  async function compressAudioFile(ffmpeg, file, level, custom, onProgress, infoConhecida) {
+    const info = infoConhecida || (await probeMediaInfo(ffmpeg, file));
     const ext = extOf(file.name);
     const inName = "ain" + ext;
     const outName = baseName(file.name) + "_comprimido.mp3";
@@ -832,8 +832,8 @@
     return { blob: new Blob([data.buffer], { type: "audio/mpeg" }), outName };
   }
 
-  async function compressVideoFile(ffmpeg, file, level, custom, onProgress) {
-    const info = await probeMediaInfo(ffmpeg, file);
+  async function compressVideoFile(ffmpeg, file, level, custom, onProgress, infoConhecida) {
+    const info = infoConhecida || (await probeMediaInfo(ffmpeg, file));
     const ext = extOf(file.name);
     const inName = "cin" + ext;
     const outName = baseName(file.name) + "_comprimido.mp4";
@@ -913,6 +913,12 @@
     tipoCompressao: null,
     // Duração/dimensões do arquivo da opção 9, lidas sem o ffmpeg.
     meta: null,
+    // Sonda completa do ffmpeg (fps, sample rate, bitrate, canais). So e
+    // buscada quando o usuario entra no nivel "Personalizada", porque
+    // exige carregar o motor.
+    info: null,
+    infoCarregando: false,
+    tokenInfo: 0,
     // Descarta leituras de metadados de seleções que já foram trocadas.
     tokenMeta: 0,
     // Saídas geradas na última execução, para "Baixar tudo".
@@ -933,6 +939,14 @@
     tipoDetectado: document.getElementById("tipo-detectado"),
     nivelResumo: document.getElementById("nivel-resumo"),
     estimativa: document.getElementById("estimativa"),
+    painelOriginal: document.getElementById("painel-original"),
+    origCarregando: document.getElementById("original-carregando"),
+    linhaResolucao: document.getElementById("linha-resolucao"),
+    linhaFps: document.getElementById("linha-fps"),
+    origResolucao: document.getElementById("orig-resolucao"),
+    origFps: document.getElementById("orig-fps"),
+    origSamplerate: document.getElementById("orig-samplerate"),
+    origBitrate: document.getElementById("orig-bitrate"),
     personalizadaVideo: document.getElementById("personalizada-video"),
     personalizadaAudioOnly: document.getElementById("personalizada-audio-only"),
     personalizadaAudio: document.getElementById("personalizada-audio"),
@@ -1190,6 +1204,12 @@
     const personalizada = nivel === "5";
     el.personalizadaVideo.classList.toggle("escondido", !(personalizada && ehVideo));
     el.personalizadaAudioOnly.classList.toggle("escondido", !(personalizada && !ehVideo));
+    el.painelOriginal.classList.toggle("escondido", !personalizada);
+
+    if (personalizada) {
+      renderizarInfoOriginal();
+      carregarInfoDetalhada();
+    }
 
     atualizarEstimativa();
   }
@@ -1197,6 +1217,9 @@
   /** Lê os metadados nativos do arquivo da opção 9 e atualiza a estimativa. */
   function carregarMetadados() {
     estado.meta = null;
+    estado.info = null;
+    estado.infoCarregando = false;
+    estado.tokenInfo++;
     const token = ++estado.tokenMeta;
     if (estado.opcao !== "9" || estado.arquivos.length !== 1 || !estado.tipoCompressao) {
       atualizarEstimativa();
@@ -1220,7 +1243,9 @@
     const custom = nivel !== "5"
       ? null
       : ehVideo ? lerNivelPersonalizado() : lerNivelPersonalizadoAudio();
-    const bytes = estimarTamanho(estado.tipoCompressao, estado.meta, nivel, custom);
+    const metaComFps = Object.assign({}, estado.meta);
+    if (estado.info && estado.info.fps) metaComFps.fps = estado.info.fps;
+    const bytes = estimarTamanho(estado.tipoCompressao, metaComFps, nivel, custom);
     if (!bytes) {
       el.estimativa.classList.add("escondido");
       el.estimativa.textContent = "";
@@ -1234,6 +1259,152 @@
       "Estimativa: " + humanSize(original) + " → ~" + humanSize(bytes) + " (" + sinal + "). " +
       "É um cálculo aproximado — o resultado real depende do conteúdo do arquivo.";
   }
+
+  // ---------------------------------------------------------------------
+  // Painel "Arquivo original" e atalhos de fração (nível Personalizada)
+  // ---------------------------------------------------------------------
+
+  /** Sample rate escolhido num dos grupos de rádio; null = manter o original. */
+  function lerSampleRate(nomeDoGrupo) {
+    const marcado = document.querySelector('input[name="' + nomeDoGrupo + '"]:checked');
+    const valor = marcado ? parseInt(marcado.value, 10) : NaN;
+    return Number.isFinite(valor) ? valor : null;
+  }
+
+  function nomeDosCanais(n) {
+    if (n === 1) return "mono";
+    if (n === 2) return "estéreo";
+    return n ? n + " canais" : null;
+  }
+
+  /** Valor original que serve de base para os botões 2/3, 1/2 e 1/3. */
+  function baseDoAtalho(chave) {
+    const meta = estado.meta || {};
+    const info = estado.info || {};
+    if (chave === "largura") return info.width || meta.largura || null;
+    if (chave === "fps") return info.fps || null;
+    if (chave === "abitrate") return info.aBitrate || null;
+    return null;
+  }
+
+  /** Desabilita os atalhos cujo valor original ainda não é conhecido. */
+  function atualizarAtalhos() {
+    document.querySelectorAll(".atalhos").forEach((grupo) => {
+      const base = baseDoAtalho(grupo.dataset.base);
+      grupo.classList.toggle("sem-base", !base);
+      grupo.querySelectorAll(".btn-fracao").forEach((btn) => {
+        btn.disabled = !base;
+        btn.title = base
+          ? "Definir como " + btn.textContent.trim() + " do original"
+          : "O valor original deste campo ainda não foi lido";
+      });
+    });
+  }
+
+  function preencherLinha(elemento, texto) {
+    elemento.textContent = texto === null || texto === undefined ? "—" : texto;
+  }
+
+  /**
+   * Mostra o que se sabe do arquivo. A resolução aparece na hora (vem do
+   * elemento <video> nativo); fps, sample rate e bitrate só depois da sonda
+   * do ffmpeg, e enquanto isso ficam como "—".
+   */
+  function renderizarInfoOriginal() {
+    const meta = estado.meta || {};
+    const info = estado.info || {};
+    const ehVideo = estado.tipoCompressao === "video";
+    const sondou = !!estado.info;
+
+    const largura = info.width || meta.largura;
+    const altura = info.height || meta.altura;
+    preencherLinha(el.origResolucao, largura && altura ? largura + " × " + altura : null);
+    preencherLinha(
+      el.origFps,
+      info.fps ? String(Math.round(info.fps * 100) / 100).replace(".", ",") : null
+    );
+    // arquivo de áudio não tem resolução nem fps para mostrar
+    el.linhaResolucao.hidden = !ehVideo;
+    el.linhaFps.hidden = !ehVideo;
+
+    if (sondou && !info.hasAudio) {
+      preencherLinha(el.origSamplerate, "sem faixa de áudio");
+      preencherLinha(el.origBitrate, null);
+    } else {
+      const canais = nomeDosCanais(info.aChannels);
+      preencherLinha(
+        el.origSamplerate,
+        info.aSampleRate
+          ? info.aSampleRate.toLocaleString("pt-BR") + " Hz" + (canais ? " · " + canais : "")
+          : null
+      );
+      preencherLinha(el.origBitrate, info.aBitrate ? info.aBitrate + " kbps" : null);
+    }
+
+    atualizarAtalhos();
+  }
+
+  /**
+   * Roda a sonda do ffmpeg para descobrir fps, sample rate, bitrate e canais.
+   * Só é chamada ao entrar no nível "Personalizada": exige o motor carregado,
+   * e não faz sentido pagar esse custo em quem vai usar um preset.
+   */
+  async function carregarInfoDetalhada() {
+    if (estado.opcao !== "9" || estado.arquivos.length !== 1 || !estado.tipoCompressao) return;
+    if (estado.info || estado.infoCarregando) return;
+
+    const token = ++estado.tokenInfo;
+    estado.infoCarregando = true;
+    el.origCarregando.classList.remove("escondido");
+    try {
+      const ffmpeg = await getFFmpeg(setStatus, onProgressoMotor);
+      if (token !== estado.tokenInfo) return;
+      const info = await probeMediaInfo(ffmpeg, estado.arquivos[0]);
+      if (token !== estado.tokenInfo) return;
+      estado.info = info;
+      diag("Sonda do arquivo:", info);
+      setStatus("");
+      renderizarInfoOriginal();
+      atualizarEstimativa();
+    } catch (err) {
+      diagAviso("Não consegui analisar o arquivo:", err);
+      if (token === estado.tokenInfo) {
+        setStatus("Não foi possível ler os dados do arquivo: " + err.message);
+      }
+    } finally {
+      if (token === estado.tokenInfo) {
+        estado.infoCarregando = false;
+        el.origCarregando.classList.add("escondido");
+      }
+    }
+  }
+
+  // Atalhos 2/3, 1/2, 1/3 e "original" nos campos numéricos.
+  document.addEventListener("click", (ev) => {
+    const btn = ev.target.closest ? ev.target.closest(".btn-fracao") : null;
+    if (!btn || btn.disabled) return;
+    const grupo = btn.closest(".atalhos");
+    const base = baseDoAtalho(grupo.dataset.base);
+    if (!base) return;
+    const campo = document.getElementById(grupo.dataset.alvo);
+    const fracao = parseFloat(btn.dataset.fracao);
+
+    // Nos campos cujo rotulo diz "vazio = original" (largura e fps), voltar
+    // ao original e limpar, nao gravar um numero: escrever 30 num video de
+    // 29,97 seria uma reamostragem disfarcada de "sem mudanca".
+    if (fracao === 1 && campo.placeholder === "original") {
+      campo.value = "";
+      atualizarEstimativa();
+      return;
+    }
+
+    const bruto = base * fracao;
+    // largura tem de ser par: o x264 recusa dimensão ímpar em yuv420p
+    campo.value = String(
+      grupo.dataset.base === "largura" ? roundEven(bruto) : Math.max(1, Math.round(bruto))
+    );
+    atualizarEstimativa();
+  });
 
   // ---------------------------------------------------------------------
   // Eventos da seleção de operação e dos campos
@@ -1285,9 +1456,12 @@
 
   el.pRemoverAudio.addEventListener("change", () => {
     const desabilitado = el.pRemoverAudio.checked;
-    el.personalizadaAudio.querySelectorAll("input:not(#p-remover-audio)").forEach((i) => {
-      i.disabled = desabilitado;
-    });
+    el.personalizadaAudio
+      .querySelectorAll("input:not(#p-remover-audio), button")
+      .forEach((campo) => {
+        campo.disabled = desabilitado;
+      });
+    if (!desabilitado) atualizarAtalhos(); // devolve o estado real dos atalhos
   });
 
   el.btnLimpar.addEventListener("click", () => {
@@ -1305,6 +1479,7 @@
     el.listaSelecionados.innerHTML = "";
     el.avisoMemoria.classList.add("escondido");
     el.estimativa.classList.add("escondido");
+    el.painelOriginal.classList.add("escondido");
     el.resultadosWrapper.classList.add("escondido");
     el.listaResultados.innerHTML = "";
     el.progressoLote.textContent = "";
@@ -1315,7 +1490,7 @@
   function lerNivelPersonalizadoAudio() {
     return {
       bitrate: parseInt(document.getElementById("pa-bitrate").value, 10) || 96,
-      samplerate: parseInt(document.getElementById("pa-samplerate").value, 10) || null,
+      samplerate: lerSampleRate("pa-sr"),
       mono: document.getElementById("pa-mono").checked,
     };
   }
@@ -1327,7 +1502,7 @@
       fps: parseFloat(document.getElementById("p-fps").value) || null,
       removeAudio: el.pRemoverAudio.checked,
       audioBitrate: parseInt(document.getElementById("p-audio-bitrate").value, 10) || 96,
-      audioSampleRate: parseInt(document.getElementById("p-audio-samplerate").value, 10) || 24000,
+      audioSampleRate: lerSampleRate("p-sr"),
       mono: document.getElementById("p-audio-mono").checked,
     };
   }
@@ -1587,7 +1762,9 @@
         try {
           linha.setStatus(ehVideo ? "Analisando o vídeo…" : "Analisando o áudio…");
           const comprimir = ehVideo ? compressVideoFile : compressAudioFile;
-          const resultado = await comprimir(ffmpeg, file, nivel, custom, (p) => linha.setProgresso(p));
+          const resultado = await comprimir(
+            ffmpeg, file, nivel, custom, (p) => linha.setProgresso(p), estado.info
+          );
           linha.setStatus("Concluído.", "ok");
           linha.adicionarDownload(resultado.blob, resultado.outName);
         } catch (err) {
