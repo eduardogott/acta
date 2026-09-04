@@ -149,14 +149,20 @@ navegador** via
   comporta igual em qualquer versão do ffmpeg. Os campos aceitam `90`,
   `1:30` ou `1:02:03`; a duração vem dos metadados nativos, então a
   validação não depende de carregar o motor.
-- **Andamento da compressão** sai do log do ffmpeg (`acompanharEncode`),
-  não do evento `progress` do ffmpeg.wasm. O evento é calculado sobre a
-  duração do arquivo de **entrada**: com `-t 15` num vídeo de cinco
-  minutos ele empaca em 5% e a tela parece travada. As linhas de log
-  trazem `time=` e `speed=`, que dão a fração real e uma estimativa de
-  quanto falta. Publica a cada linha (no máximo 4×/s) e tem um heartbeat
-  de 1 s para o tempo decorrido continuar andando quando o encoder fica
-  quieto — importante nas máquinas lentas, onde o encode leva minutos.
+- **Andamento da compressão** (`acompanharEncode`) usa o campo `time` do
+  evento `progress` — o core chama `receiveProgress(progress, time)` de
+  dentro do C, com o tempo já processado em microssegundos — e divide pela
+  duração que **nós** conhecemos. O campo `progress` do próprio evento não
+  serve: é calculado sobre a duração do arquivo de **entrada**, então com
+  `-t 15` num vídeo de cinco minutos empaca em 5%.
+
+  As linhas de log ficam só como reserva e não dá para depender delas: o
+  ffmpeg termina a linha de andamento com ``, e o Emscripten só entrega
+  ao logger quando encontra `
+`, então na prática elas nunca chegam
+  durante o encode. Há um heartbeat de 1 s para o tempo decorrido seguir
+  andando, e as métricas (tempo processado, fonte, contagem de eventos e
+  de linhas, velocidade) saem no console a cada 5 s.
 - **Prévia** ao lado de cada botão Baixar: abre o arquivo convertido num
   modal e pede tela cheia. `requestFullscreen()` só vale dentro do gesto
   do usuário — daí ser chamado direto no clique; se o navegador recusar, o

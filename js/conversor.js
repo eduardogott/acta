@@ -520,8 +520,10 @@
       if (logWatcher) logWatcher(message);
       if (VERBOSE) console.debug("[ffmpeg]", message);
     });
-    ffmpeg.on("progress", ({ progress }) => {
-      if (progressCallback) progressCallback(Math.min(1, Math.max(0, progress || 0)));
+    // repassa o payload inteiro: o campo `time` (microssegundos) é o que
+    // realmente serve para medir andamento — ver criarAcompanhante()
+    ffmpeg.on("progress", (evento) => {
+      if (progressCallback) progressCallback(evento || {});
     });
   }
 
@@ -746,7 +748,8 @@
 
   async function probeMediaInfo(ffmpeg, file) {
     const inName = "probe" + extOf(file.name);
-    await ffmpeg.writeFile(inName, await fileToUint8(file));
+    await etapa("Sonda: escrever " + humanSize(file.size) + " no FS",
+                async () => ffmpeg.writeFile(inName, await fileToUint8(file)));
     logSink = [];
     try {
       await execComLog(ffmpeg, ["-i", inName]);
@@ -769,7 +772,9 @@
     const inName = "in" + ext;
     const outName = baseName(file.name) + ".mp3";
     await ffmpeg.writeFile(inName, await fileToUint8(file));
-    progressCallback = onProgress || null;
+    progressCallback = onProgress
+      ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
+      : null;
     let code;
     try {
       code = await execComLog(ffmpeg, ["-i", inName, "-vn", "-codec:a", "libmp3lame", "-q:a", "0", outName]);
@@ -789,7 +794,9 @@
     const inName = "in" + ext;
     const outName = baseName(file.name) + ".mp4";
     await ffmpeg.writeFile(inName, await fileToUint8(file));
-    progressCallback = onProgress || null;
+    progressCallback = onProgress
+      ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
+      : null;
     let code;
     try {
       // tenta remuxar primeiro: copia os streams, sem recodificar (sem perda).
@@ -817,7 +824,9 @@
     const inName = "in" + ext;
     const outName = baseName(file.name) + ".jpg";
     await ffmpeg.writeFile(inName, await fileToUint8(file));
-    progressCallback = onProgress || null;
+    progressCallback = onProgress
+      ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
+      : null;
     let code;
     try {
       code = await execComLog(ffmpeg, ["-i", inName, "-q:v", "2", outName]);
@@ -849,7 +858,8 @@
     const ext = extOf(file.name);
     const inName = "ain" + ext;
     const outName = baseName(file.name) + "_comprimido.mp3";
-    await ffmpeg.writeFile(inName, await fileToUint8(file));
+    await etapa("Escrever " + humanSize(file.size) + " no FS do ffmpeg",
+                async () => ffmpeg.writeFile(inName, await fileToUint8(file)));
 
     const alvo = level === "5"
       ? { bitrate: custom.bitrate, samplerate: custom.samplerate, mono: custom.mono,
@@ -883,7 +893,7 @@
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
     if (code) throw new Error("ffmpeg retornou erro ao comprimir o áudio");
-    const data = await ffmpeg.readFile(outName);
+    const data = await etapa("Ler a saída", () => ffmpeg.readFile(outName));
     await ffmpeg.deleteFile(outName);
     return { blob: new Blob([data.buffer], { type: "audio/mpeg" }), outName };
   }
@@ -894,7 +904,8 @@
     const ext = extOf(file.name);
     const inName = "cin" + ext;
     const outName = baseName(file.name) + "_comprimido.mp4";
-    await ffmpeg.writeFile(inName, await fileToUint8(file));
+    await etapa("Escrever " + humanSize(file.size) + " no FS do ffmpeg",
+                async () => ffmpeg.writeFile(inName, await fileToUint8(file)));
 
     let crf, preset;
     let newW = info.width, newH = info.height, targetFps = null;
@@ -958,7 +969,7 @@
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
     if (code) throw new Error("ffmpeg retornou erro ao comprimir o vídeo");
-    const data = await ffmpeg.readFile(outName);
+    const data = await etapa("Ler a saída", () => ffmpeg.readFile(outName));
     await ffmpeg.deleteFile(outName);
     return { blob: new Blob([data.buffer], { type: "video/mp4" }), outName };
   }
@@ -1517,80 +1528,154 @@
   }
 
   /**
-   * Acompanha um encode lendo o log do próprio ffmpeg.
+   * Acompanha um encode.
    *
-   * O evento "progress" do ffmpeg.wasm não serve aqui: ele é calculado sobre
-   * a duração do arquivo de ENTRADA, então com `-t 15` num vídeo de cinco
-   * minutos a barra empaca em 5% e parece travada — e com `-ss` fica pior.
-   * As linhas de log trazem `time=` e `speed=`, que são o andamento real.
+   * A fonte é o campo `time` do evento "progress" — o core chama
+   * receiveProgress(progress, time) de dentro do C, com o tempo já
+   * processado em MICROSSEGUNDOS. Usamos esse tempo contra a duração que
+   * nós conhecemos, e não o campo `progress`, porque o core calcula essa
+   * fração sobre a duração do arquivo de ENTRADA: com `-t 15` num vídeo de
+   * cinco minutos ela empaca em 5%.
+   *
+   * As linhas de log ficam como reserva, mas não dá para depender delas: o
+   * ffmpeg termina a linha de andamento com `\r`, e o Emscripten só entrega
+   * ao logger quando encontra `\n` — na prática elas só aparecem no fim.
    */
   function criarAcompanhante(duracaoAlvo) {
     const inicio = performance.now();
-    const atual = { segundos: 0, velocidade: null, fracao: 0 };
+    const atual = {
+      segundos: 0, fracao: 0, fonte: null,
+      eventos: 0, linhas: 0, linhasComTime: 0,
+    };
+
+    function registrar(segundos, fonte) {
+      if (!Number.isFinite(segundos) || segundos < 0) return;
+      atual.segundos = segundos;
+      atual.fonte = fonte;
+      if (duracaoAlvo > 0) atual.fracao = Math.min(1, segundos / duracaoAlvo);
+    }
 
     return {
-      /** Recebe cada linha de log do ffmpeg. */
-      observar(mensagem) {
+      observarProgresso(evento) {
+        atual.eventos++;
+        if (evento && Number.isFinite(evento.time)) {
+          registrar(evento.time / 1e6, "evento progress");
+        }
+      },
+
+      observarLog(mensagem) {
+        atual.linhas++;
         const t = mensagem.match(/time=\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
         if (t) {
-          atual.segundos = Number(t[1]) * 3600 + Number(t[2]) * 60 + parseFloat(t[3]);
-          if (duracaoAlvo > 0) atual.fracao = Math.min(1, atual.segundos / duracaoAlvo);
+          atual.linhasComTime++;
+          registrar(Number(t[1]) * 3600 + Number(t[2]) * 60 + parseFloat(t[3]), "log");
         }
-        const v = mensagem.match(/speed=\s*([\d.]+)x/);
-        if (v) atual.velocidade = parseFloat(v[1]);
+      },
+
+      decorrido() {
+        return (performance.now() - inicio) / 1000;
+      },
+
+      /** Segundos de mídia processados por segundo de relógio. */
+      velocidade() {
+        const d = this.decorrido();
+        return d > 0.5 && atual.segundos > 0 ? atual.segundos / d : 0;
       },
 
       fracao() {
         return atual.fracao;
       },
 
-      /**
-       * Texto para a linha de resultado. Enquanto o ffmpeg não emitiu o
-       * primeiro `time=`, mostra o tempo decorrido — o importante é a
-       * pessoa ver que algo está acontecendo, ainda mais em máquina lenta.
-       */
+      /** Números crus para o diagnóstico. */
+      metricas() {
+        return {
+          "tempo processado (s)": Math.round(atual.segundos * 100) / 100,
+          "duração alvo (s)": Math.round(duracaoAlvo * 100) / 100,
+          "fração": Math.round(atual.fracao * 1000) / 1000,
+          "fonte": atual.fonte || "(nenhuma ainda)",
+          "eventos progress": atual.eventos,
+          "linhas de log": atual.linhas,
+          "linhas com time=": atual.linhasComTime,
+          "decorrido (s)": Math.round(this.decorrido()),
+          "velocidade (x)": Math.round(this.velocidade() * 1000) / 1000,
+        };
+      },
+
       texto() {
         if (duracaoAlvo > 0 && atual.segundos > 0) {
           let s = "Comprimindo… " + formatarTempo(atual.segundos) + " de " +
                   formatarTempo(duracaoAlvo) + " (" + Math.round(atual.fracao * 100) + "%)";
-          if (atual.velocidade > 0 && atual.fracao < 1) {
-            const restante = (duracaoAlvo - atual.segundos) / atual.velocidade;
+          const v = this.velocidade();
+          if (v > 0 && atual.fracao < 1) {
+            const restante = (duracaoAlvo - atual.segundos) / v;
             if (restante >= 1) s += " · faltam ~" + formatarTempo(restante);
           }
           return s;
         }
-        const decorrido = (performance.now() - inicio) / 1000;
-        return "Comprimindo… " + formatarTempo(decorrido) + " decorrido";
+        return "Comprimindo… " + formatarTempo(this.decorrido()) + " decorrido";
       },
     };
   }
 
   /**
-   * Liga o acompanhante ao log do ffmpeg e mantém a linha de resultado
-   * atualizada uma vez por segundo. Devolve a função que desliga tudo.
+   * Liga o acompanhante ao ffmpeg e mantém a linha de resultado atualizada.
+   * Devolve a função que desliga tudo.
    */
   function acompanharEncode(duracaoAlvo, onAndamento) {
-    if (!onAndamento) return () => {};
     const acompanhante = criarAcompanhante(duracaoAlvo);
     let ultimaPublicacao = 0;
+    let ultimoRelatorio = 0;
+    let avisouSemSinal = false;
+
+    diag("Encode começou. Duração alvo:",
+         duracaoAlvo > 0 ? formatarTempo(duracaoAlvo) : "desconhecida");
+
     const publicar = () => {
       ultimaPublicacao = performance.now();
-      onAndamento({ fracao: acompanhante.fracao(), texto: acompanhante.texto() });
+      if (onAndamento) onAndamento({ fracao: acompanhante.fracao(), texto: acompanhante.texto() });
     };
 
-    // Publica a cada linha do ffmpeg, que é o dado fresco — mas no máximo
-    // umas 4 vezes por segundo, porque o encoder fala bem mais que isso.
+    /** Despeja as métricas no console de tempos em tempos. */
+    const relatar = (forcado) => {
+      const agora = performance.now();
+      if (!forcado && agora - ultimoRelatorio < 5000) return;
+      ultimoRelatorio = agora;
+      const m = acompanhante.metricas();
+      diag("Andamento:", m);
+      // Sem nenhum evento depois de 10 s, algo está errado no canal —
+      // vale dizer isso em vez de deixar a barra parada em silêncio.
+      if (!avisouSemSinal && m["eventos progress"] === 0 && acompanhante.decorrido() > 10) {
+        avisouSemSinal = true;
+        diagAviso(
+          "Nenhum evento de progresso em " + Math.round(acompanhante.decorrido()) + "s. " +
+          "O encode pode estar rodando sem reportar; o tempo decorrido continua contando."
+        );
+      }
+    };
+
+    progressCallback = (evento) => {
+      acompanhante.observarProgresso(evento);
+      if (performance.now() - ultimaPublicacao >= 250) publicar();
+      relatar(false);
+    };
     logWatcher = (mensagem) => {
-      acompanhante.observar(mensagem);
+      acompanhante.observarLog(mensagem);
       if (performance.now() - ultimaPublicacao >= 250) publicar();
     };
+
     publicar();
-    // o relógio anda mesmo quando o ffmpeg fica quieto entre dois `time=`
-    const timer = setInterval(publicar, 1000);
+    // mantém o relógio andando mesmo se o ffmpeg ficar mudo
+    const timer = setInterval(() => {
+      publicar();
+      relatar(false);
+    }, 1000);
 
     return () => {
       clearInterval(timer);
+      relatar(true);
+      diag("Encode terminou em", formatarTempo(acompanhante.decorrido()), "de relógio.");
       logWatcher = null;
+      progressCallback = null;
     };
   }
 
@@ -1628,6 +1713,14 @@
   }
 
   /** Argumentos de corte. Precisam vir ANTES do -i para o seek ser rápido. */
+  /** Roda uma etapa medindo quanto demorou, e conta isso no console. */
+  async function etapa(rotulo, executar) {
+    const t = performance.now();
+    const r = await executar();
+    diag(rotulo, "levou", Math.round(performance.now() - t) + "ms");
+    return r;
+  }
+
   /** Quantos segundos de mídia este trabalho vai produzir. 0 = não sei. */
   function duracaoDoTrabalho(info, corte) {
     if (corte && !corte.erro && corte.duracao) return corte.duracao;
