@@ -2,6 +2,14 @@
 # Escopo apenas na página do conversor: habilita COOP/COEP (isolamento de
 # origem cruzada), necessário para o ffmpeg.wasm multi-thread (SharedArrayBuffer).
 # Não se aplica ao restante do site (index.html etc).
+#
+# NOTA: o Cloudflare Pages não aplica este arquivo a respostas que passam
+# por uma Pages Function (mesmo via next()) — ver
+# https://developers.cloudflare.com/pages/configuration/headers/. Como
+# functions/_middleware.js (gate de Basic Auth) roda em toda rota, ele
+# também seta esses mesmos dois cabeçalhos para /conversor.html na mão.
+# Este arquivo fica como documentação/fallback caso o middleware seja
+# removido no futuro.
 /conversor.html
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp

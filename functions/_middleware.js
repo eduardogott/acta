@@ -57,5 +57,24 @@ export async function onRequest(context) {
     return unauthorized();
   }
 
-  return next();
+  const response = await next();
+
+  // _headers não é aplicado a respostas que passam por uma Function do
+  // Pages (mesmo via next()) — ver https://developers.cloudflare.com/pages/configuration/headers/.
+  // Como este middleware roda em toda rota, precisamos setar aqui o
+  // COOP/COEP que o _headers configurava para /conversor.html (necessário
+  // para o ffmpeg.wasm multi-thread via SharedArrayBuffer).
+  const url = new URL(request.url);
+  if (url.pathname === "/conversor.html") {
+    const headers = new Headers(response.headers);
+    headers.set("Cross-Origin-Opener-Policy", "same-origin");
+    headers.set("Cross-Origin-Embedder-Policy", "require-corp");
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+
+  return response;
 }
