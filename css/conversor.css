@@ -370,6 +370,113 @@
    de sample rate e os atalhos; aqui o bloco pode respirar. */
 .campos-personalizada{max-width:460px;}
 
+/* =========================================================
+   Corte de trecho
+   ========================================================= */
+.corte{
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px dashed var(--border);
+}
+.corte-campos{
+  margin-top:12px;
+}
+.corte-linha{
+  display:flex;
+  flex-wrap:wrap;
+  gap:16px;
+}
+.corte-linha .campo-inline{
+  flex:0 0 auto;
+}
+.corte-linha input[type="text"]{
+  width:120px;
+  font-family:var(--mono);
+}
+.corte-info{
+  margin:10px 0 0;
+  font-size:12.5px;
+  color:var(--text-muted);
+}
+.corte-info:empty{display:none;}
+.corte-erro{
+  margin:8px 0 0;
+  font-size:12.5px;
+  color:var(--danger);
+}
+
+/* =========================================================
+   Prévia em tela cheia
+   ========================================================= */
+.resultado-acoes{
+  display:flex;
+  flex-shrink:0;
+  gap:8px;
+  align-items:center;
+}
+.resultado-previa{cursor:pointer;}
+
+.previa{
+  position:fixed;
+  inset:0;
+  z-index:100;
+  display:flex;
+  flex-direction:column;
+  /* fundo opaco: em tela cheia o navegador pinta o resto de preto mesmo */
+  background:#0b0b0a;
+}
+.previa-barra{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:10px 16px;
+  background:rgba(255,255,255,0.06);
+  flex-shrink:0;
+}
+.previa-nome{
+  font-family:var(--mono);
+  font-size:12.5px;
+  color:#e8e6df;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.previa-fechar{
+  flex-shrink:0;
+  font-size:13px;
+  padding:7px 14px;
+  border:1px solid rgba(255,255,255,0.25);
+  border-radius:6px;
+  background:transparent;
+  color:#e8e6df;
+  cursor:pointer;
+  transition:border-color .12s ease, background .12s ease;
+}
+.previa-fechar:hover{
+  border-color:#e8e6df;
+  background:rgba(255,255,255,0.1);
+}
+
+.previa-palco{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:0;
+  padding:16px;
+}
+.previa-midia{
+  max-width:100%;
+  max-height:100%;
+  /* o vídeo inteiro tem de caber: nada de cortar as bordas */
+  object-fit:contain;
+}
+.previa-audio{
+  width:min(560px, 100%);
+  max-height:none;
+}
+
 /* .escondido é definida em style.css, que carrega antes deste arquivo; sem o
    !important qualquer regra de display daqui (.btn-arquivo, por exemplo)
    venceria por ordem de cascata e o elemento continuaria visível. */

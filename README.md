@@ -122,6 +122,11 @@ navegador** via
   extensão e só os campos daquele tipo aparecem, e apenas no nível
   "Personalizada".
 
+  A saída é sempre **H.264 e MP3**, por decisão de compatibilidade: parte
+  das máquinas que abrem esses arquivos é modesta, e formatos mais
+  eficientes (o build tem `libx265` e `libopus` habilitados) custariam
+  conversão mais lenta e arquivo que não abre em todo lugar.
+
   Nesse nível aparece também o painel "Arquivo original" (resolução, fps,
   sample rate e bitrate do áudio) e os atalhos 2/3, 1/2 e 1/3 ao lado dos
   campos de largura, fps e bitrate. A resolução sai na hora, do elemento
@@ -138,6 +143,16 @@ navegador** via
   LAME, em que 0 é o mais lento e caprichado e 9 o mais apressado. Nos campos cujo rótulo diz "vazio = original" (largura e fps), o
   botão "original" limpa o campo em vez de escrever um número: gravar 30
   num vídeo de 29,97 seria reamostrar disfarçado de "sem mudança".
+- **Corte de trecho** (opção 9, qualquer nível): `-ss` entra **antes** do
+  `-i` para o seek ser rápido, e a janela é fechada com `-t` (duração) em
+  vez de `-to`, porque `-ss` de entrada combinado com `-t` de saída se
+  comporta igual em qualquer versão do ffmpeg. Os campos aceitam `90`,
+  `1:30` ou `1:02:03`; a duração vem dos metadados nativos, então a
+  validação não depende de carregar o motor.
+- **Prévia** ao lado de cada botão Baixar: abre o arquivo convertido num
+  modal e pede tela cheia. `requestFullscreen()` só vale dentro do gesto
+  do usuário — daí ser chamado direto no clique; se o navegador recusar, o
+  modal continua servindo como visualização em janela.
 - **`js/zip.js`** — escritor de ZIP mínimo (método STORE, sem ZIP64) usado
   pelo botão "Baixar tudo". Não usa biblioteca externa: os arquivos de
   saída já são comprimidos, então deflate não traria ganho.

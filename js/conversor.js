@@ -836,7 +836,7 @@
   // Compressão (opção 9) — vídeo ou áudio, conforme o arquivo escolhido
   // ---------------------------------------------------------------------
 
-  async function compressAudioFile(ffmpeg, file, level, custom, onProgress, infoConhecida) {
+  async function compressAudioFile(ffmpeg, file, level, custom, onProgress, infoConhecida, corte) {
     const info = infoConhecida || (await probeMediaInfo(ffmpeg, file));
     const ext = extOf(file.name);
     const inName = "ain" + ext;
@@ -856,7 +856,9 @@
     if (samplerate && info.aSampleRate && info.aSampleRate < samplerate) samplerate = info.aSampleRate;
     const mono = alvo.mono || info.aChannels === 1;
 
-    const args = ["-i", inName, "-vn", "-c:a", "libmp3lame", "-b:a", bitrate + "k",
+    const recorte = argumentosDeCorte(corte);
+    const args = [...recorte.antes, "-i", inName, ...recorte.depois,
+                  "-vn", "-c:a", "libmp3lame", "-b:a", bitrate + "k",
                   "-ac", mono ? "1" : String(info.aChannels || 2)];
     if (samplerate) args.push("-ar", String(samplerate));
     if (alvo.compressionLevel !== undefined && alvo.compressionLevel !== null) {
@@ -878,7 +880,7 @@
     return { blob: new Blob([data.buffer], { type: "audio/mpeg" }), outName };
   }
 
-  async function compressVideoFile(ffmpeg, file, level, custom, onProgress, infoConhecida) {
+  async function compressVideoFile(ffmpeg, file, level, custom, onProgress, infoConhecida, corte) {
     const info = infoConhecida || (await probeMediaInfo(ffmpeg, file));
     const ext = extOf(file.name);
     const inName = "cin" + ext;
@@ -937,7 +939,11 @@
     progressCallback = onProgress || null;
     let code;
     try {
-      code = await execComLog(ffmpeg, ["-i", inName, ...vArgs, ...audioArgs, outName]);
+      const recorte = argumentosDeCorte(corte);
+      code = await execComLog(ffmpeg, [
+        ...recorte.antes, "-i", inName, ...recorte.depois,
+        ...vArgs, ...audioArgs, outName,
+      ]);
     } finally {
       progressCallback = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
@@ -993,6 +999,16 @@
     origFps: document.getElementById("orig-fps"),
     origSamplerate: document.getElementById("orig-samplerate"),
     origBitrate: document.getElementById("orig-bitrate"),
+    corteAtivo: document.getElementById("corte-ativo"),
+    corteCampos: document.getElementById("corte-campos"),
+    corteInicio: document.getElementById("corte-inicio"),
+    corteFim: document.getElementById("corte-fim"),
+    corteInfo: document.getElementById("corte-info"),
+    corteErro: document.getElementById("corte-erro"),
+    previa: document.getElementById("previa"),
+    previaPalco: document.getElementById("previa-palco"),
+    previaNome: document.getElementById("previa-nome"),
+    previaFechar: document.getElementById("previa-fechar"),
     personalizadaVideo: document.getElementById("personalizada-video"),
     personalizadaAudioOnly: document.getElementById("personalizada-audio-only"),
     personalizadaAudio: document.getElementById("personalizada-audio"),
@@ -1197,6 +1213,10 @@
     }
     let ok = estado.opcao && estado.arquivos.length > 0;
     if (estado.opcao === "9" && (estado.arquivos.length !== 1 || !estado.tipoCompressao)) ok = false;
+    if (ok && estado.opcao === "9") {
+      const corte = lerCorte();
+      if (corte && corte.erro) ok = false;
+    }
     el.btnIniciar.disabled = !ok;
   }
 
@@ -1263,6 +1283,10 @@
   /** Lê os metadados nativos do arquivo da opção 9 e atualiza a estimativa. */
   function carregarMetadados() {
     estado.meta = null;
+    el.corteAtivo.checked = false;
+    el.corteInicio.value = "";
+    el.corteFim.value = "";
+    atualizarPainelCorte();
     estado.info = null;
     estado.infoCarregando = false;
     estado.tokenInfo++;
@@ -1291,6 +1315,8 @@
       : ehVideo ? lerNivelPersonalizado() : lerNivelPersonalizadoAudio();
     const metaComFps = Object.assign({}, estado.meta);
     if (estado.info && estado.info.fps) metaComFps.fps = estado.info.fps;
+    const corte = lerCorte();
+    if (corte && !corte.erro && corte.duracao) metaComFps.duracao = corte.duracao;
     const bytes = estimarTamanho(estado.tipoCompressao, metaComFps, nivel, custom);
     if (!bytes) {
       el.estimativa.classList.add("escondido");
@@ -1453,6 +1479,213 @@
   });
 
   // ---------------------------------------------------------------------
+  // Corte de trecho (opção 9, vale para qualquer nível)
+  // ---------------------------------------------------------------------
+
+  /**
+   * Lê "90", "1:30" ou "1:02:03" e devolve segundos. null = não entendi.
+   * Aceita vírgula ou ponto nos décimos, porque teclado brasileiro.
+   */
+  function parseTempo(texto) {
+    const limpo = String(texto || "").trim().replace(",", ".");
+    if (!limpo) return null;
+    if (!/^\d+(\.\d+)?(:\d{1,2}(\.\d+)?){0,2}$/.test(limpo)) return null;
+    const partes = limpo.split(":").map(parseFloat);
+    if (partes.some((n) => !Number.isFinite(n) || n < 0)) return null;
+    // os campos à direita dos minutos não podem passar de 59
+    if (partes.length > 1 && partes.slice(1).some((n) => n >= 60)) return null;
+    return partes.reduce((total, n) => total * 60 + n, 0);
+  }
+
+  /** Segundos → "m:ss" ou "h:mm:ss". */
+  function formatarTempo(segundos) {
+    const total = Math.max(0, Math.round(segundos));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const dois = (n) => (n < 10 ? "0" + n : String(n));
+    return h > 0 ? h + ":" + dois(m) + ":" + dois(s) : m + ":" + dois(s);
+  }
+
+  /**
+   * Trecho pedido pelo usuário, já validado.
+   * Devolve { inicio, fim, duracao } ou null quando o corte está desligado.
+   * Em caso de erro devolve { erro: "..." }.
+   */
+  function lerCorte() {
+    if (!el.corteAtivo.checked) return null;
+
+    const inicio = parseTempo(el.corteInicio.value);
+    const fimBruto = el.corteFim.value.trim();
+    const fim = fimBruto ? parseTempo(fimBruto) : null;
+    const duracaoTotal = estado.meta && estado.meta.duracao ? estado.meta.duracao : null;
+
+    if (el.corteInicio.value.trim() && inicio === null) {
+      return { erro: "Não entendi o início. Use 0:30, 1:02:03 ou só os segundos." };
+    }
+    if (fimBruto && fim === null) {
+      return { erro: "Não entendi o fim. Use 0:30, 1:02:03 ou só os segundos." };
+    }
+
+    const de = inicio || 0;
+    if (fim !== null && fim <= de) {
+      return { erro: "O fim precisa vir depois do início." };
+    }
+    if (duracaoTotal && de >= duracaoTotal) {
+      return { erro: "O início está além do fim do arquivo (" + formatarTempo(duracaoTotal) + ")." };
+    }
+
+    // sem fim informado, vai até o fim do arquivo
+    const ate = fim !== null ? (duracaoTotal ? Math.min(fim, duracaoTotal) : fim) : duracaoTotal;
+    return { inicio: de, fim: fim !== null ? fim : null, duracao: ate ? ate - de : null };
+  }
+
+  /** Argumentos de corte. Precisam vir ANTES do -i para o seek ser rápido. */
+  function argumentosDeCorte(corte) {
+    if (!corte || corte.erro) return { antes: [], depois: [] };
+    const antes = [];
+    const depois = [];
+    if (corte.inicio > 0) antes.push("-ss", String(corte.inicio));
+    // -t (duração) em vez de -to: combinado com um -ss de entrada, é o que
+    // se comporta igual em toda versão do ffmpeg.
+    if (corte.fim !== null) depois.push("-t", String(corte.fim - corte.inicio));
+    return { antes, depois };
+  }
+
+  function atualizarPainelCorte() {
+    const ligado = el.corteAtivo.checked;
+    el.corteCampos.classList.toggle("escondido", !ligado);
+
+    const duracaoTotal = estado.meta && estado.meta.duracao ? estado.meta.duracao : null;
+    if (!ligado) {
+      el.corteErro.classList.add("escondido");
+      el.corteInfo.textContent = "";
+      atualizarBotaoIniciar();
+      return;
+    }
+
+    const corte = lerCorte();
+    if (corte && corte.erro) {
+      el.corteErro.textContent = corte.erro;
+      el.corteErro.classList.remove("escondido");
+      el.corteInfo.textContent = "";
+    } else {
+      el.corteErro.classList.add("escondido");
+      const partes = [];
+      partes.push("Duração original: " + (duracaoTotal ? formatarTempo(duracaoTotal) : "desconhecida"));
+      if (corte && corte.duracao) partes.push("trecho selecionado: " + formatarTempo(corte.duracao));
+      else if (!duracaoTotal) partes.push("informe o fim para saber o tamanho do trecho");
+      el.corteInfo.textContent = partes.join(" · ");
+    }
+    atualizarBotaoIniciar();
+  }
+
+  /** Preenche os campos com o arquivo inteiro na primeira vez que se liga. */
+  function semearCamposDeCorte() {
+    const duracaoTotal = estado.meta && estado.meta.duracao ? estado.meta.duracao : null;
+    if (!el.corteInicio.value.trim()) el.corteInicio.value = "0:00";
+    if (!el.corteFim.value.trim() && duracaoTotal) el.corteFim.value = formatarTempo(duracaoTotal);
+  }
+
+  el.corteAtivo.addEventListener("change", () => {
+    if (el.corteAtivo.checked) semearCamposDeCorte();
+    atualizarPainelCorte();
+    atualizarEstimativa();
+  });
+
+  [el.corteInicio, el.corteFim].forEach((campo) => {
+    campo.addEventListener("input", () => {
+      atualizarPainelCorte();
+      atualizarEstimativa();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Prévia em tela cheia
+  // ---------------------------------------------------------------------
+
+  /** Elemento adequado ao tipo do blob, ou null se não dá para exibir. */
+  function elementoDePrevia(blob, url) {
+    const tipo = blob.type || "";
+    if (tipo.startsWith("video/")) {
+      const v = document.createElement("video");
+      v.src = url;
+      v.controls = true;
+      v.autoplay = true;
+      v.playsInline = true;
+      v.className = "previa-midia";
+      return v;
+    }
+    if (tipo.startsWith("audio/")) {
+      const a = document.createElement("audio");
+      a.src = url;
+      a.controls = true;
+      a.autoplay = true;
+      a.className = "previa-midia previa-audio";
+      return a;
+    }
+    if (tipo.startsWith("image/")) {
+      const i = document.createElement("img");
+      i.src = url;
+      i.alt = "Prévia do arquivo convertido";
+      i.className = "previa-midia";
+      return i;
+    }
+    return null;
+  }
+
+  function fecharPrevia() {
+    // solta o decodificador antes de esconder, senão o vídeo segue tocando
+    const midia = el.previaPalco.querySelector("video, audio");
+    if (midia) {
+      try { midia.pause(); } catch (e) {}
+      midia.removeAttribute("src");
+      try { midia.load(); } catch (e) {}
+    }
+    el.previaPalco.innerHTML = "";
+    el.previa.classList.add("escondido");
+    if (document.fullscreenElement === el.previa) {
+      // sair da tela cheia dispara fullscreenchange, que já chamaria daqui
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  function abrirPrevia(blob, url, nome) {
+    const midia = elementoDePrevia(blob, url);
+    if (!midia) return;
+
+    el.previaPalco.innerHTML = "";
+    el.previaPalco.appendChild(midia);
+    el.previaNome.textContent = nome;
+    el.previa.classList.remove("escondido");
+
+    // requestFullscreen só é aceito dentro do gesto do usuário — este
+    // caminho vem sempre de um clique. Se o navegador recusar, o modal
+    // continua servindo como visualização normal.
+    if (el.previa.requestFullscreen) {
+      el.previa.requestFullscreen().catch((err) => {
+        diagAviso("Tela cheia recusada, exibindo em janela:", err && err.message);
+      });
+    }
+  }
+
+  el.previaFechar.addEventListener("click", fecharPrevia);
+
+  // clicar no fundo fecha; clicar na mídia, não
+  el.previa.addEventListener("click", (ev) => {
+    if (ev.target === el.previa || ev.target === el.previaPalco) fecharPrevia();
+  });
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && !el.previa.classList.contains("escondido")) fecharPrevia();
+  });
+
+  // sair da tela cheia pelo Esc do navegador também fecha o modal
+  document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement && !el.previa.classList.contains("escondido")) fecharPrevia();
+  });
+
+  // ---------------------------------------------------------------------
   // Eventos da seleção de operação e dos campos
   // ---------------------------------------------------------------------
 
@@ -1526,6 +1759,11 @@
     el.avisoMemoria.classList.add("escondido");
     el.estimativa.classList.add("escondido");
     el.painelOriginal.classList.add("escondido");
+    el.corteAtivo.checked = false;
+    el.corteInicio.value = "";
+    el.corteFim.value = "";
+    el.corteCampos.classList.add("escondido");
+    el.corteErro.classList.add("escondido");
     el.resultadosWrapper.classList.add("escondido");
     el.listaResultados.innerHTML = "";
     el.progressoLote.textContent = "";
@@ -1618,13 +1856,30 @@
         tamanhos.classList.add(variacao > 0 ? "menor" : "maior");
 
         const url = URL.createObjectURL(blob);
+
+        const acoes = document.createElement("div");
+        acoes.className = "resultado-acoes";
+
+        // so oferece previa do que o navegador sabe tocar/exibir
+        const tipo = blob.type || "";
+        if (/^(video|audio|image)\//.test(tipo)) {
+          const previa = document.createElement("button");
+          previa.type = "button";
+          previa.className = "btn-secondary resultado-previa";
+          previa.textContent = "Prévia";
+          previa.title = "Ver " + outName + " em tela cheia";
+          previa.addEventListener("click", () => abrirPrevia(blob, url, outName));
+          acoes.appendChild(previa);
+        }
+
         const a = document.createElement("a");
         a.className = "btn-secondary resultado-download";
         a.href = url;
         a.download = outName;
         a.textContent = "Baixar";
         a.title = "Baixar " + outName;
-        li.appendChild(a);
+        acoes.appendChild(a);
+        li.appendChild(acoes);
 
         estado.saidas.push({ nome: outName, blob: blob, url: url });
         el.acoesResultados.classList.remove("escondido");
@@ -1805,11 +2060,16 @@
         const custom = nivel !== "5"
           ? null
           : ehVideo ? lerNivelPersonalizado() : lerNivelPersonalizadoAudio();
+        const corte = lerCorte();
+        if (corte && corte.duracao) {
+          diag("Cortando trecho:", formatarTempo(corte.inicio), "→",
+               corte.fim !== null ? formatarTempo(corte.fim) : "fim do arquivo");
+        }
         try {
           linha.setStatus(ehVideo ? "Analisando o vídeo…" : "Analisando o áudio…");
           const comprimir = ehVideo ? compressVideoFile : compressAudioFile;
           const resultado = await comprimir(
-            ffmpeg, file, nivel, custom, (p) => linha.setProgresso(p), estado.info
+            ffmpeg, file, nivel, custom, (p) => linha.setProgresso(p), estado.info, corte
           );
           linha.setStatus("Concluído.", "ok");
           linha.adicionarDownload(resultado.blob, resultado.outName);

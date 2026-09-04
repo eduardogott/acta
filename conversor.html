@@ -102,6 +102,25 @@
       <label class="opcao-item"><input type="radio" name="nivel" value="5" /> Personalizada</label>
     </div>
     <p class="nivel-resumo" id="nivel-resumo"></p>
+    <div class="corte" id="corte">
+      <label class="opcao-item">
+        <input type="checkbox" id="corte-ativo" /> Cortar um trecho
+      </label>
+      <div class="corte-campos escondido" id="corte-campos">
+        <div class="corte-linha">
+          <div class="campo-inline">
+            <label for="corte-inicio">Início</label>
+            <input type="text" id="corte-inicio" placeholder="0:00" inputmode="numeric" />
+          </div>
+          <div class="campo-inline">
+            <label for="corte-fim">Fim</label>
+            <input type="text" id="corte-fim" placeholder="0:00" inputmode="numeric" />
+          </div>
+        </div>
+        <p class="corte-info" id="corte-info"></p>
+        <p class="corte-erro escondido" id="corte-erro"></p>
+      </div>
+    </div>
     <p class="estimativa escondido" id="estimativa"></p>
 
     <div id="painel-original" class="painel-original escondido">
@@ -222,6 +241,14 @@
     <ul class="lista-resultados" id="lista-resultados"></ul>
   </div>
 </main>
+
+<div class="previa escondido" id="previa" role="dialog" aria-modal="true" aria-label="Prévia do arquivo convertido">
+  <div class="previa-barra">
+    <span class="previa-nome" id="previa-nome"></span>
+    <button type="button" class="previa-fechar" id="previa-fechar" aria-label="Fechar prévia">Fechar ✕</button>
+  </div>
+  <div class="previa-palco" id="previa-palco"></div>
+</div>
 
 <footer>
   <p class="footer-credit"><a class="footer-link" href="https://gttr.com.br">Eduardo Gottert</a> · 2026</p>
