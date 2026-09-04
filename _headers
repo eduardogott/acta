@@ -1,15 +1,23 @@
 # Cabeçalhos custom do Cloudflare Pages.
-# Escopo apenas na página do conversor: habilita COOP/COEP (isolamento de
-# origem cruzada), necessário para o ffmpeg.wasm multi-thread (SharedArrayBuffer).
-# Não se aplica ao restante do site (index.html etc).
+#
+# COOP/COEP (isolamento de origem cruzada) valem para o site TODO, não só
+# para /conversor.html. Motivo: o ffmpeg.wasm cria workers dedicados
+# (js/vendor/ffmpeg/814.ffmpeg.js e os workers de pthread do Emscripten), e
+# um worker criado a partir de um documento isolado precisa ele mesmo ser
+# isolado para poder usar SharedArrayBuffer. Se o script do worker vier sem
+# COEP, o construtor Worker falha com um evento de erro vazio — foi o que
+# aconteceu enquanto isto valia apenas na rota da página.
+#
+# Isso é seguro aqui porque nenhuma página do site embute recurso de outra
+# origem; o núcleo do ffmpeg vem do jsDelivr, que responde com
+# Cross-Origin-Resource-Policy: cross-origin e satisfaz o require-corp.
 #
 # NOTA: o Cloudflare Pages não aplica este arquivo a respostas que passam
 # por uma Pages Function (mesmo via next()) — ver
 # https://developers.cloudflare.com/pages/configuration/headers/. Como
 # functions/_middleware.js (gate de Basic Auth) roda em toda rota, ele
-# também seta esses mesmos dois cabeçalhos para /conversor.html na mão.
-# Este arquivo fica como documentação/fallback caso o middleware seja
-# removido no futuro.
-/conversor.html
+# também seta estes mesmos cabeçalhos na mão. Este arquivo fica como
+# documentação/fallback caso o middleware seja removido no futuro.
+/*
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp

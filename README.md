@@ -158,10 +158,17 @@ navegador** via
 - Os arquivos do núcleo ficam no Cache API sob a chave `acta-ffmpeg-v2`,
   então o download de 32 MB só acontece na primeira visita. Ao trocar a
   versão do ffmpeg, mude também esse nome de cache para invalidar o antigo.
-- **`_headers`** — habilita `Cross-Origin-Opener-Policy`/
-  `Cross-Origin-Embedder-Policy` (`same-origin`/`require-corp`) **apenas**
-  na rota `/conversor.html`, necessário para o core multi-thread
-  (`SharedArrayBuffer`). Não afeta `index.html`.
+- **`_headers`** / **`functions/_middleware.js`** — habilitam
+  `Cross-Origin-Opener-Policy: same-origin` e
+  `Cross-Origin-Embedder-Policy: require-corp` em **todas** as rotas,
+  necessário para o core multi-thread (`SharedArrayBuffer`).
+
+  O escopo é o site inteiro, e não só a página do conversor, porque o
+  ffmpeg cria workers dedicados (`814.ffmpeg.js` e os workers de pthread
+  do Emscripten): quando o documento que os cria é isolado, o próprio
+  script do worker precisa vir com COEP, senão o `new Worker()` falha com
+  um evento de erro **vazio**. Isso é seguro porque nenhuma página do site
+  embute recurso de outra origem.
 
 Limitações herdadas de rodar no navegador (sem acesso a disco): a opção 5
 (padronizar extensões) não renomeia o arquivo original no disco do

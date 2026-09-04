@@ -222,8 +222,30 @@
       w.addEventListener("error", (ev) => {
         diagErro(
           "Worker falhou:", alvo,
-          "| mensagem:", ev.message || "(vazia — tipicamente 404 ou erro de sintaxe no script do worker)",
+          "| mensagem:", ev.message || "(vazia — o script não chegou a rodar)",
           "| origem:", (ev.filename || "?") + ":" + (ev.lineno || "?")
+        );
+        // Um ErrorEvent vazio não distingue 404, 401 e falha de política.
+        // Buscar a URL na hora responde qual dos três foi.
+        if (alvo.startsWith("blob:")) return;
+        fetch(alvo, { cache: "no-store" }).then(
+          (resp) => {
+            diagErro("Investigando " + alvo + ":", {
+              status: resp.status,
+              "Content-Type": resp.headers.get("content-type") || "(ausente)",
+              "Cross-Origin-Embedder-Policy": resp.headers.get("cross-origin-embedder-policy") || "(AUSENTE)",
+              "Cross-Origin-Resource-Policy": resp.headers.get("cross-origin-resource-policy") || "(ausente)",
+            });
+            if (resp.ok && !resp.headers.get("cross-origin-embedder-policy")) {
+              diagErro(
+                "O script do worker existe (" + resp.status + ") mas veio SEM " +
+                "Cross-Origin-Embedder-Policy. Num documento isolado, o worker " +
+                "precisa desse cabeçalho para poder usar SharedArrayBuffer — " +
+                "aplique COOP/COEP a todas as rotas, não só à página."
+              );
+            }
+          },
+          (err) => diagErro("Nem o fetch de " + alvo + " passou:", err)
         );
       });
       w.addEventListener("messageerror", (ev) => diagErro("Worker messageerror:", alvo, ev));
@@ -537,24 +559,20 @@
         .join(", ")
     );
 
-    // Preferimos o Content-Length real; o jsDelivr responde em chunks e não
-    // manda esse cabeçalho, então caímos nos tamanhos declarados.
+    // O denominador tem de ser o tamanho DESCOMPRIMIDO, porque lerCorpo()
+    // conta bytes já decodificados. O Content-Length do jsDelivr é o tamanho
+    // comprimido (br/gzip) — usá-lo faria a barra bater 100% com um terço do
+    // download. Por isso o valor declarado manda, e o Content-Length só
+    // entra se não houver declaração.
     let total = 0;
-    let origemDoTotal = "Content-Length";
+    let origemDoTotal = "tamanhos declarados em ARQUIVOS_CORE";
     for (const f of fontes) {
-      const n = Number(f.resp.headers.get("content-length"));
-      if (Number.isFinite(n) && n > 0) {
-        total += n;
-        if (!f.veioDoCache && n !== f.spec.bytes) {
-          diagAviso(
-            "O tamanho declarado de " + f.spec.url.split("/").pop() + " (" + f.spec.bytes +
-            " bytes) não bate com o servidor (" + n + " bytes). Atualize ARQUIVOS_CORE."
-          );
-        }
+      if (f.spec.bytes) {
+        total += f.spec.bytes;
       } else {
-        total = totalDeclarado;
-        origemDoTotal = "tamanhos declarados em ARQUIVOS_CORE";
-        break;
+        const n = Number(f.resp.headers.get("content-length"));
+        total += Number.isFinite(n) && n > 0 ? n : 0;
+        origemDoTotal = "Content-Length (pode estar comprimido)";
       }
     }
     diag("Total do download:", humanSize(total), "(via " + origemDoTotal + ")");
@@ -566,6 +584,14 @@
         recebido += delta;
         if (onProgresso) onProgresso(recebido, total, todasEmCache);
       });
+      // Comparação honesta: bytes efetivamente lidos (já descomprimidos)
+      // contra o valor declarado. Pega constante desatualizada de verdade.
+      if (f.spec.bytes && buf.byteLength !== f.spec.bytes) {
+        diagAviso(
+          "O tamanho declarado de " + f.spec.url.split("/").pop() + " (" + f.spec.bytes +
+          " bytes) não bate com o recebido (" + buf.byteLength + " bytes). Atualize ARQUIVOS_CORE."
+        );
+      }
       if (!f.veioDoCache && cache) {
         try {
           await cache.put(f.spec.url, new Response(buf, { headers: { "Content-Type": f.spec.tipo } }));

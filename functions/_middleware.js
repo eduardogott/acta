@@ -61,25 +61,24 @@ export async function onRequest(context) {
 
   // _headers não é aplicado a respostas que passam por uma Function do
   // Pages (mesmo via next()) — ver https://developers.cloudflare.com/pages/configuration/headers/.
-  // Como este middleware roda em toda rota, precisamos setar aqui o
-  // COOP/COEP que o _headers configurava para /conversor.html (necessário
-  // para o ffmpeg.wasm multi-thread via SharedArrayBuffer).
-  // O Pages serve conversor.html em mais de um caminho (/conversor.html,
-  // /conversor e com barra no fim), então normalizamos antes de comparar —
-  // uma igualdade exata com "/conversor.html" deixava a rota /conversor sem
-  // os cabeçalhos, e o ffmpeg multi-thread não carregava.
-  const url = new URL(request.url);
-  const rota = url.pathname.replace(/\/+$/, "").replace(/\.html$/, "");
-  if (rota === "/conversor") {
-    const headers = new Headers(response.headers);
-    headers.set("Cross-Origin-Opener-Policy", "same-origin");
-    headers.set("Cross-Origin-Embedder-Policy", "require-corp");
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    });
-  }
-
-  return response;
+  // Como este middleware roda em toda rota, o COOP/COEP tem de ser setado
+  // aqui.
+  //
+  // Vale para o site TODO, não só para a página do conversor: o ffmpeg.wasm
+  // cria workers dedicados (814.ffmpeg.js e os workers de pthread do
+  // Emscripten) e um worker criado a partir de um documento isolado precisa
+  // ele mesmo ser isolado para usar SharedArrayBuffer. Servindo o script do
+  // worker sem COEP, o construtor Worker falha com um erro vazio.
+  //
+  // Seguro porque nenhuma página embute recurso de outra origem, e o núcleo
+  // do ffmpeg vem do jsDelivr, que manda Cross-Origin-Resource-Policy:
+  // cross-origin.
+  const headers = new Headers(response.headers);
+  headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  headers.set("Cross-Origin-Embedder-Policy", "require-corp");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
