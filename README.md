@@ -157,7 +157,8 @@ navegador** via
   log recebidas.
 
   Também não adianta parsear a linha de estatística normal do ffmpeg
-  (`frame= … time= …`): ela termina em ``, e o Emscripten só entrega ao
+  (`frame= … time= …`): ela termina em `
+`, e o Emscripten só entrega ao
   logger quando encontra `
 `, então fica presa no buffer o encode
   inteiro. Já os blocos do `-progress` são `chave=valor` terminados em
@@ -165,9 +166,18 @@ navegador** via
   `speed`. A fração é calculada contra a duração que **nós** conhecemos,
   porque a do próprio ffmpeg ignoraria o corte.
 
+  `execCompressao` protege esse experimento: se o comando falhar **com**
+  `-progress pipe:1`, ele repete uma vez sem — nem todo core abre esse
+  pipe, e é melhor perder a barra do que perder a conversão. Dando certo
+  na segunda, o `-progress` fica desligado pelo resto da sessão.
+
   Há um heartbeat de 1 s para o tempo decorrido seguir andando, e as
   métricas (tempo processado, fonte, contagem de eventos e linhas,
   velocidade) saem no console a cada 5 s.
+- **Quando o ffmpeg falha, as últimas 40 linhas do log vão para o
+  console** (`despejarCauda`). É onde a razão aparece, e antes elas eram
+  descartadas — restava só um código de saída sem explicação. A sonda é a
+  exceção: ela sai com código 1 de propósito, e passa `falhaEsperada`.
 - **Prévia** ao lado de cada botão Baixar: abre o arquivo convertido num
   modal e pede tela cheia. `requestFullscreen()` só vale dentro do gesto
   do usuário — daí ser chamado direto no clique; se o navegador recusar, o

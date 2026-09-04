@@ -518,12 +518,19 @@
   let ffmpegEmConstrucao = null;
   let logSink = null;
   let logWatcher = null;
+  // ultimas linhas do ffmpeg, para explicar uma falha
+  const CAUDA_MAX = 40;
+  let logCauda = [];
+  // null = ainda nao sei se este core aceita -progress pipe:1
+  let progressoSuportado = null;
   let progressCallback = null;
   let cancelado = false;
 
   function attachSinks(ffmpeg) {
     ffmpeg.on("log", ({ message }) => {
       if (logSink) logSink.push(message);
+      logCauda.push(message);
+      if (logCauda.length > CAUDA_MAX) logCauda.shift();
       if (logWatcher) logWatcher(message);
       if (VERBOSE) console.debug("[ffmpeg]", message);
     });
@@ -738,19 +745,66 @@
   }
 
   /** Envolve ffmpeg.exec logando o argv, o código de saída e o tempo gasto. */
-  async function execComLog(ffmpeg, args) {
+  async function execComLog(ffmpeg, args, opcoes) {
+    // a sonda sai com código 1 de propósito (não há arquivo de saída),
+    // então nesse caso o log não é sintoma de nada
+    const falhaEsperada = !!(opcoes && opcoes.falhaEsperada);
     diag("ffmpeg", args.join(" "));
     const inicio = performance.now();
+    logCauda = [];
     try {
       const code = await ffmpeg.exec(args);
       const ms = Math.round(performance.now() - inicio);
-      if (code) diagAviso("ffmpeg saiu com código", code, "em " + ms + "ms");
-      else diag("ffmpeg ok em " + ms + "ms");
+      if (code) {
+        if (!falhaEsperada) {
+          diagAviso("ffmpeg saiu com código", code, "em " + ms + "ms");
+          despejarCauda();
+        }
+      } else {
+        diag("ffmpeg ok em " + ms + "ms");
+      }
       return code;
     } catch (err) {
       diagErro("ffmpeg lançou exceção em " + Math.round(performance.now() - inicio) + "ms:", err);
+      despejarCauda();
       throw err;
     }
+  }
+
+  /** Mostra o fim do log do ffmpeg — é onde a razão da falha aparece. */
+  function despejarCauda() {
+    if (logCauda.length === 0) {
+      diagAviso("O ffmpeg não deixou nenhuma linha de log.");
+      return;
+    }
+    diagErro("Últimas " + logCauda.length + " linhas do ffmpeg:");
+    for (const linha of logCauda) console.error("    " + linha);
+  }
+
+  /**
+   * Roda a compressão pedindo andamento. Se falhar COM `-progress pipe:1`,
+   * tenta uma vez sem: nem todo core aceita abrir esse pipe, e é melhor
+   * perder a barra do que perder a conversão.
+   */
+  async function execCompressao(ffmpeg, args, outName) {
+    const tentarProgresso = progressoSuportado !== false;
+    let code = await execComLog(ffmpeg, tentarProgresso ? [...ARGS_PROGRESSO, ...args] : args);
+
+    if (code && tentarProgresso) {
+      try { await ffmpeg.deleteFile(outName); } catch (e) {}
+      diagAviso("Falhou com -progress pipe:1. Repetindo sem ele para descartar essa causa…");
+      code = await execComLog(ffmpeg, args);
+      if (!code) {
+        progressoSuportado = false;
+        diagAviso(
+          "Confirmado: este core recusa -progress pipe:1. O andamento detalhado " +
+          "fica desativado nesta sessão; o tempo decorrido continua contando."
+        );
+      }
+    } else if (!code && tentarProgresso) {
+      progressoSuportado = true;
+    }
+    return code;
   }
 
   async function probeMediaInfo(ffmpeg, file) {
@@ -759,7 +813,7 @@
                 async () => ffmpeg.writeFile(inName, await fileToUint8(file)));
     logSink = [];
     try {
-      await execComLog(ffmpeg, ["-i", inName]);
+      await execComLog(ffmpeg, ["-i", inName], { falhaEsperada: true });
     } catch (e) {
       // esperado: sem arquivo de saída, ffmpeg "falha" — só queremos o log
     }
@@ -882,7 +936,7 @@
     const mono = alvo.mono || info.aChannels === 1;
 
     const recorte = argumentosDeCorte(corte);
-    const args = [...ARGS_PROGRESSO, ...recorte.antes, "-i", inName, ...recorte.depois,
+    const args = [...recorte.antes, "-i", inName, ...recorte.depois,
                   "-vn", "-c:a", "libmp3lame", "-b:a", bitrate + "k",
                   "-ac", mono ? "1" : String(info.aChannels || 2)];
     if (samplerate) args.push("-ar", String(samplerate));
@@ -894,7 +948,7 @@
     const pararAcompanhamento = acompanharEncode(duracaoDoTrabalho(info, corte), onAndamento);
     let code;
     try {
-      code = await execComLog(ffmpeg, args);
+      code = await execCompressao(ffmpeg, args, outName);
     } finally {
       pararAcompanhamento();
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
@@ -967,10 +1021,10 @@
     let code;
     try {
       const recorte = argumentosDeCorte(corte);
-      code = await execComLog(ffmpeg, [
-        ...ARGS_PROGRESSO, ...recorte.antes, "-i", inName, ...recorte.depois,
+      code = await execCompressao(ffmpeg, [
+        ...recorte.antes, "-i", inName, ...recorte.depois,
         ...vArgs, ...audioArgs, outName,
-      ]);
+      ], outName);
     } finally {
       pararAcompanhamento();
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
@@ -1565,7 +1619,9 @@
     return {
       observarProgresso(evento) {
         atual.eventos++;
-        if (evento && Number.isFinite(evento.time)) {
+        // AV_NOPTS_VALUE (INT64_MAX) chega como "sem timestamp" e viraria
+        // 9223372036854 segundos de mídia processada
+        if (evento && Number.isFinite(evento.time) && evento.time > 0 && evento.time < 9e15) {
           registrar(evento.time / 1e6, "evento progress");
         }
       },
