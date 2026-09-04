@@ -76,19 +76,28 @@
     "5": "Você define cada parâmetro abaixo.",
   };
 
-  const CORE_BASE = "js/vendor/ffmpeg/core-mt";
-  // ffmpeg-core.wasm (~31 MB) é maior que o limite de 25 MiB por arquivo do
-  // Cloudflare Pages, então fica vendorizado em partes e é remontado aqui.
-  // O tamanho de cada parte fica declarado aqui porque o Cloudflare serve
-  // esses arquivos sem Content-Length; sem isso a barra de progresso do
-  // download do motor não teria denominador. Ao regerar as partes, atualize
-  // estes números — ver README, "Atualizando o ffmpeg.wasm".
-  const WASM_PARTS = [
-    { nome: "ffmpeg-core.wasm.part0", bytes: 16000000 },
-    { nome: "ffmpeg-core.wasm.part1", bytes: 16000000 },
-    { nome: "ffmpeg-core.wasm.part2", bytes: 718323 },
-  ];
-  const CACHE_MOTOR = "acta-ffmpeg-v1";
+  // O núcleo do ffmpeg (32 MB) vem do jsDelivr, não deste site. Versões
+  // fixadas de propósito: a URL vira imutável e cacheável para sempre.
+  //
+  // O "bytes" de cada arquivo está declarado porque o jsDelivr responde em
+  // chunks, sem Content-Length, e sem ele a barra de progresso ficaria sem
+  // denominador. Ao trocar de versão, atualize os números — o código avisa
+  // no console se divergirem do que o servidor mandar.
+  const CDN_CORE = "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/umd";
+  const ARQUIVOS_CORE = {
+    core:   { url: CDN_CORE + "/ffmpeg-core.js",        tipo: "text/javascript",  bytes: 129115 },
+    wasm:   { url: CDN_CORE + "/ffmpeg-core.wasm",      tipo: "application/wasm", bytes: 32718323 },
+    worker: { url: CDN_CORE + "/ffmpeg-core.worker.js", tipo: "text/javascript",  bytes: 2213 },
+  };
+  // Os dois arquivos que continuam locais (7,6 KB somados) — ver README.
+  const LOADER_LOCAL = ["js/vendor/ffmpeg/ffmpeg.js", "js/vendor/ffmpeg/814.ffmpeg.js"];
+
+  // v2: as chaves do cache mudaram de caminhos locais para URLs do jsDelivr.
+  const CACHE_MOTOR = "acta-ffmpeg-v2";
+
+  // ffmpeg.load() nunca rejeita sozinho se o worker morrer: sem um teto de
+  // tempo a página fica "Inicializando…" para sempre.
+  const TIMEOUT_LOAD_MS = 90000;
 
   // O ffmpeg.wasm carrega o arquivo inteiro no heap do WebAssembly; acima
   // disso é comum a aba ficar sem memória com um erro pouco informativo.
@@ -198,22 +207,59 @@
     return ambiente;
   }
 
-  /** Confere se os arquivos do motor estão realmente no ar. */
+  /**
+   * Envolve o construtor Worker para logar cada worker criado e, sobretudo,
+   * para escutar o evento "error" — o ffmpeg.js não escuta, então um worker
+   * que morre ao carregar deixa o load() pendurado sem nenhuma pista.
+   */
+  function instrumentarWorkers() {
+    if (typeof Worker !== "function" || Worker.__actaInstrumentado) return;
+    const Original = Worker;
+    const Envolvido = function (url, opcoes) {
+      const alvo = String(url);
+      diag("Novo Worker:", alvo, opcoes || "");
+      const w = new Original(url, opcoes);
+      w.addEventListener("error", (ev) => {
+        diagErro(
+          "Worker falhou:", alvo,
+          "| mensagem:", ev.message || "(vazia — tipicamente 404 ou erro de sintaxe no script do worker)",
+          "| origem:", (ev.filename || "?") + ":" + (ev.lineno || "?")
+        );
+      });
+      w.addEventListener("messageerror", (ev) => diagErro("Worker messageerror:", alvo, ev));
+      return w;
+    };
+    Envolvido.prototype = Original.prototype;
+    Envolvido.__actaInstrumentado = true;
+    try {
+      window.Worker = Envolvido;
+    } catch (e) {
+      diagAviso("Não consegui instrumentar o construtor Worker:", e);
+    }
+  }
+
+  /** Confere se os arquivos do motor estão realmente no ar (locais e do CDN). */
   async function diagnosticarArquivosDoMotor() {
-    const alvos = [
-      CORE_BASE + "/ffmpeg-core.js",
-      CORE_BASE + "/ffmpeg-core.worker.js",
-    ].concat(WASM_PARTS.map((p) => CORE_BASE + "/" + p.nome));
+    const alvos = LOADER_LOCAL.concat(
+      Object.keys(ARQUIVOS_CORE).map((k) => ARQUIVOS_CORE[k].url)
+    );
 
     const linhas = {};
     await Promise.all(
       alvos.map(async (url) => {
         try {
-          const resp = await fetch(url, { method: "HEAD", cache: "no-store" });
+          const ehCDN = url.startsWith("http");
+          const resp = await fetch(url, {
+            method: "HEAD",
+            cache: "no-store",
+            mode: ehCDN ? "cors" : "same-origin",
+            credentials: ehCDN ? "omit" : "same-origin",
+          });
           linhas[url] = {
             status: resp.status,
             bytes: resp.headers.get("content-length") || "(sem content-length)",
             tipo: resp.headers.get("content-type") || "(sem content-type)",
+            CORP: resp.headers.get("cross-origin-resource-policy") || "-",
           };
         } catch (err) {
           linhas[url] = { status: "ERRO", bytes: "-", tipo: String(err.message || err) };
@@ -259,6 +305,15 @@
   /** Caminho a exibir: arquivos vindos de pasta (input ou arrasto) mostram o caminho. */
   function caminhoDe(file) {
     return file.caminhoRelativo || file.webkitRelativePath || file.name;
+  }
+
+  /** Rejeita a promessa depois de `ms` caso ela não resolva sozinha. */
+  function comTeto(promessa, ms, mensagem) {
+    let timer;
+    const estouro = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(mensagem)), ms);
+    });
+    return Promise.race([promessa, estouro]).finally(() => clearTimeout(timer));
   }
 
   async function fileToUint8(file) {
@@ -441,59 +496,71 @@
   }
 
   /**
-   * Baixa (ou recupera do cache) as partes do .wasm, remonta e devolve uma
-   * blob URL, reportando o progresso em bytes.
+   * Baixa do jsDelivr (ou recupera do cache) os três arquivos do núcleo e
+   * devolve blob: URLs para cada um, reportando o progresso em bytes.
+   *
+   * Por que blob: URL e não a URL do CDN direto? Porque o Emscripten cria os
+   * workers de pthread com `new Worker(workerURL)`, e o construtor Worker
+   * rejeita qualquer URL de outra origem — nem CORS nem CORP mudam isso. Um
+   * blob: URL pertence à nossa origem e passa. De quebra, buscar nós mesmos
+   * mantém a barra de progresso e o cache.
    */
-  async function montarWasmBlobURL(onProgresso) {
+  async function baixarCoreComoBlobURLs(onProgresso) {
     const cache = await abrirCache();
-    const urls = WASM_PARTS.map((p) => `${CORE_BASE}/${p.nome}`);
-    const totalDeclarado = WASM_PARTS.reduce((n, p) => n + p.bytes, 0);
+    const chaves = ["core", "worker", "wasm"]; // wasm por último: é o pesado
+    const totalDeclarado = chaves.reduce((n, k) => n + ARQUIVOS_CORE[k].bytes, 0);
 
     // Resolve as três respostas antes de ler qualquer corpo: assim os
-    // Content-Length somados dão o denominador da barra, e as partes que
-    // faltam baixam em paralelo em vez de uma depois da outra.
+    // Content-Length somados dão o denominador da barra, e o que faltar
+    // baixa em paralelo em vez de um depois do outro.
     const fontes = await Promise.all(
-      urls.map(async (url) => {
+      chaves.map(async (chave) => {
+        const spec = ARQUIVOS_CORE[chave];
         let doCache = null;
         if (cache) {
-          try { doCache = await cache.match(url); } catch (e) { doCache = null; }
+          try { doCache = await cache.match(spec.url); } catch (e) { doCache = null; }
         }
-        if (doCache) return { url, resp: doCache, veioDoCache: true };
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`Falha ao baixar ${url} (${resp.status})`);
-        return { url, resp, veioDoCache: false };
+        if (doCache) return { chave, spec, resp: doCache, veioDoCache: true };
+        // credentials omitidas: o site fica atrás de Basic Auth, e mandar
+        // credenciais para uma origem que responde ACAO:* quebra o CORS.
+        const resp = await fetch(spec.url, { mode: "cors", credentials: "omit" });
+        if (!resp.ok) throw new Error("Falha ao baixar " + spec.url + " (" + resp.status + ")");
+        return { chave, spec, resp, veioDoCache: false };
       })
     );
 
     const todasEmCache = fontes.every((f) => f.veioDoCache);
     diag(
-      "Partes do .wasm:",
-      fontes.map((f) => f.url.split("/").pop() + (f.veioDoCache ? " (cache)" : " (rede " + f.resp.status + ")")).join(", ")
+      "Núcleo do ffmpeg:",
+      fontes
+        .map((f) => f.spec.url.split("/").pop() + (f.veioDoCache ? " (cache)" : " (jsDelivr " + f.resp.status + ")"))
+        .join(", ")
     );
-    // Preferimos o Content-Length real; quando o servidor o omite (caso do
-    // Cloudflare com estes arquivos), caímos nos tamanhos declarados acima.
+
+    // Preferimos o Content-Length real; o jsDelivr responde em chunks e não
+    // manda esse cabeçalho, então caímos nos tamanhos declarados.
     let total = 0;
     let origemDoTotal = "Content-Length";
-    for (let i = 0; i < fontes.length; i++) {
-      const n = Number(fontes[i].resp.headers.get("content-length"));
+    for (const f of fontes) {
+      const n = Number(f.resp.headers.get("content-length"));
       if (Number.isFinite(n) && n > 0) {
         total += n;
-        if (!fontes[i].veioDoCache && n !== WASM_PARTS[i].bytes) {
+        if (!f.veioDoCache && n !== f.spec.bytes) {
           diagAviso(
-            "O tamanho declarado de " + WASM_PARTS[i].nome + " (" + WASM_PARTS[i].bytes +
-            " bytes) não bate com o servidor (" + n + " bytes). Atualize WASM_PARTS."
+            "O tamanho declarado de " + f.spec.url.split("/").pop() + " (" + f.spec.bytes +
+            " bytes) não bate com o servidor (" + n + " bytes). Atualize ARQUIVOS_CORE."
           );
         }
       } else {
         total = totalDeclarado;
-        origemDoTotal = "tamanhos declarados em WASM_PARTS";
+        origemDoTotal = "tamanhos declarados em ARQUIVOS_CORE";
         break;
       }
     }
     diag("Total do download:", humanSize(total), "(via " + origemDoTotal + ")");
 
     let recebido = 0;
-    const buffers = [];
+    const urls = {};
     for (const f of fontes) {
       const buf = await lerCorpo(f.resp, (delta) => {
         recebido += delta;
@@ -501,17 +568,16 @@
       });
       if (!f.veioDoCache && cache) {
         try {
-          await cache.put(f.url, new Response(buf, { headers: { "Content-Type": "application/wasm" } }));
+          await cache.put(f.spec.url, new Response(buf, { headers: { "Content-Type": f.spec.tipo } }));
         } catch (e) {
           // cota estourada ou storage bloqueado: só perde o cache
         }
       }
-      buffers.push(buf);
+      urls[f.chave] = URL.createObjectURL(new Blob([buf], { type: f.spec.tipo }));
     }
 
-    const totalLido = buffers.reduce((n, b) => n + b.byteLength, 0);
-    diag("Wasm remontado:", humanSize(totalLido), "em", WASM_PARTS.length, "partes", desdeOInicio());
-    return URL.createObjectURL(new Blob(buffers, { type: "application/wasm" }));
+    diag("Núcleo pronto:", humanSize(recebido), "convertido em blob: URLs", desdeOInicio());
+    return { coreURL: urls.core, wasmURL: urls.wasm, workerURL: urls.worker };
   }
 
   async function getFFmpeg(onStatus, onProgresso) {
@@ -537,17 +603,27 @@
             "está sendo servido (aba Network do navegador)."
           );
         }
+        instrumentarWorkers();
         const { FFmpeg } = window.FFmpegWASM;
         const ffmpeg = new FFmpeg();
         ffmpegEmConstrucao = ffmpeg;
         attachSinks(ffmpeg);
-        const wasmURL = await montarWasmBlobURL(onProgresso);
+        const urlsDoCore = await baixarCoreComoBlobURLs(onProgresso);
         if (onStatus) onStatus("Inicializando o motor de conversão…");
-        await ffmpeg.load({
-          coreURL: `${CORE_BASE}/ffmpeg-core.js`,
-          wasmURL,
-          workerURL: `${CORE_BASE}/ffmpeg-core.worker.js`,
-        });
+        // Todas as URLs aqui são blob:, logo absolutas e da nossa origem.
+        // Isso importa: elas são repassadas ao worker js/vendor/ffmpeg/
+        // 814.ffmpeg.js, que faz importScripts(coreURL) — um caminho
+        // relativo resolveria contra a pasta do worker, não a da página — e
+        // o Emscripten faz new Worker(workerURL), que recusa outra origem.
+        diag("Carregando o core:", urlsDoCore);
+
+        await comTeto(
+          ffmpeg.load(urlsDoCore),
+          TIMEOUT_LOAD_MS,
+          "O motor não respondeu em " + TIMEOUT_LOAD_MS / 1000 + "s. Isso costuma " +
+          "significar que o worker do ffmpeg morreu ao carregar o core — veja no " +
+          "console se houve erro de Worker ou um 404 em ffmpeg-core.js."
+        );
         ffmpegEmConstrucao = null;
         ffmpegInstance = ffmpeg;
         diag("Motor pronto.", desdeOInicio());

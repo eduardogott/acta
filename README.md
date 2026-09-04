@@ -124,13 +124,39 @@ navegador** via
 - **`js/zip.js`** — escritor de ZIP mínimo (método STORE, sem ZIP64) usado
   pelo botão "Baixar tudo". Não usa biblioteca externa: os arquivos de
   saída já são comprimidos, então deflate não traria ganho.
-- **`js/vendor/ffmpeg/`** — build UMD do `@ffmpeg/ffmpeg` (`ffmpeg.js` +
-  `814.ffmpeg.js`) e, em `core-mt/`, o core multi-thread
-  `@ffmpeg/core-mt` (`ffmpeg-core.js`, `.wasm`, `.worker.js`). Vendorizado
-  no repo (não vem de CDN) para funcionar mesmo em rede restrita — ver
-  "Atualizando o ffmpeg.wasm" abaixo.
-- O `.wasm` do motor é guardado no Cache API sob a chave
-  `acta-ffmpeg-v1`, então só é baixado na primeira visita. Ao trocar a
+- **`js/vendor/ffmpeg/`** — só o carregador do `@ffmpeg/ffmpeg`
+  (`ffmpeg.js` + `814.ffmpeg.js`, 7,6 KB somados). **Precisa continuar
+  local**: o `ffmpeg.js` deriva a URL do worker `814.ffmpeg.js` do
+  `document.currentScript.src` e chama `new Worker()` com ela — e o
+  construtor `Worker` recusa qualquer URL de outra origem, independente de
+  CORS ou CORP. Servir esses dois de um CDN quebra com `SecurityError`.
+- **Núcleo do ffmpeg — vem do jsDelivr, não do repo.** `ffmpeg-core.js`,
+  `ffmpeg-core.wasm` (32 MB) e `ffmpeg-core.worker.js` são buscados de
+  `cdn.jsdelivr.net/npm/@ffmpeg/core-mt@<versão>/dist/umd/` com `fetch()`
+  e convertidos em `blob:` URLs antes de irem para o `ffmpeg.load()` — ver
+  `ARQUIVOS_CORE`/`baixarCoreComoBlobURLs` em `js/conversor.js`.
+
+  As três **têm** de virar `blob:`, e não ir como URL do CDN direto,
+  porque o Emscripten cria os workers de pthread com
+  `new Worker(workerURL)` — mesma restrição de origem acima. Um `blob:`
+  URL pertence à nossa origem e passa. De quebra, buscar por conta própria
+  mantém a barra de progresso e o cache.
+
+  Isso funciona porque o jsDelivr responde com
+  `access-control-allow-origin: *` (o `fetch` passa) e
+  `cross-origin-resource-policy: cross-origin` (satisfaz o COEP
+  `require-corp`). O `fetch` vai com `credentials: "omit"`: o site fica
+  atrás de Basic Auth, e mandar credenciais para uma origem que responde
+  `ACAO: *` quebraria o CORS.
+- As URLs passadas ao `ffmpeg.load()` precisam ser **absolutas**. Elas são
+  repassadas ao worker `814.ffmpeg.js`, que faz `importScripts(coreURL)`;
+  lá dentro um caminho relativo resolveria contra a pasta do worker, não a
+  da página. Hoje isso está garantido por serem `blob:`. Como o `ffmpeg.js`
+  não escuta o evento `error` do worker, uma falha assim não vira exceção —
+  o `load()` só nunca responde. Daí o teto de tempo (`TIMEOUT_LOAD_MS`) e a
+  instrumentação do construtor `Worker` em `js/conversor.js`.
+- Os arquivos do núcleo ficam no Cache API sob a chave `acta-ffmpeg-v2`,
+  então o download de 32 MB só acontece na primeira visita. Ao trocar a
   versão do ffmpeg, mude também esse nome de cache para invalidar o antigo.
 - **`_headers`** — habilita `Cross-Origin-Opener-Policy`/
   `Cross-Origin-Embedder-Policy` (`same-origin`/`require-corp`) **apenas**
@@ -152,36 +178,40 @@ avisa quando isso é provável.
 
 ### Atualizando o ffmpeg.wasm
 
-Os arquivos em `js/vendor/ffmpeg/` vieram de:
+São duas metades, atualizadas separadamente.
+
+**O núcleo (jsDelivr).** Basta editar `CDN_CORE` em `js/conversor.js`
+apontando para a nova versão de `@ffmpeg/core-mt` e atualizar os `bytes`
+de cada arquivo em `ARQUIVOS_CORE`. Esses tamanhos estão declarados
+porque o jsDelivr responde em chunks, sem `Content-Length`, e sem eles a
+barra de progresso perde o denominador; o código avisa no console se um
+valor declarado divergir do que o servidor mandar. Para conferir:
+
+```
+for f in ffmpeg-core.js ffmpeg-core.wasm ffmpeg-core.worker.js; do
+  curl -sS -o /tmp/$f "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/umd/$f"
+  echo "$(stat -c%s /tmp/$f) $f"
+done
+```
+
+Fixe sempre uma versão exata (nunca `@latest`): a URL vira imutável e o
+CDN pode cacheá-la para sempre. Bump também `CACHE_MOTOR`.
+
+**O carregador (local).** Só se você quiser subir a versão do
+`@ffmpeg/ffmpeg`:
 
 ```
 npm pack @ffmpeg/ffmpeg@0.12.15
-npm pack @ffmpeg/core-mt@0.12.10
 ```
 
-Para atualizar, repita o `npm pack` das versões desejadas e substitua:
+e copie `dist/umd/ffmpeg.js` e `dist/umd/814.ffmpeg.js` para
+`js/vendor/ffmpeg/` (o nome do segundo arquivo muda de versão para
+versão — copie o que estiver em `dist/umd/` além de `ffmpeg.js`).
+Mantenha as versões do carregador e do núcleo compatíveis entre si.
 
-- de `@ffmpeg/ffmpeg`: `dist/umd/ffmpeg.js` e `dist/umd/814.ffmpeg.js`
-  (o nome do segundo arquivo pode mudar de versão para versão — copie o
-  que estiver em `dist/umd/` além de `ffmpeg.js`).
-- de `@ffmpeg/core-mt`: os três arquivos de `dist/umd/` (`ffmpeg-core.js`,
-  `ffmpeg-core.wasm`, `ffmpeg-core.worker.js`).
-
-`ffmpeg-core.wasm` (~31 MB) excede o limite de 25 MiB por arquivo do
-Cloudflare Pages, então ele **não** entra inteiro no repo — é dividido em
-partes (`ffmpeg-core.wasm.part0`, `.part1`, `.part2`, ...) que
-`js/conversor.js` baixa e remonta em um Blob no navegador antes de
-carregar o motor (ver `WASM_PARTS`/`montarWasmBlobURL` nesse arquivo).
-Depois de substituir o `.wasm`, divida-o de novo (partes bem abaixo de
-25 MiB cada, ex.: 16 MB) e **atualize `WASM_PARTS`** com o nome e o
-tamanho em bytes de cada parte. O tamanho fica declarado ali porque o
-Cloudflare serve esses arquivos sem `Content-Length`, e sem ele a barra
-de progresso do download do motor perde o denominador; o código avisa no
-console se um tamanho declarado divergir do que o servidor mandar. Para
-dividir e conferir os tamanhos:
-
-```
-split -b 16000000 -d -a 1 ffmpeg-core.wasm ffmpeg-core.wasm.part
-# e então, para os números que vão em WASM_PARTS:
-#   stat -c'%s %n' ffmpeg-core.wasm.part*
-```
+**Contrapartida de usar CDN.** O conversor passa a depender de o
+`cdn.jsdelivr.net` estar acessível — em rede restrita que bloqueie o CDN,
+o motor não carrega (o console mostra a falha de `fetch`). Foi uma
+troca deliberada por não carregar 32 MB no repositório e por escapar do
+limite de 25 MiB por arquivo do Cloudflare Pages, que antes obrigava a
+quebrar o `.wasm` em partes.
