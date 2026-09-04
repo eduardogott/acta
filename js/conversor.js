@@ -106,6 +106,13 @@
   const LOADER_LOCAL = ["js/vendor/ffmpeg/ffmpeg.js", "js/vendor/ffmpeg/814.ffmpeg.js"];
 
   // v2: as chaves do cache mudaram de caminhos locais para URLs do jsDelivr.
+  // Como este core não chama receiveProgress (o símbolo nem existe no
+  // .wasm), o andamento vem de `-progress pipe:1`: o ffmpeg escreve blocos
+  // de `chave=valor` no stdout, terminados em newline — que é o que o
+  // Emscripten precisa para entregar a linha ao logger. As linhas de
+  // estatística normais terminam em CR e ficam presas no buffer.
+  const ARGS_PROGRESSO = ["-progress", "pipe:1"];
+
   const CACHE_MOTOR = "acta-ffmpeg-v2";
 
   // ffmpeg.load() nunca rejeita sozinho se o worker morrer: sem um teto de
@@ -875,7 +882,7 @@
     const mono = alvo.mono || info.aChannels === 1;
 
     const recorte = argumentosDeCorte(corte);
-    const args = [...recorte.antes, "-i", inName, ...recorte.depois,
+    const args = [...ARGS_PROGRESSO, ...recorte.antes, "-i", inName, ...recorte.depois,
                   "-vn", "-c:a", "libmp3lame", "-b:a", bitrate + "k",
                   "-ac", mono ? "1" : String(info.aChannels || 2)];
     if (samplerate) args.push("-ar", String(samplerate));
@@ -961,7 +968,7 @@
     try {
       const recorte = argumentosDeCorte(corte);
       code = await execComLog(ffmpeg, [
-        ...recorte.antes, "-i", inName, ...recorte.depois,
+        ...ARGS_PROGRESSO, ...recorte.antes, "-i", inName, ...recorte.depois,
         ...vArgs, ...audioArgs, outName,
       ]);
     } finally {
@@ -1545,7 +1552,7 @@
     const inicio = performance.now();
     const atual = {
       segundos: 0, fracao: 0, fonte: null,
-      eventos: 0, linhas: 0, linhasComTime: 0,
+      eventos: 0, linhas: 0, linhasComTempo: 0, velocidadeRelatada: 0,
     };
 
     function registrar(segundos, fonte) {
@@ -1565,11 +1572,21 @@
 
       observarLog(mensagem) {
         atual.linhas++;
-        const t = mensagem.match(/time=\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
-        if (t) {
-          atual.linhasComTime++;
-          registrar(Number(t[1]) * 3600 + Number(t[2]) * 60 + parseFloat(t[3]), "log");
+        // bloco do -progress: out_time_us vem em microssegundos
+        const us = mensagem.match(/out_time_us=(\d+)/);
+        if (us) {
+          atual.linhasComTempo++;
+          registrar(Number(us[1]) / 1e6, "-progress");
+        } else {
+          // out_time=HH:MM:SS.ffffff, e a linha de estatistica com time=
+          const t = mensagem.match(/(?:out_time|time)=\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+          if (t) {
+            atual.linhasComTempo++;
+            registrar(Number(t[1]) * 3600 + Number(t[2]) * 60 + parseFloat(t[3]), "-progress");
+          }
         }
+        const v = mensagem.match(/speed=\s*([\d.]+)x/);
+        if (v) atual.velocidadeRelatada = parseFloat(v[1]);
       },
 
       decorrido() {
@@ -1578,6 +1595,9 @@
 
       /** Segundos de mídia processados por segundo de relógio. */
       velocidade() {
+        // a velocidade que o proprio ffmpeg relata e mais estavel que a
+        // media desde o inicio, que fica distorcida pelo tempo de partida
+        if (atual.velocidadeRelatada > 0) return atual.velocidadeRelatada;
         const d = this.decorrido();
         return d > 0.5 && atual.segundos > 0 ? atual.segundos / d : 0;
       },
@@ -1595,7 +1615,7 @@
           "fonte": atual.fonte || "(nenhuma ainda)",
           "eventos progress": atual.eventos,
           "linhas de log": atual.linhas,
-          "linhas com time=": atual.linhasComTime,
+          "linhas com tempo": atual.linhasComTempo,
           "decorrido (s)": Math.round(this.decorrido()),
           "velocidade (x)": Math.round(this.velocidade() * 1000) / 1000,
         };
@@ -1644,7 +1664,8 @@
       diag("Andamento:", m);
       // Sem nenhum evento depois de 10 s, algo está errado no canal —
       // vale dizer isso em vez de deixar a barra parada em silêncio.
-      if (!avisouSemSinal && m["eventos progress"] === 0 && acompanhante.decorrido() > 10) {
+      const semSinal = m["eventos progress"] === 0 && m["linhas com tempo"] === 0;
+      if (!avisouSemSinal && semSinal && acompanhante.decorrido() > 10) {
         avisouSemSinal = true;
         diagAviso(
           "Nenhum evento de progresso em " + Math.round(acompanhante.decorrido()) + "s. " +

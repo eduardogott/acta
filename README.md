@@ -149,20 +149,25 @@ navegador** via
   comporta igual em qualquer versão do ffmpeg. Os campos aceitam `90`,
   `1:30` ou `1:02:03`; a duração vem dos metadados nativos, então a
   validação não depende de carregar o motor.
-- **Andamento da compressão** (`acompanharEncode`) usa o campo `time` do
-  evento `progress` — o core chama `receiveProgress(progress, time)` de
-  dentro do C, com o tempo já processado em microssegundos — e divide pela
-  duração que **nós** conhecemos. O campo `progress` do próprio evento não
-  serve: é calculado sobre a duração do arquivo de **entrada**, então com
-  `-t 15` num vídeo de cinco minutos empaca em 5%.
+- **Andamento da compressão** vem de `-progress pipe:1`
+  (`ARGS_PROGRESSO`), e não do evento `progress` do ffmpeg.wasm. Este core
+  **não** emite esse evento: `receiveProgress` existe no glue JS mas o
+  símbolo não está no `.wasm`, então o C nunca o chama. Confirmado em
+  campo — o diagnóstico mostrava `eventos progress: 0` com 29 linhas de
+  log recebidas.
 
-  As linhas de log ficam só como reserva e não dá para depender delas: o
-  ffmpeg termina a linha de andamento com ``, e o Emscripten só entrega
-  ao logger quando encontra `
-`, então na prática elas nunca chegam
-  durante o encode. Há um heartbeat de 1 s para o tempo decorrido seguir
-  andando, e as métricas (tempo processado, fonte, contagem de eventos e
-  de linhas, velocidade) saem no console a cada 5 s.
+  Também não adianta parsear a linha de estatística normal do ffmpeg
+  (`frame= … time= …`): ela termina em ``, e o Emscripten só entrega ao
+  logger quando encontra `
+`, então fica presa no buffer o encode
+  inteiro. Já os blocos do `-progress` são `chave=valor` terminados em
+  newline e chegam na hora; deles saem `out_time_us` (microssegundos) e
+  `speed`. A fração é calculada contra a duração que **nós** conhecemos,
+  porque a do próprio ffmpeg ignoraria o corte.
+
+  Há um heartbeat de 1 s para o tempo decorrido seguir andando, e as
+  métricas (tempo processado, fonte, contagem de eventos e linhas,
+  velocidade) saem no console a cada 5 s.
 - **Prévia** ao lado de cada botão Baixar: abre o arquivo convertido num
   modal e pede tela cheia. `requestFullscreen()` só vale dentro do gesto
   do usuário — daí ser chamado direto no clique; se o navegador recusar, o
