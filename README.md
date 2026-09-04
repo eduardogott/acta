@@ -158,7 +158,7 @@ partes (`ffmpeg-core.wasm.part0`, `.part1`, `.part2`, ...) que
 carregar o motor (ver `WASM_PARTS`/`montarWasmBlobURL` nesse arquivo).
 Depois de substituir o `.wasm`, divida-o de novo (partes bem abaixo de
 25 MiB cada, ex.: 16 MB) e atualize `WASM_PARTS` se a quantidade de
-partes mudar:
+partes mudar, utilizando:
 
 ```
 split -b 16000000 -d -a 1 ffmpeg-core.wasm ffmpeg-core.wasm.part
