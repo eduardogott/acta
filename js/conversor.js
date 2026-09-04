@@ -373,7 +373,7 @@
    */
   function parseMediaInfo(log) {
     const info = {
-      width: null, height: null, fps: null,
+      width: null, height: null, fps: null, duration: null,
       hasAudio: false, aBitrate: null, aSampleRate: null, aChannels: null,
     };
 
@@ -393,6 +393,11 @@
         const valor = parseFloat(fps[1]);
         if (Number.isFinite(valor) && valor > 0) info.fps = valor;
       }
+    }
+
+    const dur = log.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+    if (dur) {
+      info.duration = Number(dur[1]) * 3600 + Number(dur[2]) * 60 + parseFloat(dur[3]);
     }
 
     const linhaAudio = (log.match(/^.*\bAudio:.*$/m) || [])[0];
@@ -505,12 +510,14 @@
   let ffmpegLoadingPromise = null;
   let ffmpegEmConstrucao = null;
   let logSink = null;
+  let logWatcher = null;
   let progressCallback = null;
   let cancelado = false;
 
   function attachSinks(ffmpeg) {
     ffmpeg.on("log", ({ message }) => {
       if (logSink) logSink.push(message);
+      if (logWatcher) logWatcher(message);
       if (VERBOSE) console.debug("[ffmpeg]", message);
     });
     ffmpeg.on("progress", ({ progress }) => {
@@ -836,7 +843,8 @@
   // Compressão (opção 9) — vídeo ou áudio, conforme o arquivo escolhido
   // ---------------------------------------------------------------------
 
-  async function compressAudioFile(ffmpeg, file, level, custom, onProgress, infoConhecida, corte) {
+  async function compressAudioFile(ffmpeg, file, level, custom, opcoes) {
+    const { info: infoConhecida, corte, onAndamento } = opcoes || {};
     const info = infoConhecida || (await probeMediaInfo(ffmpeg, file));
     const ext = extOf(file.name);
     const inName = "ain" + ext;
@@ -866,12 +874,12 @@
     }
     args.push(outName);
 
-    progressCallback = onProgress || null;
+    const pararAcompanhamento = acompanharEncode(duracaoDoTrabalho(info, corte), onAndamento);
     let code;
     try {
       code = await execComLog(ffmpeg, args);
     } finally {
-      progressCallback = null;
+      pararAcompanhamento();
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
     if (code) throw new Error("ffmpeg retornou erro ao comprimir o áudio");
@@ -880,7 +888,8 @@
     return { blob: new Blob([data.buffer], { type: "audio/mpeg" }), outName };
   }
 
-  async function compressVideoFile(ffmpeg, file, level, custom, onProgress, infoConhecida, corte) {
+  async function compressVideoFile(ffmpeg, file, level, custom, opcoes) {
+    const { info: infoConhecida, corte, onAndamento } = opcoes || {};
     const info = infoConhecida || (await probeMediaInfo(ffmpeg, file));
     const ext = extOf(file.name);
     const inName = "cin" + ext;
@@ -936,7 +945,7 @@
     }
     if (targetFps) vArgs.push("-r", String(targetFps));
 
-    progressCallback = onProgress || null;
+    const pararAcompanhamento = acompanharEncode(duracaoDoTrabalho(info, corte), onAndamento);
     let code;
     try {
       const recorte = argumentosDeCorte(corte);
@@ -945,7 +954,7 @@
         ...vArgs, ...audioArgs, outName,
       ]);
     } finally {
-      progressCallback = null;
+      pararAcompanhamento();
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
     if (code) throw new Error("ffmpeg retornou erro ao comprimir o vídeo");
@@ -1508,6 +1517,84 @@
   }
 
   /**
+   * Acompanha um encode lendo o log do próprio ffmpeg.
+   *
+   * O evento "progress" do ffmpeg.wasm não serve aqui: ele é calculado sobre
+   * a duração do arquivo de ENTRADA, então com `-t 15` num vídeo de cinco
+   * minutos a barra empaca em 5% e parece travada — e com `-ss` fica pior.
+   * As linhas de log trazem `time=` e `speed=`, que são o andamento real.
+   */
+  function criarAcompanhante(duracaoAlvo) {
+    const inicio = performance.now();
+    const atual = { segundos: 0, velocidade: null, fracao: 0 };
+
+    return {
+      /** Recebe cada linha de log do ffmpeg. */
+      observar(mensagem) {
+        const t = mensagem.match(/time=\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+        if (t) {
+          atual.segundos = Number(t[1]) * 3600 + Number(t[2]) * 60 + parseFloat(t[3]);
+          if (duracaoAlvo > 0) atual.fracao = Math.min(1, atual.segundos / duracaoAlvo);
+        }
+        const v = mensagem.match(/speed=\s*([\d.]+)x/);
+        if (v) atual.velocidade = parseFloat(v[1]);
+      },
+
+      fracao() {
+        return atual.fracao;
+      },
+
+      /**
+       * Texto para a linha de resultado. Enquanto o ffmpeg não emitiu o
+       * primeiro `time=`, mostra o tempo decorrido — o importante é a
+       * pessoa ver que algo está acontecendo, ainda mais em máquina lenta.
+       */
+      texto() {
+        if (duracaoAlvo > 0 && atual.segundos > 0) {
+          let s = "Comprimindo… " + formatarTempo(atual.segundos) + " de " +
+                  formatarTempo(duracaoAlvo) + " (" + Math.round(atual.fracao * 100) + "%)";
+          if (atual.velocidade > 0 && atual.fracao < 1) {
+            const restante = (duracaoAlvo - atual.segundos) / atual.velocidade;
+            if (restante >= 1) s += " · faltam ~" + formatarTempo(restante);
+          }
+          return s;
+        }
+        const decorrido = (performance.now() - inicio) / 1000;
+        return "Comprimindo… " + formatarTempo(decorrido) + " decorrido";
+      },
+    };
+  }
+
+  /**
+   * Liga o acompanhante ao log do ffmpeg e mantém a linha de resultado
+   * atualizada uma vez por segundo. Devolve a função que desliga tudo.
+   */
+  function acompanharEncode(duracaoAlvo, onAndamento) {
+    if (!onAndamento) return () => {};
+    const acompanhante = criarAcompanhante(duracaoAlvo);
+    let ultimaPublicacao = 0;
+    const publicar = () => {
+      ultimaPublicacao = performance.now();
+      onAndamento({ fracao: acompanhante.fracao(), texto: acompanhante.texto() });
+    };
+
+    // Publica a cada linha do ffmpeg, que é o dado fresco — mas no máximo
+    // umas 4 vezes por segundo, porque o encoder fala bem mais que isso.
+    logWatcher = (mensagem) => {
+      acompanhante.observar(mensagem);
+      if (performance.now() - ultimaPublicacao >= 250) publicar();
+    };
+    publicar();
+    // o relógio anda mesmo quando o ffmpeg fica quieto entre dois `time=`
+    const timer = setInterval(publicar, 1000);
+
+    return () => {
+      clearInterval(timer);
+      logWatcher = null;
+    };
+  }
+
+  /**
    * Trecho pedido pelo usuário, já validado.
    * Devolve { inicio, fim, duracao } ou null quando o corte está desligado.
    * Em caso de erro devolve { erro: "..." }.
@@ -1541,6 +1628,13 @@
   }
 
   /** Argumentos de corte. Precisam vir ANTES do -i para o seek ser rápido. */
+  /** Quantos segundos de mídia este trabalho vai produzir. 0 = não sei. */
+  function duracaoDoTrabalho(info, corte) {
+    if (corte && !corte.erro && corte.duracao) return corte.duracao;
+    if (info && info.duration) return info.duration;
+    return 0;
+  }
+
   function argumentosDeCorte(corte) {
     if (!corte || corte.erro) return { antes: [], depois: [] };
     const antes = [];
@@ -2068,9 +2162,16 @@
         try {
           linha.setStatus(ehVideo ? "Analisando o vídeo…" : "Analisando o áudio…");
           const comprimir = ehVideo ? compressVideoFile : compressAudioFile;
-          const resultado = await comprimir(
-            ffmpeg, file, nivel, custom, (p) => linha.setProgresso(p), estado.info, corte
-          );
+          const resultado = await comprimir(ffmpeg, file, nivel, custom, {
+            info: estado.info,
+            corte,
+            // o texto e a barra passam a vir do log do ffmpeg, não do
+            // evento "progress" — ver acompanharEncode()
+            onAndamento: (a) => {
+              linha.setStatus(a.texto);
+              linha.setProgresso(a.fracao);
+            },
+          });
           linha.setStatus("Concluído.", "ok");
           linha.adicionarDownload(resultado.blob, resultado.outName);
         } catch (err) {

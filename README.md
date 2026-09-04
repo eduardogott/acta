@@ -149,6 +149,14 @@ navegador** via
   comporta igual em qualquer versão do ffmpeg. Os campos aceitam `90`,
   `1:30` ou `1:02:03`; a duração vem dos metadados nativos, então a
   validação não depende de carregar o motor.
+- **Andamento da compressão** sai do log do ffmpeg (`acompanharEncode`),
+  não do evento `progress` do ffmpeg.wasm. O evento é calculado sobre a
+  duração do arquivo de **entrada**: com `-t 15` num vídeo de cinco
+  minutos ele empaca em 5% e a tela parece travada. As linhas de log
+  trazem `time=` e `speed=`, que dão a fração real e uma estimativa de
+  quanto falta. Publica a cada linha (no máximo 4×/s) e tem um heartbeat
+  de 1 s para o tempo decorrido continuar andando quando o encoder fica
+  quieto — importante nas máquinas lentas, onde o encode leva minutos.
 - **Prévia** ao lado de cada botão Baixar: abre o arquivo convertido num
   modal e pede tela cheia. `requestFullscreen()` só vale dentro do gesto
   do usuário — daí ser chamado direto no clique; se o navegador recusar, o
