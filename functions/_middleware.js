@@ -64,8 +64,13 @@ export async function onRequest(context) {
   // Como este middleware roda em toda rota, precisamos setar aqui o
   // COOP/COEP que o _headers configurava para /conversor.html (necessário
   // para o ffmpeg.wasm multi-thread via SharedArrayBuffer).
+  // O Pages serve conversor.html em mais de um caminho (/conversor.html,
+  // /conversor e com barra no fim), então normalizamos antes de comparar —
+  // uma igualdade exata com "/conversor.html" deixava a rota /conversor sem
+  // os cabeçalhos, e o ffmpeg multi-thread não carregava.
   const url = new URL(request.url);
-  if (url.pathname === "/conversor.html") {
+  const rota = url.pathname.replace(/\/+$/, "").replace(/\.html$/, "");
+  if (rota === "/conversor") {
     const headers = new Headers(response.headers);
     headers.set("Cross-Origin-Opener-Policy", "same-origin");
     headers.set("Cross-Origin-Embedder-Policy", "require-corp");

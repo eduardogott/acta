@@ -173,9 +173,15 @@ partes (`ffmpeg-core.wasm.part0`, `.part1`, `.part2`, ...) que
 `js/conversor.js` baixa e remonta em um Blob no navegador antes de
 carregar o motor (ver `WASM_PARTS`/`montarWasmBlobURL` nesse arquivo).
 Depois de substituir o `.wasm`, divida-o de novo (partes bem abaixo de
-25 MiB cada, ex.: 16 MB) e atualize `WASM_PARTS` se a quantidade de
-partes mudar, utilizando:
+25 MiB cada, ex.: 16 MB) e **atualize `WASM_PARTS`** com o nome e o
+tamanho em bytes de cada parte. O tamanho fica declarado ali porque o
+Cloudflare serve esses arquivos sem `Content-Length`, e sem ele a barra
+de progresso do download do motor perde o denominador; o código avisa no
+console se um tamanho declarado divergir do que o servidor mandar. Para
+dividir e conferir os tamanhos:
 
 ```
 split -b 16000000 -d -a 1 ffmpeg-core.wasm ffmpeg-core.wasm.part
+# e então, para os números que vão em WASM_PARTS:
+#   stat -c'%s %n' ffmpeg-core.wasm.part*
 ```

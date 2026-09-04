@@ -79,7 +79,15 @@
   const CORE_BASE = "js/vendor/ffmpeg/core-mt";
   // ffmpeg-core.wasm (~31 MB) é maior que o limite de 25 MiB por arquivo do
   // Cloudflare Pages, então fica vendorizado em partes e é remontado aqui.
-  const WASM_PARTS = ["ffmpeg-core.wasm.part0", "ffmpeg-core.wasm.part1", "ffmpeg-core.wasm.part2"];
+  // O tamanho de cada parte fica declarado aqui porque o Cloudflare serve
+  // esses arquivos sem Content-Length; sem isso a barra de progresso do
+  // download do motor não teria denominador. Ao regerar as partes, atualize
+  // estes números — ver README, "Atualizando o ffmpeg.wasm".
+  const WASM_PARTS = [
+    { nome: "ffmpeg-core.wasm.part0", bytes: 16000000 },
+    { nome: "ffmpeg-core.wasm.part1", bytes: 16000000 },
+    { nome: "ffmpeg-core.wasm.part2", bytes: 718323 },
+  ];
   const CACHE_MOTOR = "acta-ffmpeg-v1";
 
   // O ffmpeg.wasm carrega o arquivo inteiro no heap do WebAssembly; acima
@@ -195,7 +203,7 @@
     const alvos = [
       CORE_BASE + "/ffmpeg-core.js",
       CORE_BASE + "/ffmpeg-core.worker.js",
-    ].concat(WASM_PARTS.map((p) => CORE_BASE + "/" + p));
+    ].concat(WASM_PARTS.map((p) => CORE_BASE + "/" + p.nome));
 
     const linhas = {};
     await Promise.all(
@@ -438,7 +446,8 @@
    */
   async function montarWasmBlobURL(onProgresso) {
     const cache = await abrirCache();
-    const urls = WASM_PARTS.map((p) => `${CORE_BASE}/${p}`);
+    const urls = WASM_PARTS.map((p) => `${CORE_BASE}/${p.nome}`);
+    const totalDeclarado = WASM_PARTS.reduce((n, p) => n + p.bytes, 0);
 
     // Resolve as três respostas antes de ler qualquer corpo: assim os
     // Content-Length somados dão o denominador da barra, e as partes que
@@ -461,16 +470,27 @@
       "Partes do .wasm:",
       fontes.map((f) => f.url.split("/").pop() + (f.veioDoCache ? " (cache)" : " (rede " + f.resp.status + ")")).join(", ")
     );
+    // Preferimos o Content-Length real; quando o servidor o omite (caso do
+    // Cloudflare com estes arquivos), caímos nos tamanhos declarados acima.
     let total = 0;
-    for (const f of fontes) {
-      const n = Number(f.resp.headers.get("content-length"));
+    let origemDoTotal = "Content-Length";
+    for (let i = 0; i < fontes.length; i++) {
+      const n = Number(fontes[i].resp.headers.get("content-length"));
       if (Number.isFinite(n) && n > 0) {
         total += n;
+        if (!fontes[i].veioDoCache && n !== WASM_PARTS[i].bytes) {
+          diagAviso(
+            "O tamanho declarado de " + WASM_PARTS[i].nome + " (" + WASM_PARTS[i].bytes +
+            " bytes) não bate com o servidor (" + n + " bytes). Atualize WASM_PARTS."
+          );
+        }
       } else {
-        total = 0; // sem Content-Length em alguma parte: barra indeterminada
+        total = totalDeclarado;
+        origemDoTotal = "tamanhos declarados em WASM_PARTS";
         break;
       }
     }
+    diag("Total do download:", humanSize(total), "(via " + origemDoTotal + ")");
 
     let recebido = 0;
     const buffers = [];
