@@ -92,6 +92,132 @@
   const FPS_PRESUMIDO = 30;
 
   // ---------------------------------------------------------------------
+  // Diagnóstico
+  //
+  // Os logs abaixo existem para responder "por que o motor não carregou?"
+  // sem precisar de um depurador. O bloco resumido sai sempre; o log
+  // linha-a-linha do próprio ffmpeg só sai com ?debug=1 na URL, porque são
+  // centenas de linhas por conversão.
+  // ---------------------------------------------------------------------
+
+  const VERBOSE = new URLSearchParams(location.search).get("debug") === "1";
+  const ESTILO_DIAG = "color:#2d4a63;font-weight:bold";
+
+  function diag(...args) {
+    console.log("%c[conversor]", ESTILO_DIAG, ...args);
+  }
+
+  function diagAviso(...args) {
+    console.warn("%c[conversor]", ESTILO_DIAG, ...args);
+  }
+
+  function diagErro(...args) {
+    console.error("%c[conversor]", ESTILO_DIAG, ...args);
+  }
+
+  const t0 = performance.now();
+  function desdeOInicio() {
+    return "+" + Math.round(performance.now() - t0) + "ms";
+  }
+
+  /**
+   * Diz se a página está isolada e, se não estiver, por quê: mostra o que o
+   * navegador reporta e o que o servidor realmente devolveu no documento.
+   */
+  async function diagnosticarIsolamento() {
+    const ambiente = {
+      url: location.href,
+      protocolo: location.protocol,
+      origem: location.origin,
+      "isSecureContext": window.isSecureContext,
+      "crossOriginIsolated": window.crossOriginIsolated,
+      "SharedArrayBuffer disponível": typeof SharedArrayBuffer !== "undefined",
+      "dentro de iframe": window.self !== window.top,
+    };
+    diag("Ambiente da página:");
+    if (console.table) console.table(ambiente);
+    else diag(ambiente);
+
+    if (location.protocol === "file:") {
+      diagAviso(
+        "A página foi aberta via file://. COOP/COEP só existem em resposta HTTP, " +
+        "então o isolamento nunca vai ligar assim. Sirva a pasta por HTTP " +
+        "(ex.: `python -m http.server`) com os cabeçalhos, ou use o deploy."
+      );
+      return ambiente;
+    }
+
+    // Refaz a requisição do próprio documento para ler os cabeçalhos que o
+    // servidor mandou. cache:"no-store" evita ler uma cópia antiga do disco.
+    try {
+      const resp = await fetch(location.href, { cache: "no-store" });
+      const coop = resp.headers.get("cross-origin-opener-policy");
+      const coep = resp.headers.get("cross-origin-embedder-policy");
+      diag("Resposta do servidor para este documento:", {
+        status: resp.status,
+        "Cross-Origin-Opener-Policy": coop || "(ausente)",
+        "Cross-Origin-Embedder-Policy": coep || "(ausente)",
+      });
+
+      if (coop === "same-origin" && coep === "require-corp") {
+        if (!window.crossOriginIsolated) {
+          diagAviso(
+            "Os dois cabeçalhos chegaram corretos, mas a página ainda não está " +
+            "isolada. Isso costuma ser um documento carregado ANTES de os " +
+            "cabeçalhos existirem (cache do navegador ou bfcache): recarregue " +
+            "com Ctrl+Shift+R. Se a página estiver dentro de um iframe, o pai " +
+            "também precisa mandar COEP."
+          );
+        }
+      } else {
+        diagAviso(
+          "O servidor não mandou o par COOP/COEP neste documento — é esta a " +
+          "causa do erro. Caminho pedido: " + location.pathname
+        );
+        if (location.pathname !== "/conversor.html") {
+          diagAviso(
+            "Atenção: functions/_middleware.js só aplica os cabeçalhos quando o " +
+            "pathname é exatamente \"/conversor.html\", e este é \"" +
+            location.pathname + "\". Acesse /conversor.html ou ajuste a " +
+            "condição do middleware."
+          );
+        }
+      }
+    } catch (err) {
+      diagErro("Não consegui reler o documento para inspecionar os cabeçalhos:", err);
+    }
+
+    return ambiente;
+  }
+
+  /** Confere se os arquivos do motor estão realmente no ar. */
+  async function diagnosticarArquivosDoMotor() {
+    const alvos = [
+      CORE_BASE + "/ffmpeg-core.js",
+      CORE_BASE + "/ffmpeg-core.worker.js",
+    ].concat(WASM_PARTS.map((p) => CORE_BASE + "/" + p));
+
+    const linhas = {};
+    await Promise.all(
+      alvos.map(async (url) => {
+        try {
+          const resp = await fetch(url, { method: "HEAD", cache: "no-store" });
+          linhas[url] = {
+            status: resp.status,
+            bytes: resp.headers.get("content-length") || "(sem content-length)",
+            tipo: resp.headers.get("content-type") || "(sem content-type)",
+          };
+        } catch (err) {
+          linhas[url] = { status: "ERRO", bytes: "-", tipo: String(err.message || err) };
+        }
+      })
+    );
+    diag("Arquivos do motor ffmpeg:");
+    if (console.table) console.table(linhas);
+    else diag(linhas);
+  }
+
+  // ---------------------------------------------------------------------
   // Utilitários
   // ---------------------------------------------------------------------
 
@@ -259,6 +385,7 @@
   function attachSinks(ffmpeg) {
     ffmpeg.on("log", ({ message }) => {
       if (logSink) logSink.push(message);
+      if (VERBOSE) console.debug("[ffmpeg]", message);
     });
     ffmpeg.on("progress", ({ progress }) => {
       if (progressCallback) progressCallback(Math.min(1, Math.max(0, progress || 0)));
@@ -266,11 +393,16 @@
   }
 
   async function abrirCache() {
-    if (!("caches" in window)) return null;
+    if (!("caches" in window)) {
+      diagAviso("Cache API indisponível — o motor será baixado toda vez.");
+      return null;
+    }
     try {
       return await caches.open(CACHE_MOTOR);
     } catch (e) {
-      return null; // modo privado / storage bloqueado: segue sem cache
+      // modo privado / storage bloqueado: segue sem cache
+      diagAviso("Não consegui abrir o cache \"" + CACHE_MOTOR + "\":", e);
+      return null;
     }
   }
 
@@ -325,6 +457,10 @@
     );
 
     const todasEmCache = fontes.every((f) => f.veioDoCache);
+    diag(
+      "Partes do .wasm:",
+      fontes.map((f) => f.url.split("/").pop() + (f.veioDoCache ? " (cache)" : " (rede " + f.resp.status + ")")).join(", ")
+    );
     let total = 0;
     for (const f of fontes) {
       const n = Number(f.resp.headers.get("content-length"));
@@ -353,6 +489,8 @@
       buffers.push(buf);
     }
 
+    const totalLido = buffers.reduce((n, b) => n + b.byteLength, 0);
+    diag("Wasm remontado:", humanSize(totalLido), "em", WASM_PARTS.length, "partes", desdeOInicio());
     return URL.createObjectURL(new Blob(buffers, { type: "application/wasm" }));
   }
 
@@ -361,12 +499,24 @@
     if (!ffmpegLoadingPromise) {
       ffmpegLoadingPromise = (async () => {
         if (!window.crossOriginIsolated) {
+          diagErro("Abortando: a página não está isolada. Diagnóstico completo abaixo.");
+          await diagnosticarIsolamento();
+          await diagnosticarArquivosDoMotor();
           throw new Error(
             "A página não está isolada (COOP/COEP). O motor de conversão multi-thread " +
-            "não pode ser carregado. Verifique o arquivo _headers do Cloudflare Pages."
+            "não pode ser carregado. Abra o console do navegador (F12) — há um " +
+            "diagnóstico detalhado lá dizendo qual cabeçalho faltou."
           );
         }
+        diag("Iniciando o carregamento do motor.", desdeOInicio());
         if (onStatus) onStatus("Carregando o motor de conversão (ffmpeg)…");
+        if (!window.FFmpegWASM || !window.FFmpegWASM.FFmpeg) {
+          diagErro("window.FFmpegWASM não existe — js/vendor/ffmpeg/ffmpeg.js não carregou.");
+          throw new Error(
+            "A biblioteca ffmpeg.js não carregou. Confira se js/vendor/ffmpeg/ffmpeg.js " +
+            "está sendo servido (aba Network do navegador)."
+          );
+        }
         const { FFmpeg } = window.FFmpegWASM;
         const ffmpeg = new FFmpeg();
         ffmpegEmConstrucao = ffmpeg;
@@ -380,11 +530,13 @@
         });
         ffmpegEmConstrucao = null;
         ffmpegInstance = ffmpeg;
+        diag("Motor pronto.", desdeOInicio());
         if (onStatus) onStatus("");
         return ffmpeg;
       })();
       // permite uma nova tentativa depois de um erro ou de um cancelamento
-      ffmpegLoadingPromise.catch(() => {
+      ffmpegLoadingPromise.catch((err) => {
+        diagErro("Falha ao carregar o motor:", err);
         ffmpegLoadingPromise = null;
         ffmpegEmConstrucao = null;
       });
@@ -394,6 +546,7 @@
 
   /** Mata o worker do ffmpeg; a instância recarrega (do cache) na próxima vez. */
   function derrubarMotor() {
+    diag("Derrubando o worker do ffmpeg.");
     const alvo = ffmpegInstance || ffmpegEmConstrucao;
     if (alvo) {
       try { alvo.terminate(); } catch (e) {}
@@ -405,12 +558,28 @@
     logSink = null;
   }
 
+  /** Envolve ffmpeg.exec logando o argv, o código de saída e o tempo gasto. */
+  async function execComLog(ffmpeg, args) {
+    diag("ffmpeg", args.join(" "));
+    const inicio = performance.now();
+    try {
+      const code = await ffmpeg.exec(args);
+      const ms = Math.round(performance.now() - inicio);
+      if (code) diagAviso("ffmpeg saiu com código", code, "em " + ms + "ms");
+      else diag("ffmpeg ok em " + ms + "ms");
+      return code;
+    } catch (err) {
+      diagErro("ffmpeg lançou exceção em " + Math.round(performance.now() - inicio) + "ms:", err);
+      throw err;
+    }
+  }
+
   async function probeMediaInfo(ffmpeg, file) {
     const inName = "probe" + extOf(file.name);
     await ffmpeg.writeFile(inName, await fileToUint8(file));
     logSink = [];
     try {
-      await ffmpeg.exec(["-i", inName]);
+      await execComLog(ffmpeg, ["-i", inName]);
     } catch (e) {
       // esperado: sem arquivo de saída, ffmpeg "falha" — só queremos o log
     }
@@ -433,7 +602,7 @@
     progressCallback = onProgress || null;
     let code;
     try {
-      code = await ffmpeg.exec(["-i", inName, "-vn", "-codec:a", "libmp3lame", "-q:a", "0", outName]);
+      code = await execComLog(ffmpeg, ["-i", inName, "-vn", "-codec:a", "libmp3lame", "-q:a", "0", outName]);
     } finally {
       progressCallback = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
@@ -454,10 +623,10 @@
     let code;
     try {
       // tenta remuxar primeiro: copia os streams, sem recodificar (sem perda).
-      code = await ffmpeg.exec(["-i", inName, "-map", "0", "-c", "copy", "-movflags", "+faststart", outName]);
+      code = await execComLog(ffmpeg, ["-i", inName, "-map", "0", "-c", "copy", "-movflags", "+faststart", outName]);
       if (code) {
         try { await ffmpeg.deleteFile(outName); } catch (e) {}
-        code = await ffmpeg.exec([
+        code = await execComLog(ffmpeg, [
           "-i", inName, "-c:v", "libx264", "-crf", "18", "-preset", "medium",
           "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "256k", outName,
         ]);
@@ -481,7 +650,7 @@
     progressCallback = onProgress || null;
     let code;
     try {
-      code = await ffmpeg.exec(["-i", inName, "-q:v", "2", outName]);
+      code = await execComLog(ffmpeg, ["-i", inName, "-q:v", "2", outName]);
     } finally {
       progressCallback = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
@@ -530,7 +699,7 @@
     progressCallback = onProgress || null;
     let code;
     try {
-      code = await ffmpeg.exec(args);
+      code = await execComLog(ffmpeg, args);
     } finally {
       progressCallback = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
@@ -600,7 +769,7 @@
     progressCallback = onProgress || null;
     let code;
     try {
-      code = await ffmpeg.exec(["-i", inName, ...vArgs, ...audioArgs, outName]);
+      code = await execComLog(ffmpeg, ["-i", inName, ...vArgs, ...audioArgs, outName]);
     } finally {
       progressCallback = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
@@ -1323,13 +1492,23 @@
 
   el.btnIniciar.addEventListener("click", iniciar);
 
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", async () => {
+    diag(
+      "Conversor carregado.",
+      VERBOSE ? "Modo verboso ligado (?debug=1)." : "Use ?debug=1 na URL para ver o log linha-a-linha do ffmpeg."
+    );
+
+    const ambiente = await diagnosticarIsolamento();
+
     if (!window.crossOriginIsolated) {
+      await diagnosticarArquivosDoMotor();
       setStatus(
         "Aviso: esta página não está isolada (COOP/COEP) — o motor de conversão " +
-        "provavelmente não vai carregar. Recarregue a página; se persistir, é um " +
-        "problema de configuração do _headers no Cloudflare Pages."
+        "não vai carregar. Abra o console do navegador (F12) para ver o " +
+        "diagnóstico de qual cabeçalho faltou."
       );
+    } else {
+      diag("Página isolada — SharedArrayBuffer disponível, motor pode carregar.", ambiente.url);
     }
   });
 })();
