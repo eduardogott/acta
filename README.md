@@ -150,3 +150,16 @@ Para atualizar, repita o `npm pack` das versões desejadas e substitua:
   que estiver em `dist/umd/` além de `ffmpeg.js`).
 - de `@ffmpeg/core-mt`: os três arquivos de `dist/umd/` (`ffmpeg-core.js`,
   `ffmpeg-core.wasm`, `ffmpeg-core.worker.js`).
+
+`ffmpeg-core.wasm` (~31 MB) excede o limite de 25 MiB por arquivo do
+Cloudflare Pages, então ele **não** entra inteiro no repo — é dividido em
+partes (`ffmpeg-core.wasm.part0`, `.part1`, `.part2`, ...) que
+`js/conversor.js` baixa e remonta em um Blob no navegador antes de
+carregar o motor (ver `WASM_PARTS`/`montarWasmBlobURL` nesse arquivo).
+Depois de substituir o `.wasm`, divida-o de novo (partes bem abaixo de
+25 MiB cada, ex.: 16 MB) e atualize `WASM_PARTS` se a quantidade de
+partes mudar:
+
+```
+split -b 16000000 -d -a 1 ffmpeg-core.wasm ffmpeg-core.wasm.part
+```

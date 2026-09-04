@@ -48,6 +48,9 @@
   };
 
   const CORE_BASE = "js/vendor/ffmpeg/core-mt";
+  // ffmpeg-core.wasm (~31 MB) é maior que o limite de 25 MiB por arquivo do
+  // Cloudflare Pages, então fica vendorizado em partes e é remontado aqui.
+  const WASM_PARTS = ["ffmpeg-core.wasm.part0", "ffmpeg-core.wasm.part1", "ffmpeg-core.wasm.part2"];
 
   // ---------------------------------------------------------------------
   // Utilitários
@@ -82,6 +85,17 @@
 
   async function fileToUint8(file) {
     return new Uint8Array(await file.arrayBuffer());
+  }
+
+  async function montarWasmBlobURL(onStatus) {
+    const buffers = [];
+    for (const part of WASM_PARTS) {
+      const resp = await fetch(`${CORE_BASE}/${part}`);
+      if (!resp.ok) throw new Error(`Falha ao baixar ${part} (${resp.status})`);
+      buffers.push(await resp.arrayBuffer());
+    }
+    const blob = new Blob(buffers, { type: "application/wasm" });
+    return URL.createObjectURL(blob);
   }
 
   function parseMediaInfo(log) {
@@ -147,9 +161,10 @@
         const { FFmpeg } = window.FFmpegWASM;
         const ffmpeg = new FFmpeg();
         attachSinks(ffmpeg);
+        const wasmURL = await montarWasmBlobURL();
         await ffmpeg.load({
           coreURL: `${CORE_BASE}/ffmpeg-core.js`,
-          wasmURL: `${CORE_BASE}/ffmpeg-core.wasm`,
+          wasmURL,
           workerURL: `${CORE_BASE}/ffmpeg-core.worker.js`,
         });
         ffmpegInstance = ffmpeg;
