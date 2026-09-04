@@ -174,8 +174,23 @@ navegador** via
   Há um heartbeat de 1 s para o tempo decorrido seguir andando, e as
   métricas (tempo processado, fonte, contagem de eventos e linhas,
   velocidade) saem no console a cada 5 s.
+- **AV1 não é decodificável aqui.** O `@ffmpeg/core-mt` 0.12.10 é
+  compilado sem `libdav1d`, `libaom` e `libgav1` (confere na linha de
+  `configuration` do `.wasm`); sem elas o decoder `av1` do ffmpeg é só um
+  invólucro para aceleração de hardware, inexistente em WebAssembly.
+  `problemaDeCodec()` barra esses arquivos com uma explicação em vez de
+  deixar o ffmpeg morrer no meio.
+
+  Isso importa porque a opção 2 fabricava esses arquivos: o `-c copy` cego
+  empacotava um webm de AV1 (o que o yt-dlp baixa do YouTube) dentro de um
+  MP4, gerando algo que este próprio motor não reabria. Agora
+  `convertVideoFile` sonda antes e escolhe: `-c copy` quando é
+  h264 + aac/mp3, copiar só o vídeo quando o áudio não serve, e
+  recodificação completa para H.264 + AAC no resto — coerente com a regra
+  de sair sempre em H.264/MP3.
 - **Quando o ffmpeg falha, as últimas 40 linhas do log vão para o
-  console** (`despejarCauda`). É onde a razão aparece, e antes elas eram
+  console** (`despejarCauda`), junto de uma tradução da causa quando
+  reconhecida (`explicarFalha`). É onde a razão aparece, e antes elas eram
   descartadas — restava só um código de saída sem explicação. A sonda é a
   exceção: ela sai com código 1 de propósito, e passa `falhaEsperada`.
 - **Prévia** ao lado de cada botão Baixar: abre o arquivo convertido num

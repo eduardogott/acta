@@ -378,14 +378,77 @@
    * costuma intercalar dois ou três (`[SAR 1:1 DAR 16:9]`, `4988 kb/s`),
    * então o fps quase nunca era encontrado.
    */
+  /**
+   * Codecs de vídeo que este build não consegue decodificar.
+   *
+   * O @ffmpeg/core-mt 0.12.10 é compilado sem libdav1d, libaom e libgav1
+   * (conferido na linha de configuration do .wasm). Sem elas, o decoder
+   * "av1" do ffmpeg é só um invólucro para aceleração de hardware — que não
+   * existe em WebAssembly. O sintoma é "Your platform doesn't suppport
+   * hardware accelerated AV1 decoding" seguido de "Function not
+   * implemented", e a conversão morre antes do primeiro quadro.
+   */
+  const CODECS_SEM_DECODER = {
+    av1: "AV1",
+  };
+
+  /** Devolve a explicação se o arquivo não puder ser decodificado; senão null. */
+  function problemaDeCodec(info) {
+    if (!info || !info.vCodec) return null;
+    const nome = CODECS_SEM_DECODER[info.vCodec];
+    if (!nome) return null;
+    return (
+      "Este vídeo está codificado em " + nome + ", e o motor ffmpeg deste site " +
+      "não traz decodificador de " + nome + " — não há como convertê-lo aqui. " +
+      "Baixe o arquivo em H.264 na origem (o YouTube, por exemplo, oferece as " +
+      "duas versões) ou converta antes num programa de desktop."
+    );
+  }
+
+  /**
+   * Traduz o fim do log do ffmpeg para uma frase útil. Serve para o caso em
+   * que a falha não foi prevista pela checagem de codec.
+   */
+  function explicarFalha(linhas) {
+    const texto = linhas.join("\n");
+    const temAv1 = /\bav1\b/i.test(texto);
+
+    if (/hardware accelerated AV1 decoding|Missing Sequence Header/i.test(texto) && temAv1) {
+      return problemaDeCodec({ vCodec: "av1" });
+    }
+    if (/Protocol not found/i.test(texto)) {
+      return "O ffmpeg recusou uma das URLs do comando (protocolo indisponível neste build).";
+    }
+    if (/Function not implemented/i.test(texto)) {
+      return "O ffmpeg encontrou um recurso que este build não implementa — " +
+             "normalmente um codec de entrada sem decodificador.";
+    }
+    if (/Cannot determine format of input stream/i.test(texto)) {
+      return "O ffmpeg não conseguiu decodificar o vídeo de entrada. " +
+             "O arquivo pode estar corrompido ou usar um codec sem suporte aqui.";
+    }
+    if (/No space left|Cannot allocate memory|out of memory/i.test(texto)) {
+      return "Faltou memória. Arquivos grandes estouram o heap do WebAssembly — " +
+             "tente cortar um trecho menor.";
+    }
+    if (/Invalid data found when processing input/i.test(texto)) {
+      return "O ffmpeg achou dados inválidos na entrada. O arquivo pode estar " +
+             "truncado ou incompleto.";
+    }
+    return null;
+  }
+
   function parseMediaInfo(log) {
     const info = {
       width: null, height: null, fps: null, duration: null,
+      vCodec: null, aCodec: null,
       hasAudio: false, aBitrate: null, aSampleRate: null, aChannels: null,
     };
 
     const linhaVideo = (log.match(/^.*\bVideo:.*$/m) || [])[0];
     if (linhaVideo) {
+      const cv = linhaVideo.match(/Video:\s*([a-zA-Z0-9_]+)/);
+      if (cv) info.vCodec = cv[1].toLowerCase();
       // a resolução precisa ser um token isolado: assim "0x31637661" (a tag
       // do codec) não é confundida com dimensões
       const dim = linhaVideo.match(/(?:^|[\s,(\[])(\d{2,5})x(\d{2,5})(?:[\s,)\]]|$)/);
@@ -410,6 +473,8 @@
     const linhaAudio = (log.match(/^.*\bAudio:.*$/m) || [])[0];
     if (linhaAudio) {
       info.hasAudio = true;
+      const ca = linhaAudio.match(/Audio:\s*([a-zA-Z0-9_]+)/);
+      if (ca) info.aCodec = ca[1].toLowerCase();
       const hz = linhaAudio.match(/(\d+)\s*Hz\b/);
       if (hz) info.aSampleRate = parseInt(hz[1], 10);
 
@@ -777,6 +842,8 @@
       diagAviso("O ffmpeg não deixou nenhuma linha de log.");
       return;
     }
+    const explicacao = explicarFalha(logCauda);
+    if (explicacao) diagErro("Provável causa:", explicacao);
     diagErro("Últimas " + logCauda.length + " linhas do ffmpeg:");
     for (const linha of logCauda) console.error("    " + linha);
   }
@@ -790,9 +857,12 @@
     const tentarProgresso = progressoSuportado !== false;
     let code = await execComLog(ffmpeg, tentarProgresso ? [...ARGS_PROGRESSO, ...args] : args);
 
-    if (code && tentarProgresso) {
+    // Só vale repetir se o log realmente acusar o pipe. Repetir por
+    // qualquer falha dobraria a espera de um encode longo à toa.
+    const culpaDoPipe = logCauda.some((l) => /pipe:|progress/i.test(l) && /not found|Invalid|error/i.test(l));
+    if (code && tentarProgresso && culpaDoPipe) {
       try { await ffmpeg.deleteFile(outName); } catch (e) {}
-      diagAviso("Falhou com -progress pipe:1. Repetindo sem ele para descartar essa causa…");
+      diagAviso("O log acusa o -progress pipe:1. Repetindo sem ele…");
       code = await execComLog(ffmpeg, args);
       if (!code) {
         progressoSuportado = false;
@@ -807,20 +877,28 @@
     return code;
   }
 
-  async function probeMediaInfo(ffmpeg, file) {
-    const inName = "probe" + extOf(file.name);
-    await etapa("Sonda: escrever " + humanSize(file.size) + " no FS",
-                async () => ffmpeg.writeFile(inName, await fileToUint8(file)));
+  /** Sonda um arquivo que ja esta no FS do ffmpeg, sem reescreve-lo. */
+  async function probeArquivoEscrito(ffmpeg, inName) {
     logSink = [];
     try {
       await execComLog(ffmpeg, ["-i", inName], { falhaEsperada: true });
     } catch (e) {
-      // esperado: sem arquivo de saída, ffmpeg "falha" — só queremos o log
+      // esperado: sem arquivo de saida, ffmpeg "falha" - so queremos o log
     }
-    const text = logSink.join("\n");
+    const texto = logSink.join(String.fromCharCode(10));
     logSink = null;
-    try { await ffmpeg.deleteFile(inName); } catch (e) {}
-    return parseMediaInfo(text);
+    return parseMediaInfo(texto);
+  }
+
+  async function probeMediaInfo(ffmpeg, file) {
+    const inName = "probe" + extOf(file.name);
+    await etapa("Sonda: escrever " + humanSize(file.size) + " no FS",
+                async () => ffmpeg.writeFile(inName, await fileToUint8(file)));
+    try {
+      return await probeArquivoEscrito(ffmpeg, inName);
+    } finally {
+      try { await ffmpeg.deleteFile(inName); } catch (e) {}
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -849,24 +927,64 @@
     return { blob: new Blob([data.buffer], { type: "audio/mpeg" }), outName };
   }
 
+  /**
+   * Converte para MP4 escolhendo entre remux e recodificação pelo codec.
+   *
+   * O `-c copy` cego era um problema: um webm de AV1 (o que o yt-dlp costuma
+   * baixar do YouTube) era simplesmente empacotado num MP4, gerando um
+   * arquivo que este mesmo motor não consegue reabrir — e que contraria a
+   * regra de sair sempre em H.264/AAC por compatibilidade.
+   *
+   * Três caminhos, do mais barato ao mais caro:
+   *   h264 + aac/mp3   → `-c copy`, sem perda nenhuma
+   *   h264 + outro som → copia o vídeo, recodifica só o áudio
+   *   qualquer outro   → recodifica tudo para H.264 + AAC
+   */
   async function convertVideoFile(ffmpeg, file, onProgress) {
     const ext = extOf(file.name);
     if (ext === ".mp4") return { skipped: true, reason: "já é mp4" };
     const inName = "in" + ext;
     const outName = baseName(file.name) + ".mp4";
     await ffmpeg.writeFile(inName, await fileToUint8(file));
-    progressCallback = onProgress
-      ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
-      : null;
+
     let code;
     try {
-      // tenta remuxar primeiro: copia os streams, sem recodificar (sem perda).
-      code = await execComLog(ffmpeg, ["-i", inName, "-map", "0", "-c", "copy", "-movflags", "+faststart", outName]);
+      // sonda o arquivo que já está no FS, para não escrevê-lo duas vezes
+      const info = await probeArquivoEscrito(ffmpeg, inName);
+      const problema = problemaDeCodec(info);
+      if (problema) throw new Error(problema);
+
+      const somCompativel = !info.hasAudio || info.aCodec === "aac" || info.aCodec === "mp3";
+      const podeCopiarVideo = info.vCodec === "h264";
+      diag("Converter vídeo:", {
+        vídeo: info.vCodec || "?", áudio: info.aCodec || "(sem áudio)",
+        estratégia: podeCopiarVideo ? (somCompativel ? "remux" : "copiar vídeo, recodificar áudio")
+                                    : "recodificar tudo",
+      });
+
+      progressCallback = onProgress
+        ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
+        : null;
+
+      if (podeCopiarVideo && somCompativel) {
+        code = await execComLog(ffmpeg, [
+          "-i", inName, "-map", "0", "-c", "copy", "-movflags", "+faststart", outName,
+        ]);
+      } else if (podeCopiarVideo) {
+        code = await execComLog(ffmpeg, [
+          "-i", inName, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+          "-movflags", "+faststart", outName,
+        ]);
+      } else {
+        code = 1; // força o caminho de recodificação abaixo
+      }
+
       if (code) {
         try { await ffmpeg.deleteFile(outName); } catch (e) {}
         code = await execComLog(ffmpeg, [
           "-i", inName, "-c:v", "libx264", "-crf", "18", "-preset", "medium",
-          "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "256k", outName,
+          "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "256k",
+          "-movflags", "+faststart", outName,
         ]);
       }
     } finally {
@@ -962,6 +1080,11 @@
   async function compressVideoFile(ffmpeg, file, level, custom, opcoes) {
     const { info: infoConhecida, corte, onAndamento } = opcoes || {};
     const info = infoConhecida || (await probeMediaInfo(ffmpeg, file));
+
+    // Falhar aqui, com explicação, é melhor que deixar o ffmpeg morrer
+    // depois de escrever o arquivo inteiro no FS.
+    const problema = problemaDeCodec(info);
+    if (problema) throw new Error(problema);
     const ext = extOf(file.name);
     const inName = "cin" + ext;
     const outName = baseName(file.name) + "_comprimido.mp4";
