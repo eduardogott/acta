@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acta — Orientações ao Comunicante</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/ferramentas.css" />
+<script src="js/theme.js"></script>
+<script src="js/nav.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <p class="site-title">
+    <span class="brand-mark">●</span>
+    Acta
+  </p>
+  <nav class="site-nav" aria-label="Navegação principal"></nav>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">☾</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1 class="page-title"><b>Orientações</b> ao Comunicante</h1>
+    <p class="page-lead">Escolha o fato e o que mais se aplicar. Sai uma folha para imprimir e
+    entregar — o que a pessoa precisa fazer depois de sair da delegacia, que raramente cabe
+    no texto da ocorrência e quase sempre é esquecido no caminho de casa.</p>
+  </section>
+
+  <div class="bloco-escolha">
+    <p class="progresso">1. Qual é o fato?</p>
+    <div class="opcoes" id="opcoes-tipo"></div>
+  </div>
+
+  <div class="bloco-escolha escondido" id="bloco-subtipo">
+    <p class="progresso" id="rotulo-subtipo">2. Especifique</p>
+    <div class="opcoes" id="opcoes-subtipo"></div>
+  </div>
+
+  <div class="bloco-escolha escondido" id="bloco-extras">
+    <p class="progresso">3. Também aconteceu (marque o que couber)</p>
+    <div class="opcoes" id="opcoes-extras"></div>
+  </div>
+
+  <section class="orientacoes-saida" id="saida">
+    <div class="impressao-cabecalho">
+      <b>Acta — Orientações ao comunicante</b><br />
+      Boletim de ocorrência nº ______________________ · Data ____ / ____ / __________
+    </div>
+    <h2 class="orientacoes-titulo" id="saida-titulo"></h2>
+    <p class="orientacoes-subtitulo" id="saida-subtitulo"></p>
+    <div id="saida-grupos"></div>
+    <p class="orientacoes-vazio" id="saida-vazio">Escolha um fato acima para montar a folha.</p>
+  </section>
+
+  <div class="acoes">
+    <button type="button" class="btn-primary" id="btn-imprimir" disabled>Imprimir folha</button>
+    <button type="button" class="btn-secondary" id="btn-copiar" disabled>Copiar como texto</button>
+    <button type="button" class="btn-secondary" id="btn-limpar">Limpar</button>
+  </div>
+
+  <section class="nota-rodape">
+    <h2>Sobre esta folha</h2>
+    <ul>
+      <li>É orientação prática, não parecer jurídico. Os prazos indicados são os mais
+      comuns; o caso concreto pode ter outro.</li>
+      <li>A impressão sai só com a folha: o menu, os botões e este aviso ficam de fora.</li>
+      <li><b>Para editar o conteúdo:</b> tudo está em <code>js/orientacoes-dados.js</code>,
+      com o formato explicado no cabeçalho do arquivo. Escreva no imperativo e endereçado a
+      quem vai levar o papel.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <p class="footer-credit"><a class="footer-link" href="https://gttr.com.br">Eduardo Gottert</a> · 2026</p>
+  <p class="footer-versao"><span id="carimbo-versao"></span></p>
+</footer>
+
+<script src="js/orientacoes-dados.js"></script>
+<script src="js/orientacoes.js"></script>
+<script src="js/versao.js"></script>
+<script src="js/rodape.js"></script>
+</body>
+</html>

@@ -1,12 +1,24 @@
 # Acta
 
 **Acta** (do latim *Acta Diurna*, os registros públicos diários de Roma) é
-uma ferramenta de uso interno que transforma um questionário dinâmico em um
-parágrafo de narrativa (estilo depoimento em 3ª pessoa: "Comunica que...",
-"Informa que...", "Relata que...") para uso no registro de ocorrências
-policiais. Roda inteiramente no navegador — HTML/CSS/JS puro, sem build
-step, sem dependências, sem backend. Nenhuma resposta é enviada a
-servidor algum; o texto final só existe localmente até ser copiado.
+um conjunto de ferramentas de uso interno para o atendimento e o registro
+de ocorrências policiais. Tudo roda inteiramente no navegador —
+HTML/CSS/JS puro, sem build step, sem backend — e **nenhum dado digitado,
+nenhum arquivo e nenhum áudio saem do computador**. O que vem da internet
+são bibliotecas e modelos, nunca o conteúdo do usuário.
+
+| Página | O que faz |
+| --- | --- |
+| `index.html` | Gerador de texto de ocorrência: questionário dinâmico → um parágrafo de narrativa em 3ª pessoa ("Comunica que…", "Informa que…"). |
+| `conversor.html` | Converte e comprime áudio, vídeo e imagem com ffmpeg.wasm; extrai áudio e quadros de vídeo. |
+| `transcricao.html` | Transcreve áudio em português com o Whisper, dentro do navegador. |
+| `orientacoes.html` | Monta a folha de "o que fazer agora" para imprimir e entregar ao comunicante. |
+| `conferidor.html` | Confere dígito verificador de CPF, CNPJ, IMEI, chassi, placa, título de eleitor e PIS. |
+| `tipificacao.html` | Consulta rápida de tipificação penal, pesquisável por fato ou artigo. |
+
+A navegação entre elas é montada por **`js/nav.js`**, a partir de uma
+lista única: acrescentar uma página é uma linha em `PAGINAS`, e não seis
+menus para manter em sincronia.
 
 ## Rodando localmente
 
@@ -117,7 +129,7 @@ texto de casos que ainda não foram gerados.
 
 ## Carimbo de versão
 
-O rodapé das duas páginas mostra os últimos sete caracteres do hash do
+O rodapé de todas as páginas mostra os últimos sete caracteres do hash do
 commit que gerou o deploy (o hash inteiro fica no `title`, que é o que
 serve num `git show`). Existe para responder "qual código estava no ar
 quando isso aconteceu?" — o fraseado dos textos gerados muda de versão
@@ -142,19 +154,18 @@ Sem esse comando o site continua funcionando — o rodapé só mostra
 
 ## Conversor de mídia (`conversor.html`)
 
-Segunda ferramenta do site, acessível pela nav-bar no topo. Converte
-áudio/vídeo/imagem e comprime vídeo ou áudio, tudo processado **no
-navegador** via
+Converte áudio/vídeo/imagem e comprime vídeo ou áudio, tudo processado
+**no navegador** via
 [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) — nenhum arquivo
 é enviado a servidor algum, igual ao gerador de ocorrências.
 
 - **`conversor.html`** / **`css/conversor.css`** / **`js/conversor.js`** —
-  markup, estilo e lógica da página. `js/conversor.js` reimplementa as
-  mesmas regras do script Python homônimo (conversão sem recompressão nas
-  opções 1/2/3, tabela de crf/resolução/fps/áudio por nível na opção 9,
-  etc). A opção 9 aceita vídeo **ou** áudio: o tipo é detectado pela
-  extensão e só os campos daquele tipo aparecem, e apenas no nível
-  "Personalizada".
+  markup, estilo e lógica da página. `js/conversor.js` partiu das regras
+  do script Python homônimo (a tabela de crf/resolução/fps/áudio por nível
+  na opção 9, a padronização de extensões) e se afastou delas onde o
+  navegador ou o uso pediram. A opção 9 aceita vídeo **ou** áudio: o tipo
+  é detectado pela extensão e só os campos daquele tipo aparecem, e apenas
+  no nível "Personalizada".
 
   A opção 9 processa uma **fila**: vários arquivos, um após o outro, na
   mesma instância do motor. A seleção tem de ser homogênea (só vídeos ou
@@ -168,7 +179,31 @@ navegador** via
   são o que se quer, e não haveria como validar o intervalo contra
   durações diferentes.
 
-  Além das opções herdadas do script Python, existem três locais:
+  **As conversões 1, 2 e 3 já saem comprimidas** (`CONVERSAO_VIDEO`,
+  `CONVERSAO_AUDIO`, `QSCALE_JPEG_90`). O sistema de destino aceita no
+  máximo 20 MB por arquivo, e entregar um MP4 remuxado de 300 MB seria
+  devolver o problema ao usuário. Os números são **teto, nunca alvo**:
+  nenhuma delas sobe bitrate, sample rate ou resolução acima do que o
+  arquivo já tem.
+
+  - **Áudio → MP3** em 128 kbps e 32 kHz, cada um limitado ao que o
+    original tiver. Um `.mp3` de entrada continua passando intacto:
+    recomprimi-lo atingiria também as opções 4 e 8, que varrem pastas
+    inteiras.
+  - **Vídeo → MP4** em CRF 23, preset medium, com AAC 128 kbps a 32 kHz.
+    Antes de recomprimir, `estimarConversaoVideo` calcula quanto essa
+    linha de base produziria; se der **maior** que o original — vídeo
+    curto, já comprimido, ou de bitrate baixo —, o arquivo é apenas
+    remuxado, porque recomprimir ali seria perder qualidade para ganhar
+    tamanho. Um vídeo que não é h264 é recodificado de qualquer jeito, já
+    que copiar não é opção.
+  - **Imagem → JPG** em qscale 3. O mjpeg do ffmpeg não conhece a escala
+    0–100 do libjpeg: o que ele aceita é o qscale, de 2 (melhor) a 31
+    (pior), e o degrau 3 é o equivalente prático de "qualidade 90". O 2,
+    usado antes, fica em ~93/95 e praticamente não comprime. Um `.jpg` de
+    entrada continua passando intacto, pelo mesmo motivo do `.mp3`.
+
+  Além das opções herdadas do script Python, existem duas locais:
 
   - **6 — extrair áudio de vídeo** (`extractAudioFile`): `-vn` mais
     libmp3lame em `-q:a 2`, e não `-q:a 0` como na opção 1, porque a
@@ -182,13 +217,6 @@ navegador** via
     instante além do fim do vídeo **não** é erro para o ffmpeg: ele
     termina em paz sem escrever quadro nenhum, então é a leitura da saída
     que decide se deu certo.
-  - **10 — comprimir imagens** (`compressImageFile`): JPG de qualidade
-    fixa, sem campo na tela. O mjpeg do ffmpeg não conhece a escala 0–100
-    do libjpeg — o que ele aceita é o qscale, de 2 (melhor) a 31 (pior) —
-    e o degrau 3 é o equivalente prático de "qualidade 90"; o 2, que a
-    opção 3 já usa, fica em ~93/95. Diferente da opção 3, um `.jpg` de
-    entrada **não** é ignorado (o propósito aqui é justamente encolher), e
-    por isso a saída ganha o sufixo `_comprimida`.
 
   **Nível "Tamanho-alvo"** (nível 6 da opção 9): em vez de escolher a
   qualidade e descobrir o tamanho, o usuário diz quanto o arquivo pode
@@ -382,3 +410,96 @@ o motor não carrega (o console mostra a falha de `fetch`). Foi uma
 troca deliberada por não carregar 32 MB no repositório e por escapar do
 limite de 25 MiB por arquivo do Cloudflare Pages, que antes obrigava a
 quebrar o `.wasm` em partes.
+
+## Transcrição de áudio (`transcricao.html`)
+
+Transcreve áudio e vídeo em português com o Whisper, rodando dentro do
+navegador via [transformers.js](https://huggingface.co/docs/transformers.js).
+O áudio não sai da máquina; o que vem da rede é a biblioteca (jsDelivr) e
+o modelo (Hugging Face), guardados no cache do navegador.
+
+- **`js/transcricao.js`** — a página. A decodificação do áudio é feita
+  pela Web Audio API, não pelo ffmpeg: o Whisper quer amostras em 16 kHz
+  mono, que é exatamente o que sai de um `OfflineAudioContext`, e assim
+  esta página não carrega os 32 MB do motor de conversão. O preço é que o
+  navegador não abre `.mkv`, `.avi` nem `.wma` — para esses, a página
+  manda extrair o áudio no conversor (opção 6) e voltar.
+- **`js/transcricao-worker.js`** — a inferência. Roda em worker porque
+  ocupa a thread por minutos: na página, a aba congelaria inteira.
+  **Precisa continuar local** — o construtor `Worker` recusa URL de outra
+  origem, a mesma restrição já documentada para o carregador do ffmpeg. O
+  que vem do CDN é a biblioteca, importada de dentro do worker, e
+  `import` cruza origem sem problema quando o servidor manda CORS.
+
+**Uma thread só, de propósito.** O onnxruntime-web cria as threads de
+pthread com `new Worker(new URL(import.meta.url), …)`, e ali
+`import.meta.url` é a URL do jsDelivr. Confirmado em teste: o navegador
+responde `SecurityError: Script at 'https://cdn.jsdelivr.net/…' cannot be
+accessed from origin`. Não há fallback para blob nesse build, então subir
+`NUM_THREADS` quebraria o carregamento em vez de acelerá-lo. Para usar mais
+de uma, seria preciso baixar `ort-wasm-simd-threaded.jsep.mjs` e o `.wasm`
+por conta própria e convertê-los em `blob:` URLs — exatamente o que
+`js/conversor.js` faz com o núcleo do ffmpeg.
+
+Modelos oferecidos, com o tamanho somado do codificador e do decodificador
+quantizados em 8 bits: `whisper-tiny` (~41 MB), `whisper-base` (~77 MB,
+padrão) e `whisper-small` (~249 MB). Ao trocar de modelo, confira os
+tamanhos de novo — é por esse número que o usuário decide se espera.
+
+As buscas ao Hugging Face passam sob COEP porque o `huggingface.co`
+devolve a origem que pediu no `Access-Control-Allow-Origin`, e o COEP
+`require-corp` exige CORP **ou** CORS; um `fetch` em modo cors satisfaz.
+
+## Orientações ao comunicante (`orientacoes.html`)
+
+Monta a folha de "o que fazer agora" para imprimir e entregar. Cobre o que
+não cabe no texto da ocorrência e é justamente o que se esquece no caminho
+de casa: bloquear IMEI, pedir o MED do Pix, preservar imagens de câmera
+antes de serem sobrescritas, prazo de representação.
+
+- **`js/orientacoes-dados.js`** — todo o conteúdo, com o formato explicado
+  no cabeçalho do arquivo: itens comuns a qualquer registro, mais um bloco
+  por tipo de fato, com subtipos (escolha única) e situações adicionais
+  (marcáveis em conjunto). Um item pode declarar `prazo`, que vira
+  etiqueta ao lado da frase.
+- **`js/orientacoes.js`** — só monta e imprime; não tem conteúdo próprio.
+- A regra de escrita: imperativo, endereçado a **quem leva o papel**
+  ("Peça ao banco…"), não ao policial que atende.
+- A impressão sai só com a folha — menu, botões e avisos ficam de fora
+  pelo `@media print` de `css/ferramentas.css`.
+
+## Conferidor de identificadores (`conferidor.html`)
+
+Roda todos os verificadores sobre o mesmo valor e diz o que ele pode ser.
+É de propósito: no balcão chega um número solto, e "isto passa como IMEI e
+não passa como CPF" resolve mais do que exigir que a pessoa escolha o tipo
+antes de colar.
+
+- **`js/core/identificadores.js`** — a aritmética, com o contrato
+  `{ ok, motivo }`. Separado de `validadores.js` porque tem dois
+  consumidores com necessidades diferentes: o questionário quer uma
+  mensagem para o campo, o conferidor quer o veredito de todos os tipos.
+  `validadores.js` passou a delegar para cá, então CPF, CNPJ, IMEI e placa
+  têm uma implementação só.
+- **RENAVAM e CNH ficaram de fora** de propósito: circulam versões
+  conflitantes do algoritmo de cada um, e um "inválido" errado num
+  documento verdadeiro é pior que não ter a conferência.
+- **Sobre o chassi:** o dígito verificador do VIN é obrigatório na América
+  do Norte e **opcional** no resto do mundo. Um VIN brasileiro típico não
+  fecha, e isso não é indício de adulteração — a página diz isso na cara,
+  porque a conclusão contrária seria grave.
+
+## Consulta de tipificação (`tipificacao.html`)
+
+Tabela pesquisável por nome do fato, artigo ou pela palavra que a pessoa
+usou ao contar. Alimentada por **`js/tipificacao-dados.js`**, um array de
+objetos com o formato documentado no cabeçalho do arquivo — acrescentar um
+fato é uma entrada nova, e nada na página precisa ser tocado.
+
+O campo `busca` existe porque o nome jurídico raramente é a palavra que a
+pessoa usa: quem chega dizendo "mexeram no meu carro" procura por
+"arrombamento", não por "furto qualificado". A busca ignora acento e
+pontuação, e casa também com o termo colado (`art155` acha `Art. 155`).
+
+**Esta tabela é digitada à mão e envelhece a cada lei nova.** É um atalho
+para lembrar onde procurar, nunca a fonte.

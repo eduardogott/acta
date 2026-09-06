@@ -1,0 +1,361 @@
+/* =========================================================
+   Estilos das quatro ferramentas menores: conferidor,
+   tipificação, orientações e transcrição.
+
+   Um arquivo só porque elas compartilham quase tudo — campo de
+   busca, cartão de resultado, lista de itens — e porque quatro
+   folhas de 60 linhas seriam quatro lugares para o mesmo ajuste.
+   O que é da página do conversor continua em conversor.css.
+   ========================================================= */
+
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ---------------------------------------------------------
+   Campo de busca (conferidor, tipificação)
+   --------------------------------------------------------- */
+.campo-busca {
+  margin-bottom: 18px;
+}
+.campo-busca label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.campo-busca input[type="text"] {
+  font-family: var(--mono);
+  font-size: 15px;
+  padding: 12px 14px;
+}
+
+/* ---------------------------------------------------------
+   Conferidor
+   --------------------------------------------------------- */
+.conferidor-resumo {
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0 0 16px;
+  min-height: 22px;
+}
+.conferidor-resumo.ok { color: var(--accent); }
+.conferidor-resumo.erro { color: var(--danger); }
+.conferidor-resumo.neutro { color: var(--text-muted); }
+
+.lista-conferencia {
+  list-style: none;
+  margin: 0 0 36px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.conferencia-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+}
+.conferencia-item.valido { border-color: var(--accent); }
+.conferencia-item.neutro { opacity: 0.5; }
+.conferencia-marca {
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.3;
+  width: 16px;
+  flex-shrink: 0;
+  text-align: center;
+}
+.conferencia-item.valido .conferencia-marca { color: var(--accent); }
+.conferencia-item.invalido .conferencia-marca { color: var(--danger); }
+.conferencia-item.neutro .conferencia-marca { color: var(--text-muted); }
+.conferencia-corpo { min-width: 0; }
+.conferencia-rotulo {
+  font-size: 14px;
+  font-weight: 500;
+}
+.conferencia-motivo {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ---------------------------------------------------------
+   Nota de rodapé das páginas (limites, avisos)
+   --------------------------------------------------------- */
+.nota-rodape {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-bottom: 24px;
+}
+.nota-rodape h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.nota-rodape ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-read);
+}
+.nota-rodape li { margin-bottom: 7px; }
+
+/* ---------------------------------------------------------
+   Tipificação
+   --------------------------------------------------------- */
+.filtros-tipificacao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.contagem-resultados {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+.tabela-wrapper {
+  overflow-x: auto;
+  margin-bottom: 32px;
+}
+.tabela-tipificacao {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.tabela-tipificacao th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.tabela-tipificacao td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--text-read);
+}
+.tabela-tipificacao tr:hover td { background: var(--accent-soft); }
+.tipificacao-fato {
+  color: var(--text);
+  font-weight: 500;
+}
+.tipificacao-artigo {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.tipificacao-obs {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+.etiqueta {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.etiqueta.condicionada { border-color: var(--accent); color: var(--accent); }
+.etiqueta.privada { border-color: var(--danger); color: var(--danger); }
+.etiqueta.jecrim { border-color: var(--accent); color: var(--accent); }
+.sem-resultados {
+  padding: 28px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ---------------------------------------------------------
+   Orientações
+   --------------------------------------------------------- */
+.bloco-escolha {
+  margin-bottom: 22px;
+}
+.bloco-escolha .opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.orientacoes-saida {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  margin-bottom: 28px;
+}
+.orientacoes-titulo {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+.orientacoes-subtitulo {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 20px;
+}
+.orientacoes-grupo {
+  margin-bottom: 22px;
+}
+.orientacoes-grupo h3 {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.orientacoes-grupo ol {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-read);
+}
+.orientacoes-grupo li { margin-bottom: 10px; }
+.orientacoes-grupo li b { color: var(--text); }
+.orientacoes-prazo {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+.orientacoes-vazio {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 20px 0;
+}
+.impressao-cabecalho { display: none; }
+
+/* ---------------------------------------------------------
+   Transcrição
+   --------------------------------------------------------- */
+.painel-modelo,
+.painel-transcricao {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+.modelo-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.modelo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 13.5px;
+}
+.modelo-item:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.modelo-item input { accent-color: var(--accent); margin: 3px 0 0; }
+.modelo-nome { font-weight: 500; }
+.modelo-detalhe {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.barra-progresso {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+  margin-top: 10px;
+}
+.barra-progresso-preenchida {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.15s linear;
+}
+.status-linha {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+.status-linha.erro { color: var(--danger); }
+.transcricao-texto {
+  width: 100%;
+  min-height: 320px;
+  font-family: var(--sans);
+  font-size: 14.5px;
+  line-height: 1.7;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  resize: vertical;
+}
+.transcricao-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* ---------------------------------------------------------
+   Impressão: sai a orientação, não o site em volta
+   --------------------------------------------------------- */
+@media print {
+  .site-header,
+  footer,
+  .intro,
+  .bloco-escolha,
+  .acoes,
+  .nota-rodape,
+  .theme-toggle {
+    display: none !important;
+  }
+  main { padding: 0; max-width: none; }
+  .orientacoes-saida { border-top: none; padding-top: 0; }
+  .impressao-cabecalho {
+    display: block;
+    border-bottom: 1px solid #000;
+    padding-bottom: 8px;
+    margin-bottom: 18px;
+    font-size: 12px;
+  }
+  .orientacoes-grupo ol { font-size: 12pt; line-height: 1.6; }
+  body { background: #fff; color: #000; }
+}

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acta — Transcrição de Áudio</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/ferramentas.css" />
+<script src="js/theme.js"></script>
+<script src="js/nav.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <p class="site-title">
+    <span class="brand-mark">●</span>
+    Acta
+  </p>
+  <nav class="site-nav" aria-label="Navegação principal"></nav>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">☾</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1 class="page-title"><b>Transcrição</b> de Áudio</h1>
+    <p class="page-lead">Transcreve áudio e vídeo em português usando o Whisper, rodando
+    dentro do navegador. É uma primeira versão do texto para revisar, nunca a transcrição
+    final — nome próprio, número e sigla são justamente o que a máquina mais erra.</p>
+    <p class="aviso-privacidade">
+      <span aria-hidden="true">🔒</span>
+      O áudio não sai do seu computador. O que vem da internet é só o modelo, baixado uma
+      vez do Hugging Face e guardado no cache do navegador; a partir daí a página funciona
+      sem rede. Nenhum trecho de áudio, nenhuma transcrição e nenhum nome são enviados a
+      servidor algum.
+    </p>
+  </section>
+
+  <p class="progresso">1. Escolha o arquivo</p>
+  <div id="painel-arquivo" class="painel-arquivos">
+    <div class="selecao-arquivos">
+      <label class="btn-secondary btn-arquivo">
+        Selecionar áudio ou vídeo
+        <input type="file" id="input-arquivo" accept="audio/*,video/*" hidden />
+      </label>
+      <span class="dica-arrastar">ou arraste o arquivo para cá</span>
+    </div>
+    <p class="status-linha" id="info-arquivo"></p>
+  </div>
+
+  <p class="progresso">2. Modelo</p>
+  <div class="painel-modelo">
+    <div class="modelo-lista" id="modelo-lista"></div>
+    <label class="opcao-item" style="margin-top:14px">
+      <input type="checkbox" id="com-tempos" /> Marcar o tempo de cada trecho
+    </label>
+  </div>
+
+  <div class="acoes">
+    <button type="button" class="btn-primary" id="btn-transcrever" disabled>Transcrever</button>
+    <button type="button" class="btn-secondary escondido" id="btn-parar">Parar</button>
+    <button type="button" class="btn-secondary" id="btn-limpar">Limpar</button>
+  </div>
+
+  <div class="painel-transcricao escondido" id="painel-status">
+    <p class="status-linha" id="status-texto"></p>
+    <div class="barra-progresso escondido" id="barra">
+      <div class="barra-progresso-preenchida" id="barra-preenchida"></div>
+    </div>
+  </div>
+
+  <div class="escondido" id="painel-resultado">
+    <p class="progresso">3. Transcrição — revise antes de usar</p>
+    <textarea class="transcricao-texto" id="texto-transcrito" spellcheck="false"></textarea>
+    <div class="transcricao-acoes">
+      <button type="button" class="btn-secondary" id="btn-copiar">Copiar texto</button>
+      <button type="button" class="btn-secondary" id="btn-baixar">Baixar .txt</button>
+    </div>
+  </div>
+
+  <section class="nota-rodape">
+    <h2>O que esperar</h2>
+    <ul>
+      <li><b>É lento.</b> A biblioteca roda em uma thread só — o construtor <code>Worker</code>
+      recusa as threads que o motor tentaria criar a partir do CDN. Conte com um tempo próximo
+      ao da duração do áudio, ou mais, na primeira vez que rodar.</li>
+      <li><b>O modelo é baixado uma vez.</b> Depois disso ele fica no cache do navegador e a
+      transcrição funciona mesmo sem internet.</li>
+      <li><b>Formato não reconhecido?</b> O navegador não sabe abrir <code>.mkv</code>,
+      <code>.avi</code> ou <code>.wma</code>. Use a opção "Extrair áudio" do
+      <a href="conversor.html">conversor</a> e traga o MP3 de volta para cá.</li>
+      <li><b>Sempre revise.</b> A saída não distingue quem fala, erra nome próprio, número de
+      documento e valor, e não marca hesitação. Para uso como prova, a transcrição precisa ser
+      conferida ouvindo o áudio.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <p class="footer-credit"><a class="footer-link" href="https://gttr.com.br">Eduardo Gottert</a> · 2026</p>
+  <p class="footer-versao"><span id="carimbo-versao"></span></p>
+</footer>
+
+<script src="js/transcricao.js"></script>
+<script src="js/versao.js"></script>
+<script src="js/rodape.js"></script>
+</body>
+</html>

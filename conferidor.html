@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acta — Conferidor de Identificadores</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/ferramentas.css" />
+<script src="js/theme.js"></script>
+<script src="js/nav.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <p class="site-title">
+    <span class="brand-mark">●</span>
+    Acta
+  </p>
+  <nav class="site-nav" aria-label="Navegação principal"></nav>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">☾</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1 class="page-title"><b>Conferidor</b> de Identificadores</h1>
+    <p class="page-lead">Cole um número e veja o que ele pode ser. A conferência é do
+    dígito verificador — ela prova que o número é <em>bem formado</em>, não que exista
+    ou pertença a quem diz pertencer.</p>
+  </section>
+
+  <div class="campo-busca">
+    <label for="entrada">Número, documento ou identificador</label>
+    <input type="text" id="entrada" autocomplete="off" spellcheck="false"
+           placeholder="529.982.247-25 · 11.222.333/0001-81 · 490154203237518 · ABC1D23" />
+  </div>
+
+  <p class="conferidor-resumo" id="resumo"></p>
+
+  <ul class="lista-conferencia" id="lista-conferencia"></ul>
+
+  <section class="nota-rodape">
+    <h2>O que esta página não faz</h2>
+    <ul>
+      <li><b>Não consulta base alguma.</b> Tudo é aritmética local: nenhum número
+      digitado aqui sai do seu navegador. Um CPF pode passar na conferência e nunca
+      ter sido emitido.</li>
+      <li><b>Chassi (VIN):</b> o dígito verificador da 9ª posição é obrigatório na
+      América do Norte e <b>opcional</b> no resto do mundo. Muito veículo fabricado no
+      Brasil, na Europa e no Japão traz ali um algarismo qualquer — um dígito que não
+      fecha <b>não</b> é indício de adulteração por si só.</li>
+      <li><b>Placa</b> não tem dígito verificador: só dá para conferir o formato.</li>
+      <li><b>RENAVAM e CNH ficaram de fora</b> de propósito: circulam versões
+      conflitantes do algoritmo de cada um, e um "inválido" errado num documento
+      verdadeiro é pior que não ter a conferência.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <p class="footer-credit"><a class="footer-link" href="https://gttr.com.br">Eduardo Gottert</a> · 2026</p>
+  <p class="footer-versao"><span id="carimbo-versao"></span></p>
+</footer>
+
+<script src="js/core/identificadores.js"></script>
+<script src="js/conferidor.js"></script>
+<script src="js/versao.js"></script>
+<script src="js/rodape.js"></script>
+</body>
+</html>

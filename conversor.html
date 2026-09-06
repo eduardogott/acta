@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="css/style.css" />
 <link rel="stylesheet" href="css/conversor.css" />
 <script src="js/theme.js"></script>
+<script src="js/nav.js"></script>
 </head>
 <body>
 
@@ -15,20 +16,17 @@
     <span class="brand-mark">●</span>
     Acta
   </p>
-  <nav class="site-nav" aria-label="Navegação principal">
-    <a href="index.html" class="nav-link">Gerador de Ocorrências</a>
-    <a href="conversor.html" class="nav-link ativo">Conversor de Mídia</a>
-  </nav>
+  <nav class="site-nav" aria-label="Navegação principal"></nav>
   <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">☾</button>
 </header>
 
 <main>
   <section class="intro">
     <h1 class="page-title"><b>Conversor</b> de Mídia</h1>
-    <p class="page-lead">Converte áudios, vídeos e imagens, padroniza extensões,
-    extrai o áudio ou um quadro de um vídeo e comprime vídeos, áudios e imagens —
-    tudo processado localmente no seu navegador com ffmpeg, sem enviar nada a
-    servidor algum.</p>
+    <p class="page-lead">Converte áudios, vídeos e imagens — já comprimidos, porque o
+    destino tem limite de 20&nbsp;MB por arquivo —, padroniza extensões, extrai o áudio
+    ou um quadro de um vídeo e comprime até um tamanho escolhido. Tudo processado
+    localmente no seu navegador com ffmpeg, sem enviar nada a servidor algum.</p>
     <p class="aviso-privacidade">
       <span aria-hidden="true">🔒</span>
       Todo o processamento roda no seu navegador (WebAssembly). Os arquivos
@@ -45,15 +43,15 @@
   <div class="opcoes-conversor" id="opcoes-conversor">
     <button type="button" class="opcao-conversor" data-op="1">
       <span class="opcao-titulo">Converter áudios</span>
-      <span class="opcao-desc">Qualquer áudio → MP3</span>
+      <span class="opcao-desc">Qualquer áudio → MP3 128 kbps / 32 kHz</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="2">
       <span class="opcao-titulo">Converter vídeos</span>
-      <span class="opcao-desc">Qualquer vídeo → MP4</span>
+      <span class="opcao-desc">Qualquer vídeo → MP4 H.264 CRF 23</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="3">
       <span class="opcao-titulo">Converter imagens</span>
-      <span class="opcao-desc">Qualquer imagem → JPG</span>
+      <span class="opcao-desc">Qualquer imagem → JPG de qualidade ~90</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="4">
       <span class="opcao-titulo">Converter tudo</span>
@@ -74,10 +72,6 @@
     <button type="button" class="opcao-conversor" data-op="7">
       <span class="opcao-titulo">Extrair quadro</span>
       <span class="opcao-desc">Um instante do vídeo → JPG</span>
-    </button>
-    <button type="button" class="opcao-conversor" data-op="10">
-      <span class="opcao-titulo">Comprimir imagens</span>
-      <span class="opcao-desc">Qualquer imagem → JPG de qualidade ~90</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="9">
       <span class="opcao-titulo">Comprimir vídeo ou áudio</span>

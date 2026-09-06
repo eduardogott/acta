@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acta — Consulta de Tipificação</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/ferramentas.css" />
+<script src="js/theme.js"></script>
+<script src="js/nav.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <p class="site-title">
+    <span class="brand-mark">●</span>
+    Acta
+  </p>
+  <nav class="site-nav" aria-label="Navegação principal"></nav>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">☾</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1 class="page-title">Consulta de <b>Tipificação</b></h1>
+    <p class="page-lead">Procure pelo nome do fato, pelo artigo ou pelo jeito que a pessoa
+    contou. A tabela é digitada à mão e serve para lembrar onde procurar —
+    <b>confira sempre no texto legal antes de tipificar.</b></p>
+  </section>
+
+  <div class="campo-busca">
+    <label for="busca">Fato, artigo ou palavra da narrativa</label>
+    <input type="text" id="busca" autocomplete="off" spellcheck="false"
+           placeholder="furto · art. 155 · arrombamento · som alto · pix" />
+  </div>
+
+  <div class="filtros-tipificacao" id="filtros">
+    <label class="opcao-item"><input type="checkbox" id="filtro-jecrim" /> Só JECRIM</label>
+    <label class="opcao-item"><input type="checkbox" id="filtro-condicionada" /> Só ação condicionada ou privada</label>
+  </div>
+
+  <p class="contagem-resultados" id="contagem"></p>
+
+  <div class="tabela-wrapper">
+    <table class="tabela-tipificacao">
+      <thead>
+        <tr>
+          <th>Fato</th>
+          <th>Artigo</th>
+          <th>Pena</th>
+          <th>Ação penal</th>
+        </tr>
+      </thead>
+      <tbody id="corpo-tabela"></tbody>
+    </table>
+  </div>
+
+  <p class="sem-resultados escondido" id="sem-resultados">Nada encontrado com esse termo.</p>
+
+  <section class="nota-rodape">
+    <h2>Como ler e como alimentar</h2>
+    <ul>
+      <li><b>Ação penal:</b> sem etiqueta é pública incondicionada. <span class="etiqueta condicionada">condicionada</span>
+      exige representação da vítima, com prazo decadencial de seis meses.
+      <span class="etiqueta privada">privada</span> exige queixa-crime, no mesmo prazo.</li>
+      <li><span class="etiqueta jecrim">jecrim</span> marca a infração de menor potencial ofensivo
+      (contravenção ou pena máxima até dois anos). Violência doméstica contra a mulher fica de
+      fora mesmo com pena baixa, por força do art. 41 da Lei 11.340/2006.</li>
+      <li><b>Para acrescentar um fato:</b> uma entrada em <code>js/tipificacao-dados.js</code>.
+      O cabeçalho do arquivo tem o formato e o significado de cada campo. Nada nesta página
+      precisa ser tocado.</li>
+      <li><b>Esta tabela envelhece.</b> Ela é digitada à mão e cada lei nova pode desatualizá-la.
+      É um atalho de memória, não a fonte.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <p class="footer-credit"><a class="footer-link" href="https://gttr.com.br">Eduardo Gottert</a> · 2026</p>
+  <p class="footer-versao"><span id="carimbo-versao"></span></p>
+</footer>
+
+<script src="js/tipificacao-dados.js"></script>
+<script src="js/tipificacao.js"></script>
+<script src="js/versao.js"></script>
+<script src="js/rodape.js"></script>
+</body>
+</html>

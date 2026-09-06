@@ -15,14 +15,15 @@
  *
  * Acrescentadas aqui, sem correspondência no script Python:
  *
- *   6  - Extrair a faixa de áudio de um vídeo para MP3
- *   7  - Extrair um quadro do vídeo (instante à escolha) para JPG
- *   10 - Comprimir imagens para JPG de qualidade ~90
+ *   6 - Extrair a faixa de áudio de um vídeo para MP3
+ *   7 - Extrair um quadro do vídeo (instante à escolha) para JPG
  *
- * As opções 1/2/3 não recomprimem: vídeo tenta remux (-c copy, sem perda);
- * áudio usa VBR de qualidade máxima; imagem usa qualidade JPEG máxima. A
- * opção 10 existe justamente para o caso oposto — quando o que se quer é
- * um arquivo menor, não uma cópia fiel.
+ * As opções 1/2/3 já entregam o arquivo comprimido (ver CONVERSAO_*): o
+ * destino desses arquivos tem limite de 20 MB, então converter sem
+ * comprimir só adiaria o problema. O que elas nunca fazem é AUMENTAR o
+ * arquivo — bitrate, sample rate e resolução nunca sobem acima do
+ * original, e um vídeo que já esteja abaixo da linha de base é apenas
+ * remuxado, sem recompressão nenhuma.
  */
 
 (function () {
@@ -125,14 +126,23 @@
   const ALVO_MP3_KBPS_MINIMO = 8;
 
   // -------------------------------------------------------------------
-  // Qualidade fixa das imagens (opção 10)
+  // Linha de base das conversões (opções 1, 2 e 3)
+  //
+  // Converter e comprimir são a mesma operação aqui: o sistema de destino
+  // aceita no máximo 20 MB por arquivo, e entregar um MP4 remuxado de
+  // 300 MB seria devolver o problema ao usuário. Os números abaixo são o
+  // teto, nunca o alvo — nenhuma conversão sobe bitrate, sample rate ou
+  // resolução acima do que o arquivo já tem.
+  // -------------------------------------------------------------------
+  const CONVERSAO_VIDEO = { crf: 23, preset: "medium", audioKbps: 128, audioHz: 32000 };
+  const CONVERSAO_AUDIO = { kbps: 128, hz: 32000 };
+
+  // Qualidade das imagens convertidas para JPG.
   //
   // O mjpeg do ffmpeg não conhece a escala 0–100 do libjpeg: o que ele
   // aceita é o qscale, de 2 (melhor) a 31 (pior). O degrau 3 é o
-  // equivalente prático de "qualidade 90" — 2 fica em ~93/95, que é quase
-  // o que a opção 3 já faz. Fixo de propósito, sem campo na tela: quem
-  // precisa de um tamanho específico usa o nível Tamanho-alvo.
-  // -------------------------------------------------------------------
+  // equivalente prático de "qualidade 90"; o 2, usado antes, fica em
+  // ~93/95 e praticamente não comprime nada.
   const QSCALE_JPEG_90 = "3";
 
   // O núcleo do ffmpeg (32 MB) vem do jsDelivr, não deste site. Versões
@@ -679,6 +689,38 @@
     return ((kbps * 1000) / 8) * duracao;
   }
 
+  /**
+   * Argumentos da faixa AAC, com bitrate e sample rate limitados ao que o
+   * arquivo já tem. Recomprimir para cima só aumentaria o arquivo sem
+   * devolver nada do que a compressão anterior jogou fora.
+   */
+  function argsAudioAac(info, bitrateAlvo, samplerateAlvo, monoAlvo) {
+    let bitrate = bitrateAlvo;
+    if (info.aBitrate && info.aBitrate < bitrate) bitrate = info.aBitrate;
+    let samplerate = samplerateAlvo;
+    if (samplerate && info.aSampleRate && info.aSampleRate < samplerate) samplerate = info.aSampleRate;
+    const mono = monoAlvo || info.aChannels === 1;
+    const args = ["-c:a", "aac", "-b:a", bitrate + "k", "-ac", mono ? "1" : String(info.aChannels || 2)];
+    if (samplerate) args.push("-ar", String(samplerate));
+    return args;
+  }
+
+  /**
+   * Bytes que a linha de base da opção 2 produziria neste vídeo, ou null
+   * quando falta dado para calcular. Mesmo modelo de bits por pixel da
+   * estimativa da tela — grosseiro, mas suficiente para a única decisão
+   * que depende dele: recomprimir ou apenas remuxar.
+   */
+  function estimarConversaoVideo(info) {
+    if (!info || !info.duration || !info.width || !info.height) return null;
+    const fps = info.fps || FPS_PRESUMIDO;
+    const bpp = BPP_CRF23 * Math.pow(2, (23 - CONVERSAO_VIDEO.crf) / 6);
+    const audioBps = info.hasAudio
+      ? (Math.min(CONVERSAO_VIDEO.audioKbps, info.aBitrate || CONVERSAO_VIDEO.audioKbps) * 1000) / 8
+      : 0;
+    return ((bpp * info.width * info.height * fps) / 8 + audioBps) * info.duration;
+  }
+
   /** Estimativa grosseira do tamanho da saída, em bytes. null = não dá para estimar. */
   function estimarTamanho(tipo, meta, nivel, custom) {
     if (!meta || !meta.duracao) return null;
@@ -1059,6 +1101,18 @@
   // Operações (opções 1, 2, 3, 5)
   // ---------------------------------------------------------------------
 
+  /**
+   * Converte qualquer áudio para MP3 na linha de base (CONVERSAO_AUDIO).
+   *
+   * Bitrate e sample rate são TETO, não alvo: um arquivo que já esteja
+   * abaixo deles sai com os próprios números. Reencodar um áudio de
+   * 64 kbps a 128 kbps dobraria o arquivo sem recuperar nada do que a
+   * compressão anterior descartou.
+   *
+   * Um .mp3 de entrada continua passando intacto. Recomprimi-lo aqui
+   * atingiria também as opções 4 e 8, que varrem pastas inteiras — quem
+   * quer encolher um MP3 que já é MP3 usa a opção 9.
+   */
   async function convertAudioFile(ffmpeg, file, onProgress) {
     const ext = extOf(file.name);
     if (ext === ".mp3") return { skipped: true, reason: "já é mp3" };
@@ -1070,7 +1124,18 @@
       : null;
     let code;
     try {
-      code = await execComLog(ffmpeg, ["-i", inName, "-vn", "-codec:a", "libmp3lame", "-q:a", "0", outName]);
+      // sonda o arquivo que já está no FS, para não escrevê-lo duas vezes
+      const info = await probeArquivoEscrito(ffmpeg, inName);
+      const bitrate = Math.min(CONVERSAO_AUDIO.kbps, info.aBitrate || CONVERSAO_AUDIO.kbps);
+      const samplerate = Math.min(CONVERSAO_AUDIO.hz, info.aSampleRate || CONVERSAO_AUDIO.hz);
+      diag("Converter áudio:", {
+        origem: (info.aBitrate || "?") + " kbps / " + (info.aSampleRate || "?") + " Hz",
+        saída: bitrate + " kbps / " + samplerate + " Hz",
+      });
+      code = await execComLog(ffmpeg, [
+        "-i", inName, "-vn", "-codec:a", "libmp3lame",
+        "-b:a", bitrate + "k", "-ar", String(samplerate), outName,
+      ]);
     } finally {
       progressCallback = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
@@ -1082,17 +1147,22 @@
   }
 
   /**
-   * Converte para MP4 escolhendo entre remux e recodificação pelo codec.
+   * Converte para MP4, já na linha de base de compressão (CONVERSAO_VIDEO).
    *
    * O `-c copy` cego era um problema: um webm de AV1 (o que o yt-dlp costuma
    * baixar do YouTube) era simplesmente empacotado num MP4, gerando um
    * arquivo que este mesmo motor não consegue reabrir — e que contraria a
    * regra de sair sempre em H.264/AAC por compatibilidade.
    *
-   * Três caminhos, do mais barato ao mais caro:
-   *   h264 + aac/mp3   → `-c copy`, sem perda nenhuma
-   *   h264 + outro som → copia o vídeo, recodifica só o áudio
-   *   qualquer outro   → recodifica tudo para H.264 + AAC
+   * A escolha do caminho tem duas perguntas. A primeira é se dá para
+   * copiar o vídeo (só h264). A segunda é se vale a pena: se a linha de
+   * base produziria um arquivo MAIOR que o original — vídeo curto, já
+   * comprimido, ou de bitrate baixo —, recomprimir seria perder qualidade
+   * para ganhar tamanho, então o arquivo é apenas remuxado.
+   *
+   *   h264 já enxuto + aac/mp3   → `-c copy`, sem perda nenhuma
+   *   h264 já enxuto + outro som → copia o vídeo, recodifica só o áudio
+   *   qualquer outro caso        → recodifica em CRF 23 + AAC 128k/32 kHz
    */
   async function convertVideoFile(ffmpeg, file, onProgress) {
     const ext = extOf(file.name);
@@ -1110,23 +1180,33 @@
 
       const somCompativel = !info.hasAudio || info.aCodec === "aac" || info.aCodec === "mp3";
       const podeCopiarVideo = info.vCodec === "h264";
+
+      // Sem duração ou dimensões não dá para estimar; nesse caso a dúvida
+      // se resolve a favor de não mexer no que já está em h264.
+      const estimativa = estimarConversaoVideo(info);
+      const valeRecomprimir = estimativa !== null && estimativa < file.size;
+      const copiar = podeCopiarVideo && !valeRecomprimir;
+
       diag("Converter vídeo:", {
         vídeo: info.vCodec || "?", áudio: info.aCodec || "(sem áudio)",
-        estratégia: podeCopiarVideo ? (somCompativel ? "remux" : "copiar vídeo, recodificar áudio")
-                                    : "recodificar tudo",
+        original: humanSize(file.size),
+        "linha de base estimada": estimativa === null ? "indeterminada" : humanSize(estimativa),
+        estratégia: copiar ? (somCompativel ? "remux" : "copiar vídeo, recodificar áudio")
+                           : "recodificar em CRF " + CONVERSAO_VIDEO.crf,
       });
 
       progressCallback = onProgress
         ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
         : null;
 
-      if (podeCopiarVideo && somCompativel) {
+      if (copiar && somCompativel) {
         code = await execComLog(ffmpeg, [
           "-i", inName, "-map", "0", "-c", "copy", "-movflags", "+faststart", outName,
         ]);
-      } else if (podeCopiarVideo) {
+      } else if (copiar) {
         code = await execComLog(ffmpeg, [
-          "-i", inName, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+          "-i", inName, "-c:v", "copy",
+          ...argsAudioAac(info, CONVERSAO_VIDEO.audioKbps, CONVERSAO_VIDEO.audioHz, false),
           "-movflags", "+faststart", outName,
         ]);
       } else {
@@ -1135,10 +1215,14 @@
 
       if (code) {
         try { await ffmpeg.deleteFile(outName); } catch (e) {}
+        const audioArgs = info.hasAudio
+          ? argsAudioAac(info, CONVERSAO_VIDEO.audioKbps, CONVERSAO_VIDEO.audioHz, false)
+          : ["-an"];
         code = await execComLog(ffmpeg, [
-          "-i", inName, "-c:v", "libx264", "-crf", "18", "-preset", "medium",
-          "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "256k",
-          "-movflags", "+faststart", outName,
+          "-i", inName,
+          "-c:v", "libx264", "-crf", String(CONVERSAO_VIDEO.crf),
+          "-preset", CONVERSAO_VIDEO.preset, "-pix_fmt", "yuv420p",
+          ...audioArgs, "-movflags", "+faststart", outName,
         ]);
       }
     } finally {
@@ -1151,6 +1235,16 @@
     return { blob: new Blob([data.buffer], { type: "video/mp4" }), outName };
   }
 
+  /**
+   * Converte qualquer imagem para JPG já comprimido (QSCALE_JPEG_90).
+   *
+   * `-frames:v 1` protege contra GIF animado: sem isso o mjpeg escreveria
+   * todos os quadros concatenados num arquivo .jpg só.
+   *
+   * Um .jpg de entrada continua passando intacto — recomprimi-lo aqui
+   * atingiria também as opções 4 e 8, que varrem pastas inteiras, e
+   * degradaria em silêncio fotos que já estavam boas.
+   */
   async function convertImageFile(ffmpeg, file, onProgress) {
     const ext = extOf(file.name);
     if (ext === ".jpg") return { skipped: true, reason: "já é jpg" };
@@ -1162,7 +1256,7 @@
       : null;
     let code;
     try {
-      code = await execComLog(ffmpeg, ["-i", inName, "-q:v", "2", outName]);
+      code = await execComLog(ffmpeg, ["-i", inName, "-frames:v", "1", "-q:v", QSCALE_JPEG_90, outName]);
     } finally {
       progressCallback = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
@@ -1174,7 +1268,7 @@
   }
 
   // ---------------------------------------------------------------------
-  // Extrações e compressão de imagem (opções 6, 7 e 10)
+  // Extrações (opções 6 e 7)
   // ---------------------------------------------------------------------
 
   /**
@@ -1245,39 +1339,6 @@
         "Nenhum quadro em " + formatarTempo(instante) + " — o vídeo é mais curto que isso."
       );
     }
-    await ffmpeg.deleteFile(outName);
-    return { blob: new Blob([data.buffer], { type: "image/jpeg" }), outName };
-  }
-
-  /**
-   * Recomprime uma imagem em JPG de qualidade fixa (ver QSCALE_JPEG_90).
-   *
-   * Diferente da opção 3, aqui um .jpg de entrada NÃO é ignorado: o
-   * propósito da operação é justamente encolher, inclusive o que já é
-   * JPEG. Como o nome de saída seria igual ao de entrada nesse caso, ele
-   * ganha o sufixo "_comprimida" para não haver dúvida sobre qual arquivo
-   * é qual.
-   *
-   * `-frames:v 1` protege contra GIF animado: sem isso o mjpeg escreveria
-   * todos os quadros concatenados num arquivo .jpg só.
-   */
-  async function compressImageFile(ffmpeg, file, onProgress) {
-    const ext = extOf(file.name);
-    const inName = "img" + ext;
-    const outName = baseName(file.name) + (ext === ".jpg" ? "_comprimida.jpg" : ".jpg");
-    await ffmpeg.writeFile(inName, await fileToUint8(file));
-    progressCallback = onProgress
-      ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
-      : null;
-    let code;
-    try {
-      code = await execComLog(ffmpeg, ["-i", inName, "-frames:v", "1", "-q:v", QSCALE_JPEG_90, outName]);
-    } finally {
-      progressCallback = null;
-      try { await ffmpeg.deleteFile(inName); } catch (e) {}
-    }
-    if (code) throw new Error("ffmpeg retornou erro ao comprimir a imagem");
-    const data = await ffmpeg.readFile(outName);
     await ffmpeg.deleteFile(outName);
     return { blob: new Blob([data.buffer], { type: "image/jpeg" }), outName };
   }
@@ -1382,16 +1443,7 @@
     let newW = info.width, newH = info.height, targetFps = null;
     let audioArgs = ["-an"];
 
-    function montarAudio(bitrateAlvo, samplerateAlvo, monoAlvo) {
-      let bitrate = bitrateAlvo;
-      if (info.aBitrate && info.aBitrate < bitrate) bitrate = info.aBitrate;
-      let samplerate = samplerateAlvo;
-      if (samplerate && info.aSampleRate && info.aSampleRate < samplerate) samplerate = info.aSampleRate;
-      const mono = monoAlvo || info.aChannels === 1;
-      const args = ["-c:a", "aac", "-b:a", bitrate + "k", "-ac", mono ? "1" : String(info.aChannels || 2)];
-      if (samplerate) args.push("-ar", String(samplerate));
-      return args;
-    }
+    const montarAudio = (bitrate, samplerate, mono) => argsAudioAac(info, bitrate, samplerate, mono);
 
     if (level === "6") {
       const duracao = duracaoDoTrabalho(info, corte);
@@ -2491,7 +2543,6 @@
     "6": "2. Selecione o(s) vídeo(s) ou a pasta",
     "7": "2. Selecione o(s) vídeo(s) ou a pasta",
     "9": "2. Selecione os arquivos de vídeo ou de áudio (todos do mesmo tipo)",
-    "10": "2. Selecione a(s) imagem(ns) ou a pasta",
   };
 
   function selecionarOpcao(opcao) {
@@ -2817,9 +2868,6 @@
       if (VIDEO_EXTS.includes(ext)) {
         tarefas.push(["quadro", () => extractFrameFile(ffmpeg, file, opcoes.instante)]);
       }
-    }
-    if (opcao === "10") {
-      if (IMAGE_EXTS.includes(ext)) tarefas.push(["imagem", (p) => compressImageFile(ffmpeg, file, p)]);
     }
 
     if (tarefas.length === 0) {
