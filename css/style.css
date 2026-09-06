@@ -435,6 +435,20 @@ input:focus{
   color:var(--danger);
 }
 
+/* Feedback temporário de um botão de ação (copiar). O :hover é sobrescrito
+   de propósito: com o ponteiro parado sobre o botão, o estado de hover
+   escondia justamente a cor que informa se deu certo. */
+.btn-ok,
+.btn-ok:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.btn-falhou,
+.btn-falhou:hover{
+  border-color:var(--danger);
+  color:var(--danger);
+}
+
 /* =========================================================
    Saída (texto gerado)
    ========================================================= */
@@ -504,6 +518,12 @@ footer .footer-credit{
 
 footer .footer-link{
   color:inherit
+}
+
+/* Carimbo de versão: presente mas discreto — só interessa quando alguém
+   precisa saber qual código estava no ar. */
+footer .footer-versao{
+  opacity:0.55;
 }
 
 @media (max-width:560px){

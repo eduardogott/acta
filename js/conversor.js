@@ -9,12 +9,20 @@
  *   4 - Todas as conversões (1, 2 e 3)
  *   5 - Padronizar extensões (jpeg->jpg, mpeg->mpg, etc)
  *   8 - Efetuar todos (4 e 5)
- *   9 - Comprimir um arquivo de vídeo OU de áudio
- *       (baixa/média/alta/extrema/personalizada; o tipo é detectado
- *        automaticamente pela extensão do arquivo escolhido)
+ *   9 - Comprimir vídeos OU áudios, em fila
+ *       (baixa/média/alta/extrema/personalizada/tamanho-alvo; o tipo é
+ *        detectado pela extensão e precisa ser o mesmo em toda a seleção)
+ *
+ * Acrescentadas aqui, sem correspondência no script Python:
+ *
+ *   6  - Extrair a faixa de áudio de um vídeo para MP3
+ *   7  - Extrair um quadro do vídeo (instante à escolha) para JPG
+ *   10 - Comprimir imagens para JPG de qualidade ~90
  *
  * As opções 1/2/3 não recomprimem: vídeo tenta remux (-c copy, sem perda);
- * áudio usa VBR de qualidade máxima; imagem usa qualidade JPEG máxima.
+ * áudio usa VBR de qualidade máxima; imagem usa qualidade JPEG máxima. A
+ * opção 10 existe justamente para o caso oposto — quando o que se quer é
+ * um arquivo menor, não uma cópia fiel.
  */
 
 (function () {
@@ -79,6 +87,7 @@
     "3": "CRF 32 · até 24 fps · 75% da resolução · áudio AAC 64 kbps mono 22,05 kHz",
     "4": "CRF 34 · até 19 fps · 50% da resolução · áudio AAC 32 kbps mono 16 kHz · preset slow",
     "5": "Você define cada parâmetro abaixo.",
+    "6": "O bitrate sai da conta do tamanho pedido — e a resolução cai se o bitrate não sustentar a original.",
   };
 
   const RESUMO_AUDIO = {
@@ -87,7 +96,44 @@
     "3": "MP3 48 kbps · mono · até 24 kHz",
     "4": "MP3 24 kbps · mono · até 16 kHz",
     "5": "Você define cada parâmetro abaixo.",
+    "6": "O bitrate sai da conta do tamanho pedido; sample rate e canais acompanham.",
   };
+
+  // -------------------------------------------------------------------
+  // Nível "Tamanho-alvo" (nível 6 da opção 9)
+  //
+  // Em vez de escolher a qualidade e descobrir o tamanho, o usuário diz o
+  // tamanho e o bitrate sai da divisão. É o caminho natural quando o
+  // limite é externo — anexo de e-mail, campo de upload de um sistema.
+  // -------------------------------------------------------------------
+
+  // Sobra para o overhead do contêiner e para o erro do controle de taxa
+  // do x264, que mira a média mas não a acerta na casa do byte.
+  const ALVO_MARGEM = 0.95;
+  // Abaixo disto o vídeo vira um borrão sem serventia: o encode passa a
+  // ignorar o alvo e o aviso vai para a estimativa.
+  const ALVO_VIDEO_KBPS_MINIMO = 64;
+  // Bits por pixel por quadro. Abaixo disto compensa mais encolher a
+  // imagem do que insistir na resolução original com bitrate insuficiente.
+  const ALVO_BPP_MINIMO = 0.04;
+  // Degraus de largura para essa redução (só desce, nunca sobe).
+  const ESCADA_LARGURA = [1920, 1280, 854, 640, 480, 320];
+  // Bitrates de áudio candidatos, do melhor para o pior.
+  const ALVO_AUDIO_KBPS = [128, 96, 64, 48, 32, 24, 16];
+  // Bitrates que o libmp3lame aceita, na compressão de áudio puro.
+  const ALVO_MP3_KBPS = [320, 256, 192, 160, 128, 112, 96, 80, 64, 56, 48, 40, 32, 24, 16, 8];
+  const ALVO_MP3_KBPS_MINIMO = 8;
+
+  // -------------------------------------------------------------------
+  // Qualidade fixa das imagens (opção 10)
+  //
+  // O mjpeg do ffmpeg não conhece a escala 0–100 do libjpeg: o que ele
+  // aceita é o qscale, de 2 (melhor) a 31 (pior). O degrau 3 é o
+  // equivalente prático de "qualidade 90" — 2 fica em ~93/95, que é quase
+  // o que a opção 3 já faz. Fixo de propósito, sem campo na tela: quem
+  // precisa de um tamanho específico usa o nível Tamanho-alvo.
+  // -------------------------------------------------------------------
+  const QSCALE_JPEG_90 = "3";
 
   // O núcleo do ffmpeg (32 MB) vem do jsDelivr, não deste site. Versões
   // fixadas de propósito: a URL vira imutável e cacheável para sempre.
@@ -370,6 +416,22 @@
   }
 
   /**
+   * Tipo único de toda a seleção da opção 9, ou null.
+   *
+   * A fila exige que os arquivos sejam todos vídeo ou todos áudio: as
+   * tabelas de nível são diferentes entre os dois, e os campos manuais na
+   * tela são de um tipo só. Misturar significaria uma tela que fala de
+   * duas coisas ao mesmo tempo — melhor pedir duas passadas.
+   */
+  function tipoComumDeCompressao(arquivos) {
+    if (arquivos.length === 0) return null;
+    const tipos = new Set(arquivos.map(tipoDoArquivo));
+    if (tipos.size !== 1) return null;
+    const unico = tipos.values().next().value;
+    return unico === "video" || unico === "audio" ? unico : null;
+  }
+
+  /**
    * Extrai o que interessa do log do `ffmpeg -i`.
    *
    * Trabalha uma linha de cada vez em vez de uma regex só. A versão anterior
@@ -532,9 +594,101 @@
     });
   }
 
+  /**
+   * Traduz "este vídeo tem de caber em N bytes" em bitrate de vídeo, de
+   * áudio e, se preciso, uma resolução menor.
+   *
+   * Devolve também `cabe: false` quando nem o bitrate mínimo utilizável
+   * cabe no alvo — nesse caso o encode segue no mínimo e o arquivo sai
+   * maior que o pedido, o que é melhor que devolver um borrão inútil do
+   * tamanho certo.
+   */
+  function planejarAlvo(info, duracao, alvoBytes) {
+    const kbpsTotal = (alvoBytes * 8 * ALVO_MARGEM) / duracao / 1000;
+
+    // O áudio vem primeiro porque é a parte que não se comprime bem: fica
+    // com no máximo um quinto do orçamento e nunca acima do original.
+    let audioKbps = 0;
+    if (info.hasAudio) {
+      const teto = Math.max(16, kbpsTotal * 0.2);
+      audioKbps = ALVO_AUDIO_KBPS.find((k) => k <= teto) || 16;
+      if (info.aBitrate && info.aBitrate < audioKbps) audioKbps = info.aBitrate;
+    }
+
+    let videoKbps = Math.floor(kbpsTotal - audioKbps);
+    let cabe = true;
+    if (videoKbps < ALVO_VIDEO_KBPS_MINIMO) {
+      videoKbps = ALVO_VIDEO_KBPS_MINIMO;
+      cabe = false;
+    }
+
+    // Com bitrate curto, uma imagem menor e nítida serve melhor que a
+    // resolução original cheia de blocos.
+    let width = info.width;
+    let height = info.height;
+    const fps = info.fps || FPS_PRESUMIDO;
+    if (width && height) {
+      const bpp = () => (videoKbps * 1000) / (width * height * fps);
+      for (const degrau of ESCADA_LARGURA) {
+        if (bpp() >= ALVO_BPP_MINIMO) break;
+        if (degrau >= width) continue; // a escada só desce
+        // sempre a partir das dimensões originais, para o arredondamento
+        // de um degrau não se acumular no seguinte
+        height = roundEven((degrau * info.height) / info.width);
+        width = roundEven(degrau);
+      }
+    }
+
+    return {
+      videoKbps,
+      audioKbps,
+      samplerate: audioKbps > 0 && audioKbps <= 64 ? 24000 : null,
+      mono: audioKbps > 0 && audioKbps <= 64,
+      width,
+      height,
+      cabe,
+    };
+  }
+
+  /** Mesma ideia de planejarAlvo, para arquivo de áudio puro (saída MP3). */
+  function planejarAlvoAudio(info, duracao, alvoBytes) {
+    const bruto = (alvoBytes * 8 * ALVO_MARGEM) / duracao / 1000;
+    const bitrate = ALVO_MP3_KBPS.find((k) => k <= bruto) || ALVO_MP3_KBPS_MINIMO;
+
+    // Sample rate e canais acompanham o bitrate: 24 kbps em estéreo a
+    // 44,1 kHz soa pior que 24 kbps em mono a 16 kHz — e o MP3 nem aceita
+    // bitrate baixo com taxa de amostragem alta (MPEG-1 x MPEG-2).
+    let samplerate = null;
+    let mono = false;
+    if (bitrate < 40) {
+      samplerate = 16000;
+      mono = true;
+    } else if (bitrate < 64) {
+      samplerate = 24000;
+      mono = true;
+    } else if (bitrate < 112) {
+      samplerate = 32000;
+    }
+
+    return { bitrate, samplerate, mono, compressionLevel: 2, cabe: bruto >= ALVO_MP3_KBPS_MINIMO };
+  }
+
+  /** Piso de tamanho do nível Tamanho-alvo: abaixo disso o encoder não desce. */
+  function pisoDoAlvo(tipo, duracao) {
+    const kbps = tipo === "video" ? ALVO_VIDEO_KBPS_MINIMO + 16 : ALVO_MP3_KBPS_MINIMO;
+    return ((kbps * 1000) / 8) * duracao;
+  }
+
   /** Estimativa grosseira do tamanho da saída, em bytes. null = não dá para estimar. */
   function estimarTamanho(tipo, meta, nivel, custom) {
     if (!meta || !meta.duracao) return null;
+
+    // No Tamanho-alvo a estimativa é o próprio alvo — a menos que ele
+    // esteja abaixo do que o bitrate mínimo produz nessa duração.
+    if (nivel === "6") {
+      if (!custom || !custom.alvoBytes) return null;
+      return Math.max(custom.alvoBytes, pisoDoAlvo(tipo, meta.duracao));
+    }
 
     if (tipo === "audio") {
       const alvo = nivel === "5" ? custom : LEVEL_AUDIO_ONLY[nivel];
@@ -1019,6 +1173,115 @@
     return { blob: new Blob([data.buffer], { type: "image/jpeg" }), outName };
   }
 
+  // ---------------------------------------------------------------------
+  // Extrações e compressão de imagem (opções 6, 7 e 10)
+  // ---------------------------------------------------------------------
+
+  /**
+   * Tira só a faixa de áudio de um vídeo e entrega um MP3.
+   *
+   * `-q:a 2` (VBR, ~190 kbps) e não `-q:a 0` como na opção 1: aqui a
+   * origem é uma faixa já comprimida dentro do vídeo, e o ajuste mais
+   * caprichado gastaria o dobro do espaço guardando fielmente o ruído da
+   * compressão anterior.
+   */
+  async function extractAudioFile(ffmpeg, file, onProgress) {
+    const ext = extOf(file.name);
+    const inName = "ex" + ext;
+    const outName = baseName(file.name) + ".mp3";
+    await ffmpeg.writeFile(inName, await fileToUint8(file));
+    progressCallback = onProgress
+      ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
+      : null;
+    let code;
+    try {
+      code = await execComLog(ffmpeg, ["-i", inName, "-vn", "-c:a", "libmp3lame", "-q:a", "2", outName]);
+    } finally {
+      progressCallback = null;
+      try { await ffmpeg.deleteFile(inName); } catch (e) {}
+    }
+    if (code) {
+      // O caso comum de falha aqui é o vídeo simplesmente não ter som —
+      // vale dizer isso em vez de repetir "o ffmpeg deu erro".
+      const semSom = logCauda.some((l) => /does not contain any stream|Output file .* empty/i.test(l));
+      throw new Error(semSom ? "Este vídeo não tem faixa de áudio." : "ffmpeg retornou erro ao extrair o áudio");
+    }
+    const data = await ffmpeg.readFile(outName);
+    await ffmpeg.deleteFile(outName);
+    return { blob: new Blob([data.buffer], { type: "audio/mpeg" }), outName };
+  }
+
+  /**
+   * Captura um único quadro do vídeo, no instante pedido (em segundos).
+   *
+   * `-ss` vem antes do `-i` pelo mesmo motivo do corte de trecho: o seek
+   * fica rápido em vez de decodificar o vídeo inteiro até chegar lá.
+   */
+  async function extractFrameFile(ffmpeg, file, instante) {
+    const ext = extOf(file.name);
+    const inName = "fr" + ext;
+    const outName = baseName(file.name) + "_quadro_" + formatarTempo(instante).replace(/:/g, "-") + ".jpg";
+    await ffmpeg.writeFile(inName, await fileToUint8(file));
+    let code;
+    try {
+      const antes = instante > 0 ? ["-ss", String(instante)] : [];
+      code = await execComLog(ffmpeg, [
+        ...antes, "-i", inName, "-frames:v", "1", "-q:v", QSCALE_JPEG_90, outName,
+      ]);
+    } finally {
+      try { await ffmpeg.deleteFile(inName); } catch (e) {}
+    }
+    // Um instante além do fim do vídeo não é erro para o ffmpeg: ele
+    // termina em paz sem escrever quadro nenhum. Por isso a leitura da
+    // saída é que decide se deu certo.
+    let data = null;
+    try {
+      data = await ffmpeg.readFile(outName);
+    } catch (e) {}
+    if (!data || data.length === 0) {
+      try { await ffmpeg.deleteFile(outName); } catch (e) {}
+      if (code) throw new Error("ffmpeg retornou erro ao extrair o quadro");
+      throw new Error(
+        "Nenhum quadro em " + formatarTempo(instante) + " — o vídeo é mais curto que isso."
+      );
+    }
+    await ffmpeg.deleteFile(outName);
+    return { blob: new Blob([data.buffer], { type: "image/jpeg" }), outName };
+  }
+
+  /**
+   * Recomprime uma imagem em JPG de qualidade fixa (ver QSCALE_JPEG_90).
+   *
+   * Diferente da opção 3, aqui um .jpg de entrada NÃO é ignorado: o
+   * propósito da operação é justamente encolher, inclusive o que já é
+   * JPEG. Como o nome de saída seria igual ao de entrada nesse caso, ele
+   * ganha o sufixo "_comprimida" para não haver dúvida sobre qual arquivo
+   * é qual.
+   *
+   * `-frames:v 1` protege contra GIF animado: sem isso o mjpeg escreveria
+   * todos os quadros concatenados num arquivo .jpg só.
+   */
+  async function compressImageFile(ffmpeg, file, onProgress) {
+    const ext = extOf(file.name);
+    const inName = "img" + ext;
+    const outName = baseName(file.name) + (ext === ".jpg" ? "_comprimida.jpg" : ".jpg");
+    await ffmpeg.writeFile(inName, await fileToUint8(file));
+    progressCallback = onProgress
+      ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
+      : null;
+    let code;
+    try {
+      code = await execComLog(ffmpeg, ["-i", inName, "-frames:v", "1", "-q:v", QSCALE_JPEG_90, outName]);
+    } finally {
+      progressCallback = null;
+      try { await ffmpeg.deleteFile(inName); } catch (e) {}
+    }
+    if (code) throw new Error("ffmpeg retornou erro ao comprimir a imagem");
+    const data = await ffmpeg.readFile(outName);
+    await ffmpeg.deleteFile(outName);
+    return { blob: new Blob([data.buffer], { type: "image/jpeg" }), outName };
+  }
+
   function standardizeExtensionFile(file) {
     const ext = extOf(file.name);
     const newExt = EXTENSION_MAP[ext];
@@ -1040,11 +1303,32 @@
     await etapa("Escrever " + humanSize(file.size) + " no FS do ffmpeg",
                 async () => ffmpeg.writeFile(inName, await fileToUint8(file)));
 
-    const alvo = level === "5"
-      ? { bitrate: custom.bitrate, samplerate: custom.samplerate, mono: custom.mono,
-          // no nivel manual vale o ajuste mais caprichado do LAME
-          compressionLevel: 0 }
-      : LEVEL_AUDIO_ONLY[level];
+    let alvo;
+    if (level === "5") {
+      alvo = { bitrate: custom.bitrate, samplerate: custom.samplerate, mono: custom.mono,
+               // no nivel manual vale o ajuste mais caprichado do LAME
+               compressionLevel: 0 };
+    } else if (level === "6") {
+      const duracao = duracaoDoTrabalho(info, corte);
+      if (!duracao) {
+        throw new Error(
+          "Não consegui descobrir a duração deste áudio, e o Tamanho-alvo depende dela. " +
+          "Use um dos níveis fixos."
+        );
+      }
+      alvo = planejarAlvoAudio(info, duracao, custom.alvoBytes);
+      diag("Tamanho-alvo (áudio):", {
+        "alvo": humanSize(custom.alvoBytes), "duração (s)": Math.round(duracao),
+        "bitrate (kbps)": alvo.bitrate, "sample rate": alvo.samplerate || "original",
+        "mono": alvo.mono, "cabe no alvo": alvo.cabe,
+      });
+      if (!alvo.cabe) {
+        diagAviso("O alvo é menor do que o bitrate mínimo do MP3 produz nessa duração — " +
+                  "o arquivo vai sair maior que o pedido.");
+      }
+    } else {
+      alvo = LEVEL_AUDIO_ONLY[level];
+    }
 
     // Nunca sobe acima do original: recomprimir para cima só aumenta o arquivo.
     let bitrate = alvo.bitrate;
@@ -1092,6 +1376,9 @@
                 async () => ffmpeg.writeFile(inName, await fileToUint8(file)));
 
     let crf, preset;
+    // Preenchido só no nível Tamanho-alvo: lá o controle é por bitrate, e
+    // não por CRF — é a única forma de mirar num tamanho.
+    let bitrateVideo = null;
     let newW = info.width, newH = info.height, targetFps = null;
     let audioArgs = ["-an"];
 
@@ -1106,7 +1393,32 @@
       return args;
     }
 
-    if (level !== "5") {
+    if (level === "6") {
+      const duracao = duracaoDoTrabalho(info, corte);
+      if (!duracao) {
+        throw new Error(
+          "Não consegui descobrir a duração deste vídeo, e o Tamanho-alvo depende dela. " +
+          "Use um dos níveis fixos."
+        );
+      }
+      const plano = planejarAlvo(info, duracao, custom.alvoBytes);
+      preset = "medium";
+      bitrateVideo = plano.videoKbps;
+      newW = plano.width;
+      newH = plano.height;
+      if (info.hasAudio && plano.audioKbps) {
+        audioArgs = montarAudio(plano.audioKbps, plano.samplerate, plano.mono);
+      }
+      diag("Tamanho-alvo (vídeo):", {
+        "alvo": humanSize(custom.alvoBytes), "duração (s)": Math.round(duracao),
+        "vídeo (kbps)": plano.videoKbps, "áudio (kbps)": plano.audioKbps || "sem áudio",
+        "resolução": newW && newH ? newW + "x" + newH : "original", "cabe no alvo": plano.cabe,
+      });
+      if (!plano.cabe) {
+        diagAviso("O alvo é menor do que o bitrate mínimo utilizável produz nessa duração — " +
+                  "o arquivo vai sair maior que o pedido. Cortar um trecho resolve.");
+      }
+    } else if (level !== "5") {
       const v = LEVEL_VIDEO[level];
       crf = v.crf;
       preset = v.preset;
@@ -1134,7 +1446,16 @@
       }
     }
 
-    const vArgs = ["-c:v", "libx264", "-crf", String(crf), "-preset", preset, "-pix_fmt", "yuv420p"];
+    // No Tamanho-alvo o encode é por bitrate médio (ABR de uma passada). O
+    // -maxrate/-bufsize existe para o pico não estourar o alvo num trecho
+    // agitado; duas passadas seriam mais exatas, mas dobrariam um encode
+    // que aqui já é lento.
+    const vArgs = bitrateVideo
+      ? ["-c:v", "libx264", "-b:v", bitrateVideo + "k",
+         "-maxrate", Math.round(bitrateVideo * 1.25) + "k",
+         "-bufsize", Math.round(bitrateVideo * 2) + "k",
+         "-preset", preset, "-pix_fmt", "yuv420p"]
+      : ["-c:v", "libx264", "-crf", String(crf), "-preset", preset, "-pix_fmt", "yuv420p"];
     if (newW && newH && info.width && info.height && (newW !== info.width || newH !== info.height)) {
       vArgs.push("-vf", "scale=" + newW + ":" + newH);
     }
@@ -1165,10 +1486,16 @@
   const estado = {
     opcao: null,
     arquivos: [],
-    // Opção 9: "video" | "audio" | null — detectado pela extensão do arquivo.
+    // Opção 9: "video" | "audio" | null — detectado pela extensão dos
+    // arquivos. A fila exige um tipo só para toda a seleção.
     tipoCompressao: null,
-    // Duração/dimensões do arquivo da opção 9, lidas sem o ffmpeg.
+    // Duração/dimensões do PRIMEIRO arquivo da opção 9, lidas sem o
+    // ffmpeg. É dele que falam o painel "Arquivo original" e o corte.
     meta: null,
+    // O mesmo para cada arquivo da fila, na ordem da seleção (posições
+    // podem ser null quando o navegador não sabe demuxar o formato). Só
+    // serve à estimativa somada do lote.
+    metas: [],
     // Sonda completa do ffmpeg (fps, sample rate, bitrate, canais). So e
     // buscada quando o usuario entra no nivel "Personalizada", porque
     // exige carregar o motor.
@@ -1188,7 +1515,6 @@
     rotuloArquivos: document.getElementById("rotulo-arquivos"),
     inputArquivos: document.getElementById("input-arquivos"),
     inputPasta: document.getElementById("input-pasta"),
-    labelPasta: document.getElementById("label-pasta"),
     listaSelecionados: document.getElementById("lista-selecionados"),
     avisoMemoria: document.getElementById("aviso-memoria"),
     painelCompressao: document.getElementById("painel-compressao"),
@@ -1197,12 +1523,14 @@
     estimativa: document.getElementById("estimativa"),
     painelOriginal: document.getElementById("painel-original"),
     origCarregando: document.getElementById("original-carregando"),
+    origRotulo: document.getElementById("original-rotulo"),
     linhaResolucao: document.getElementById("linha-resolucao"),
     linhaFps: document.getElementById("linha-fps"),
     origResolucao: document.getElementById("orig-resolucao"),
     origFps: document.getElementById("orig-fps"),
     origSamplerate: document.getElementById("orig-samplerate"),
     origBitrate: document.getElementById("orig-bitrate"),
+    corte: document.getElementById("corte"),
     corteAtivo: document.getElementById("corte-ativo"),
     corteCampos: document.getElementById("corte-campos"),
     corteInicio: document.getElementById("corte-inicio"),
@@ -1213,6 +1541,11 @@
     previaPalco: document.getElementById("previa-palco"),
     previaNome: document.getElementById("previa-nome"),
     previaFechar: document.getElementById("previa-fechar"),
+    camposAlvo: document.getElementById("campos-alvo"),
+    alvoMb: document.getElementById("alvo-mb"),
+    painelQuadro: document.getElementById("painel-quadro"),
+    quadroInstante: document.getElementById("quadro-instante"),
+    quadroErro: document.getElementById("quadro-erro"),
     personalizadaVideo: document.getElementById("personalizada-video"),
     personalizadaAudioOnly: document.getElementById("personalizada-audio-only"),
     personalizadaAudio: document.getElementById("personalizada-audio"),
@@ -1279,6 +1612,10 @@
 
   function definirArquivos(lista) {
     estado.arquivos = lista;
+    // As leituras da seleção anterior não valem mais e ficariam
+    // desalinhadas com a nova lista até o carregarMetadados() terminar.
+    estado.metas = [];
+    estado.meta = null;
     atualizarListaSelecionados();
   }
 
@@ -1416,11 +1753,13 @@
       return;
     }
     let ok = estado.opcao && estado.arquivos.length > 0;
-    if (estado.opcao === "9" && (estado.arquivos.length !== 1 || !estado.tipoCompressao)) ok = false;
-    if (ok && estado.opcao === "9") {
+    if (estado.opcao === "9") {
+      if (!estado.tipoCompressao) ok = false;
       const corte = lerCorte();
-      if (corte && corte.erro) ok = false;
+      if (ok && corte && corte.erro) ok = false;
+      if (ok && nivelSelecionado() === "6" && !lerNivelAlvo().alvoBytes) ok = false;
     }
+    if (estado.opcao === "7" && instanteDoQuadro() === null) ok = false;
     el.btnIniciar.disabled = !ok;
   }
 
@@ -1441,8 +1780,7 @@
       return;
     }
 
-    estado.tipoCompressao =
-      estado.arquivos.length === 1 ? tipoDoArquivo(estado.arquivos[0]) : null;
+    estado.tipoCompressao = tipoComumDeCompressao(estado.arquivos);
 
     if (estado.arquivos.length === 0) {
       el.painelCompressao.classList.add("escondido");
@@ -1450,30 +1788,53 @@
     }
 
     if (!estado.tipoCompressao) {
+      const tipos = new Set(estado.arquivos.map(tipoDoArquivo));
+      // Selecionar uma pasta inteira costuma trazer junto o que não é
+      // mídia; dizer quantos são ajuda mais que "tipo não reconhecido".
+      const foraDaLista = estado.arquivos.filter((f) => !tipoDoArquivo(f)).length;
       el.painelCompressao.classList.remove("escondido");
-      el.tipoDetectado.textContent =
-        estado.arquivos.length > 1
-          ? "selecione um único arquivo"
-          : "tipo não reconhecido — escolha um vídeo ou um áudio";
+      el.tipoDetectado.textContent = foraDaLista
+        ? foraDaLista + " arquivo(s) que não são vídeo nem áudio na seleção"
+        : tipos.has("video") && tipos.has("audio")
+          ? "a fila não mistura tipos — escolha só vídeos ou só áudios"
+          : "tipo não reconhecido — escolha vídeos ou áudios";
       el.tipoDetectado.className = "tipo-detectado invalido";
       el.nivelResumo.textContent = "";
       el.estimativa.classList.add("escondido");
       el.personalizadaVideo.classList.add("escondido");
       el.personalizadaAudioOnly.classList.add("escondido");
+      el.camposAlvo.classList.add("escondido");
+      el.painelOriginal.classList.add("escondido");
       return;
     }
 
     const nivel = nivelSelecionado();
     const ehVideo = estado.tipoCompressao === "video";
+    const quantos = estado.arquivos.length;
 
     el.painelCompressao.classList.remove("escondido");
-    el.tipoDetectado.textContent = ehVideo ? "vídeo detectado" : "áudio detectado";
+    el.tipoDetectado.textContent = quantos > 1
+      ? quantos + (ehVideo ? " vídeos na fila" : " áudios na fila")
+      : (ehVideo ? "vídeo detectado" : "áudio detectado");
     el.tipoDetectado.className = "tipo-detectado";
     el.nivelResumo.textContent = (ehVideo ? RESUMO_VIDEO : RESUMO_AUDIO)[nivel] || "";
+
+    // Cortar um trecho é uma escolha sobre UM arquivo: os mesmos segundos
+    // aplicados a uma fila inteira quase nunca são o que se quer, e não
+    // haveria como validar o intervalo contra durações diferentes.
+    const podeCortar = quantos === 1;
+    el.corte.classList.toggle("escondido", !podeCortar);
+    if (!podeCortar && el.corteAtivo.checked) {
+      el.corteAtivo.checked = false;
+      atualizarPainelCorte();
+    }
 
     const personalizada = nivel === "5";
     el.personalizadaVideo.classList.toggle("escondido", !(personalizada && ehVideo));
     el.personalizadaAudioOnly.classList.toggle("escondido", !(personalizada && !ehVideo));
+    el.camposAlvo.classList.toggle("escondido", nivel !== "6");
+    // O painel "Arquivo original" fala do primeiro arquivo da fila; com um
+    // só, fala do arquivo — por isso o rótulo muda.
     el.painelOriginal.classList.toggle("escondido", !personalizada);
 
     if (personalizada) {
@@ -1484,9 +1845,16 @@
     atualizarEstimativa();
   }
 
-  /** Lê os metadados nativos do arquivo da opção 9 e atualiza a estimativa. */
+  /**
+   * Lê os metadados nativos dos arquivos da opção 9 e atualiza a
+   * estimativa. Vai um de cada vez, na ordem da fila, publicando o
+   * resultado a cada arquivo: a leitura é rápida (só o cabeçalho, de um
+   * blob local), e assim uma pasta com dezenas de arquivos não abre
+   * dezenas de elementos <video> ao mesmo tempo.
+   */
   function carregarMetadados() {
     estado.meta = null;
+    estado.metas = [];
     el.corteAtivo.checked = false;
     el.corteInicio.value = "";
     el.corteFim.value = "";
@@ -1495,45 +1863,82 @@
     estado.infoCarregando = false;
     estado.tokenInfo++;
     const token = ++estado.tokenMeta;
-    if (estado.opcao !== "9" || estado.arquivos.length !== 1 || !estado.tipoCompressao) {
+    if (estado.opcao !== "9" || !estado.tipoCompressao) {
       atualizarEstimativa();
       return;
     }
-    lerMetadadosNativos(estado.arquivos[0]).then((meta) => {
-      if (token !== estado.tokenMeta) return; // a seleção mudou nesse meio-tempo
-      estado.meta = meta;
-      atualizarEstimativa();
-    });
+
+    const arquivos = estado.arquivos.slice();
+    (async () => {
+      const metas = [];
+      for (const arquivo of arquivos) {
+        const meta = await lerMetadadosNativos(arquivo);
+        if (token !== estado.tokenMeta) return; // a seleção mudou nesse meio-tempo
+        metas.push(meta);
+        estado.metas = metas.slice();
+        if (metas.length === 1) {
+          // o corte e o painel "Arquivo original" falam do primeiro
+          estado.meta = meta;
+          atualizarPainelCorte();
+        }
+        atualizarEstimativa();
+      }
+    })();
   }
 
   function atualizarEstimativa() {
-    if (estado.opcao !== "9" || !estado.tipoCompressao || !estado.meta) {
+    const esconder = () => {
       el.estimativa.classList.add("escondido");
       el.estimativa.textContent = "";
-      return;
-    }
+    };
+    if (estado.opcao !== "9" || !estado.tipoCompressao || estado.metas.length === 0) return esconder();
+
     const nivel = nivelSelecionado();
     const ehVideo = estado.tipoCompressao === "video";
-    const custom = nivel !== "5"
-      ? null
-      : ehVideo ? lerNivelPersonalizado() : lerNivelPersonalizadoAudio();
-    const metaComFps = Object.assign({}, estado.meta);
-    if (estado.info && estado.info.fps) metaComFps.fps = estado.info.fps;
+    const custom = nivel === "5"
+      ? (ehVideo ? lerNivelPersonalizado() : lerNivelPersonalizadoAudio())
+      : nivel === "6" ? lerNivelAlvo() : null;
+    if (nivel === "6" && !custom.alvoBytes) return esconder();
+
     const corte = lerCorte();
-    if (corte && !corte.erro && corte.duracao) metaComFps.duracao = corte.duracao;
-    const bytes = estimarTamanho(estado.tipoCompressao, metaComFps, nivel, custom);
-    if (!bytes) {
-      el.estimativa.classList.add("escondido");
-      el.estimativa.textContent = "";
-      return;
-    }
-    const original = estado.arquivos[0].size;
-    const variacao = Math.round((1 - bytes / original) * 100);
+    let somaOriginal = 0;
+    let somaSaida = 0;
+    let estimados = 0;
+    let estourouOAlvo = false;
+
+    estado.metas.forEach((meta, i) => {
+      const arquivo = estado.arquivos[i];
+      // meta null = formato que o navegador não sabe demuxar; arquivo
+      // ausente = leitura de uma seleção anterior, ainda não descartada
+      if (!meta || !arquivo) return;
+      const ajustada = Object.assign({}, meta);
+      // a sonda do ffmpeg só existe para o primeiro arquivo da fila
+      if (i === 0 && estado.info && estado.info.fps) ajustada.fps = estado.info.fps;
+      if (corte && !corte.erro && corte.duracao) ajustada.duracao = corte.duracao;
+      const bytes = estimarTamanho(estado.tipoCompressao, ajustada, nivel, custom);
+      if (!bytes) return;
+      if (nivel === "6" && bytes > custom.alvoBytes) estourouOAlvo = true;
+      somaSaida += bytes;
+      somaOriginal += arquivo.size;
+      estimados++;
+    });
+
+    if (estimados === 0) return esconder();
+
+    const variacao = Math.round((1 - somaSaida / somaOriginal) * 100);
     const sinal = variacao >= 0 ? "−" + variacao + "%" : "+" + -variacao + "%";
+    const total = estado.arquivos.length;
+    const escopo = total > 1 ? "Estimativa do lote (" + estimados + " de " + total + ")" : "Estimativa";
+
+    let texto = escopo + ": " + humanSize(somaOriginal) + " → ~" + humanSize(somaSaida) +
+                " (" + sinal + "). É um cálculo aproximado — o resultado real depende do " +
+                "conteúdo do arquivo.";
+    if (estourouOAlvo) {
+      texto += " Atenção: nesta duração o alvo pedido fica abaixo do bitrate mínimo " +
+               "utilizável, então a saída vai passar do tamanho. Cortar um trecho resolve.";
+    }
     el.estimativa.classList.remove("escondido");
-    el.estimativa.textContent =
-      "Estimativa: " + humanSize(original) + " → ~" + humanSize(bytes) + " (" + sinal + "). " +
-      "É um cálculo aproximado — o resultado real depende do conteúdo do arquivo.";
+    el.estimativa.textContent = texto;
   }
 
   // ---------------------------------------------------------------------
@@ -1587,6 +1992,10 @@
    * do ffmpeg, e enquanto isso ficam como "—".
    */
   function renderizarInfoOriginal() {
+    // Numa fila, o painel só sabe falar do primeiro arquivo — a sonda é
+    // cara e os campos manuais valem para todos igualmente.
+    el.origRotulo.textContent =
+      estado.arquivos.length > 1 ? "Primeiro arquivo da fila" : "Arquivo original";
     const meta = estado.meta || {};
     const info = estado.info || {};
     const ehVideo = estado.tipoCompressao === "video";
@@ -2076,6 +2485,15 @@
   // Eventos da seleção de operação e dos campos
   // ---------------------------------------------------------------------
 
+  // O que a etapa 2 pede, por operação. O padrão serve para as opções que
+  // aceitam qualquer mídia (1 a 5 e 8).
+  const ROTULO_ARQUIVOS = {
+    "6": "2. Selecione o(s) vídeo(s) ou a pasta",
+    "7": "2. Selecione o(s) vídeo(s) ou a pasta",
+    "9": "2. Selecione os arquivos de vídeo ou de áudio (todos do mesmo tipo)",
+    "10": "2. Selecione a(s) imagem(ns) ou a pasta",
+  };
+
   function selecionarOpcao(opcao) {
     estado.opcao = opcao;
     document.querySelectorAll(".opcao-conversor").forEach((btn) => {
@@ -2083,11 +2501,10 @@
     });
     el.painelArquivos.classList.remove("escondido");
     el.rotuloArquivos.textContent =
-      opcao === "9"
-        ? "2. Selecione um único arquivo de vídeo ou de áudio"
-        : "2. Selecione o(s) arquivo(s) ou a pasta";
-    el.labelPasta.classList.toggle("escondido", opcao === "9");
+      ROTULO_ARQUIVOS[opcao] || "2. Selecione o(s) arquivo(s) ou a pasta";
+    el.painelQuadro.classList.toggle("escondido", opcao !== "7");
     atualizarPainelCompressao();
+    atualizarPainelQuadro();
     carregarMetadados();
     atualizarBotaoIniciar();
   }
@@ -2111,6 +2528,8 @@
   document.getElementById("niveis-compressao").addEventListener("change", (ev) => {
     if (ev.target.name !== "nivel") return;
     atualizarPainelCompressao();
+    // o Tamanho-alvo tem campo próprio, e um campo vazio bloqueia o botão
+    atualizarBotaoIniciar();
   });
 
   // Mexer nos campos da personalizada recalcula a estimativa na hora.
@@ -2135,6 +2554,7 @@
     estado.arquivos = [];
     estado.tipoCompressao = null;
     estado.meta = null;
+    estado.metas = [];
     estado.tokenMeta++;
     limparSaidas();
     el.inputArquivos.value = "";
@@ -2142,6 +2562,11 @@
     document.querySelectorAll(".opcao-conversor").forEach((btn) => btn.classList.remove("ativo"));
     el.painelArquivos.classList.add("escondido");
     el.painelCompressao.classList.add("escondido");
+    el.painelQuadro.classList.add("escondido");
+    el.camposAlvo.classList.add("escondido");
+    el.quadroInstante.value = "";
+    el.quadroErro.classList.add("escondido");
+    el.corte.classList.remove("escondido");
     el.listaSelecionados.innerHTML = "";
     el.avisoMemoria.classList.add("escondido");
     el.estimativa.classList.add("escondido");
@@ -2155,6 +2580,37 @@
     el.listaResultados.innerHTML = "";
     el.progressoLote.textContent = "";
     setStatus("");
+    atualizarBotaoIniciar();
+  });
+
+  /** Tamanho máximo por arquivo, em bytes. alvoBytes null = campo inválido. */
+  function lerNivelAlvo() {
+    const mb = parseFloat(String(el.alvoMb.value || "").trim().replace(",", "."));
+    // MB aqui é MiB, como em humanSize — o número na tela e o número no
+    // resultado precisam falar a mesma língua.
+    return { alvoBytes: Number.isFinite(mb) && mb > 0 ? mb * 1024 * 1024 : null };
+  }
+
+  /** Instante do quadro em segundos; 0 quando vazio, null quando ilegível. */
+  function instanteDoQuadro() {
+    const bruto = el.quadroInstante.value.trim();
+    if (!bruto) return 0; // sem nada digitado, o primeiro quadro
+    return parseTempo(bruto);
+  }
+
+  function atualizarPainelQuadro() {
+    const ilegivel = estado.opcao === "7" && instanteDoQuadro() === null;
+    el.quadroErro.textContent = ilegivel
+      ? "Não entendi o instante. Use 0:30, 1:02:03 ou só os segundos."
+      : "";
+    el.quadroErro.classList.toggle("escondido", !ilegivel);
+    atualizarBotaoIniciar();
+  }
+
+  el.quadroInstante.addEventListener("input", atualizarPainelQuadro);
+
+  el.alvoMb.addEventListener("input", () => {
+    atualizarEstimativa();
     atualizarBotaoIniciar();
   });
 
@@ -2339,7 +2795,7 @@
   // Orquestração — o que roda quando o usuário clica em "Iniciar"
   // ---------------------------------------------------------------------
 
-  async function processarArquivoConversao(ffmpeg, file, opcao, linha) {
+  async function processarArquivoConversao(ffmpeg, file, opcao, linha, opcoes) {
     const ext = extOf(file.name);
     const tarefas = [];
     if (opcao === "1" || opcao === "4" || opcao === "8") {
@@ -2353,6 +2809,17 @@
     }
     if (opcao === "5" || opcao === "8") {
       tarefas.push(["extensão", () => Promise.resolve(standardizeExtensionFile(file))]);
+    }
+    if (opcao === "6") {
+      if (VIDEO_EXTS.includes(ext)) tarefas.push(["áudio", (p) => extractAudioFile(ffmpeg, file, p)]);
+    }
+    if (opcao === "7") {
+      if (VIDEO_EXTS.includes(ext)) {
+        tarefas.push(["quadro", () => extractFrameFile(ffmpeg, file, opcoes.instante)]);
+      }
+    }
+    if (opcao === "10") {
+      if (IMAGE_EXTS.includes(ext)) tarefas.push(["imagem", (p) => compressImageFile(ffmpeg, file, p)]);
     }
 
     if (tarefas.length === 0) {
@@ -2439,46 +2906,57 @@
     setStatus("");
 
     try {
+      const total = estado.arquivos.length;
+
       if (estado.opcao === "9") {
-        const file = estado.arquivos[0];
         const ehVideo = estado.tipoCompressao === "video";
-        const linha = criarLinhaResultado(caminhoDe(file), file.size);
         const nivel = nivelSelecionado();
-        const custom = nivel !== "5"
-          ? null
-          : ehVideo ? lerNivelPersonalizado() : lerNivelPersonalizadoAudio();
-        const corte = lerCorte();
+        const custom = nivel === "5"
+          ? (ehVideo ? lerNivelPersonalizado() : lerNivelPersonalizadoAudio())
+          : nivel === "6" ? lerNivelAlvo() : null;
+        // O corte só existe com um arquivo selecionado (ver
+        // atualizarPainelCompressao), então na fila ele é sempre null.
+        const corte = total === 1 ? lerCorte() : null;
         if (corte && corte.duracao) {
           diag("Cortando trecho:", formatarTempo(corte.inicio), "→",
                corte.fim !== null ? formatarTempo(corte.fim) : "fim do arquivo");
         }
-        try {
-          linha.setStatus(ehVideo ? "Analisando o vídeo…" : "Analisando o áudio…");
-          const comprimir = ehVideo ? compressVideoFile : compressAudioFile;
-          const resultado = await comprimir(ffmpeg, file, nivel, custom, {
-            info: estado.info,
-            corte,
-            // o texto e a barra passam a vir do log do ffmpeg, não do
-            // evento "progress" — ver acompanharEncode()
-            onAndamento: (a) => {
-              linha.setStatus(a.texto);
-              linha.setProgresso(a.fracao);
-            },
-          });
-          linha.setStatus("Concluído.", "ok");
-          linha.adicionarDownload(resultado.blob, resultado.outName);
-        } catch (err) {
-          linha.esconderBarra();
-          linha.setStatus(cancelado ? "Cancelado." : "Falha: " + err.message, "erro");
+        const comprimir = ehVideo ? compressVideoFile : compressAudioFile;
+
+        for (let i = 0; i < total; i++) {
+          if (cancelado) break;
+          const file = estado.arquivos[i];
+          if (total > 1) el.progressoLote.textContent = "arquivo " + (i + 1) + " de " + total;
+          const linha = criarLinhaResultado(caminhoDe(file), file.size);
+          try {
+            linha.setStatus(ehVideo ? "Analisando o vídeo…" : "Analisando o áudio…");
+            const resultado = await comprimir(ffmpeg, file, nivel, custom, {
+              // a sonda guardada é do primeiro arquivo (é dele que o painel
+              // "Arquivo original" fala); os demais são sondados na hora
+              info: i === 0 ? estado.info : null,
+              corte,
+              // o texto e a barra passam a vir do log do ffmpeg, não do
+              // evento "progress" — ver acompanharEncode()
+              onAndamento: (a) => {
+                linha.setStatus(a.texto);
+                linha.setProgresso(a.fracao);
+              },
+            });
+            linha.setStatus("Concluído.", "ok");
+            linha.adicionarDownload(resultado.blob, resultado.outName);
+          } catch (err) {
+            linha.esconderBarra();
+            linha.setStatus(cancelado ? "Cancelado." : "Falha: " + err.message, "erro");
+          }
         }
       } else {
-        const total = estado.arquivos.length;
+        const opcoes = { instante: estado.opcao === "7" ? instanteDoQuadro() : 0 };
         for (let i = 0; i < total; i++) {
           if (cancelado) break;
           const file = estado.arquivos[i];
           el.progressoLote.textContent = "arquivo " + (i + 1) + " de " + total;
           const linha = criarLinhaResultado(caminhoDe(file), file.size);
-          await processarArquivoConversao(ffmpeg, file, estado.opcao, linha);
+          await processarArquivoConversao(ffmpeg, file, estado.opcao, linha, opcoes);
         }
       }
     } finally {

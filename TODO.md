@@ -2,6 +2,8 @@
 
 ## NEW
 
+* Calculadora de prazos para decadenciais e prescricionais
+
 Novos tipos de ocorrência (`js/tipos/*.js`) — candidatos fortes a
 automação, seguindo o padrão de `estelionato.js`/`perda.js`:
 

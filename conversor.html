@@ -25,9 +25,10 @@
 <main>
   <section class="intro">
     <h1 class="page-title"><b>Conversor</b> de Mídia</h1>
-    <p class="page-lead">Converte áudios, vídeos e imagens, padroniza extensões e
-    comprime vídeos e áudios — tudo processado localmente no seu navegador com ffmpeg,
-    sem enviar nada a servidor algum.</p>
+    <p class="page-lead">Converte áudios, vídeos e imagens, padroniza extensões,
+    extrai o áudio ou um quadro de um vídeo e comprime vídeos, áudios e imagens —
+    tudo processado localmente no seu navegador com ffmpeg, sem enviar nada a
+    servidor algum.</p>
     <p class="aviso-privacidade">
       <span aria-hidden="true">🔒</span>
       Todo o processamento roda no seu navegador (WebAssembly). Os arquivos
@@ -66,9 +67,21 @@
       <span class="opcao-titulo">Efetuar todos</span>
       <span class="opcao-desc">Converter tudo + padronizar extensões</span>
     </button>
+    <button type="button" class="opcao-conversor" data-op="6">
+      <span class="opcao-titulo">Extrair áudio</span>
+      <span class="opcao-desc">A faixa de áudio de um vídeo → MP3</span>
+    </button>
+    <button type="button" class="opcao-conversor" data-op="7">
+      <span class="opcao-titulo">Extrair quadro</span>
+      <span class="opcao-desc">Um instante do vídeo → JPG</span>
+    </button>
+    <button type="button" class="opcao-conversor" data-op="10">
+      <span class="opcao-titulo">Comprimir imagens</span>
+      <span class="opcao-desc">Qualquer imagem → JPG de qualidade ~90</span>
+    </button>
     <button type="button" class="opcao-conversor" data-op="9">
-      <span class="opcao-titulo">Comprimir arquivo</span>
-      <span class="opcao-desc">Vídeo ou áudio, um por vez</span>
+      <span class="opcao-titulo">Comprimir vídeo ou áudio</span>
+      <span class="opcao-desc">Em fila, um arquivo após o outro</span>
     </button>
   </div>
 
@@ -89,6 +102,17 @@
     <p class="aviso-memoria escondido" id="aviso-memoria"></p>
   </div>
 
+  <div id="painel-quadro" class="painel-quadro escondido">
+    <p class="progresso">3. Instante do quadro</p>
+    <div class="campo-inline">
+      <label for="quadro-instante">Momento do vídeo a capturar (vazio = primeiro quadro)</label>
+      <input type="text" id="quadro-instante" placeholder="0:00" inputmode="numeric" />
+    </div>
+    <p class="quadro-info">Aceita <code>90</code>, <code>1:30</code> ou <code>1:02:03</code>. Com
+    vários vídeos selecionados, o mesmo instante é capturado em todos.</p>
+    <p class="corte-erro escondido" id="quadro-erro"></p>
+  </div>
+
   <div id="painel-compressao" class="painel-compressao escondido">
     <p class="progresso">
       3. Nível de compressão
@@ -100,8 +124,19 @@
       <label class="opcao-item"><input type="radio" name="nivel" value="3" /> Alta</label>
       <label class="opcao-item"><input type="radio" name="nivel" value="4" /> Extrema</label>
       <label class="opcao-item"><input type="radio" name="nivel" value="5" /> Personalizada</label>
+      <label class="opcao-item"><input type="radio" name="nivel" value="6" /> Tamanho-alvo</label>
     </div>
     <p class="nivel-resumo" id="nivel-resumo"></p>
+
+    <div id="campos-alvo" class="campos-personalizada escondido">
+      <div class="campo-inline">
+        <label for="alvo-mb">Tamanho máximo por arquivo (MB)</label>
+        <input type="number" id="alvo-mb" value="25" min="0.1" step="1" />
+      </div>
+      <p class="alvo-info">O bitrate é calculado para caber nesse tamanho. Cada arquivo da fila
+      recebe o mesmo teto — não é o total do lote. Se a duração não couber nem no bitrate mínimo
+      utilizável, o arquivo sai maior que o alvo e o aviso aparece na estimativa.</p>
+    </div>
     <div class="corte" id="corte">
       <label class="opcao-item">
         <input type="checkbox" id="corte-ativo" /> Cortar um trecho
@@ -124,7 +159,7 @@
     <p class="estimativa escondido" id="estimativa"></p>
 
     <div id="painel-original" class="painel-original escondido">
-      <p class="original-titulo">Arquivo original <span id="original-carregando" class="original-carregando escondido">analisando…</span></p>
+      <p class="original-titulo"><span id="original-rotulo">Arquivo original</span> <span id="original-carregando" class="original-carregando escondido">analisando…</span></p>
       <dl class="original-grade">
         <div id="linha-resolucao"><dt>Resolução</dt><dd id="orig-resolucao">—</dd></div>
         <div id="linha-fps"><dt>FPS</dt><dd id="orig-fps">—</dd></div>
@@ -252,10 +287,15 @@
 
 <footer>
   <p class="footer-credit"><a class="footer-link" href="https://gttr.com.br">Eduardo Gottert</a> · 2026</p>
+  <p class="footer-versao"><span id="carimbo-versao"></span></p>
 </footer>
 
 <script src="js/vendor/ffmpeg/ffmpeg.js"></script>
 <script src="js/zip.js"></script>
 <script src="js/conversor.js"></script>
+
+<!-- carimbo de versão no rodapé (versao.js é gerado no deploy) -->
+<script src="js/versao.js"></script>
+<script src="js/rodape.js"></script>
 </body>
 </html>

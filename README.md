@@ -64,6 +64,15 @@ O fluxo é: **schema → engine → generator**.
   apontando para um id inexistente, etc. Não bloqueia o uso da
   ferramenta — é um aviso para quem edita o questionário, não para quem
   o preenche.
+- **`js/main.js`** — liga os botões da página. O "Copiar texto" tem três
+  degraus: `navigator.clipboard.writeText`, o `document.execCommand("copy")`
+  legado (que funciona em `file://` e em navegador antigo) e, se nem
+  isso, deixar o texto selecionado e pedir Ctrl+C. Existem porque a API
+  moderna rejeita em situações comuns aqui — página aberta como
+  `file://`, permissão negada, foco fora do documento — e antes a
+  promessa rejeitava em silêncio: o botão não mudava e o usuário
+  concluía que tinha copiado sem ter copiado nada. O resultado, qualquer
+  que seja, aparece no próprio botão.
 
 ## Adicionando um tipo de ocorrência novo
 
@@ -106,6 +115,31 @@ português e merecem atenção redobrada ao editar — uma mudança de
 fraseado num tipo já usado em produção pode alterar retroativamente o
 texto de casos que ainda não foram gerados.
 
+## Carimbo de versão
+
+O rodapé das duas páginas mostra os últimos sete caracteres do hash do
+commit que gerou o deploy (o hash inteiro fica no `title`, que é o que
+serve num `git show`). Existe para responder "qual código estava no ar
+quando isso aconteceu?" — o fraseado dos textos gerados muda de versão
+para versão, e um relato de "o texto saiu errado" só é investigável
+sabendo qual commit o usuário tinha na tela.
+
+- **`js/versao.js`** — arquivo commitado com o valor `"dev"`, que é o que
+  aparece ao servir os arquivos localmente.
+- **`js/rodape.js`** — lê `window.ACTA_VERSAO` e escreve no rodapé. Sem
+  carimbo, não escreve nada: melhor um rodapé como antes do que
+  "undefined" na tela.
+
+Como não há build step, quem preenche o valor real é o **comando de build
+do Cloudflare Pages** (Settings → Builds & deployments → Build command):
+
+```
+echo "window.ACTA_VERSAO = \"$CF_PAGES_COMMIT_SHA\";" > js/versao.js
+```
+
+Sem esse comando o site continua funcionando — o rodapé só mostra
+"versão local (dev)".
+
 ## Conversor de mídia (`conversor.html`)
 
 Segunda ferramenta do site, acessível pela nav-bar no topo. Converte
@@ -121,6 +155,56 @@ navegador** via
   etc). A opção 9 aceita vídeo **ou** áudio: o tipo é detectado pela
   extensão e só os campos daquele tipo aparecem, e apenas no nível
   "Personalizada".
+
+  A opção 9 processa uma **fila**: vários arquivos, um após o outro, na
+  mesma instância do motor. A seleção tem de ser homogênea (só vídeos ou
+  só áudios) — as tabelas de nível são diferentes entre os dois tipos e os
+  campos manuais da tela são de um tipo só, então misturar produziria uma
+  tela falando de duas coisas ao mesmo tempo. Duas coisas continuam sendo
+  do **primeiro** arquivo da fila: o painel "Arquivo original" (a sonda é
+  cara demais para rodar em todos antes de começar) e, por consequência,
+  os atalhos de fração. O corte de trecho só aparece com um arquivo
+  selecionado: os mesmos segundos aplicados a uma fila inteira quase nunca
+  são o que se quer, e não haveria como validar o intervalo contra
+  durações diferentes.
+
+  Além das opções herdadas do script Python, existem três locais:
+
+  - **6 — extrair áudio de vídeo** (`extractAudioFile`): `-vn` mais
+    libmp3lame em `-q:a 2`, e não `-q:a 0` como na opção 1, porque a
+    origem é uma faixa já comprimida dentro do vídeo — o ajuste mais
+    caprichado gastaria o dobro do espaço guardando fielmente o ruído da
+    compressão anterior. Vídeo sem faixa de áudio recebe essa frase, em
+    vez do código de erro cru do ffmpeg.
+  - **7 — extrair quadro** (`extractFrameFile`): `-ss` antes do `-i`
+    (mesmo motivo do corte) mais `-frames:v 1`. O instante aceita `90`,
+    `1:30` ou `1:02:03` e vale para todos os vídeos selecionados. Um
+    instante além do fim do vídeo **não** é erro para o ffmpeg: ele
+    termina em paz sem escrever quadro nenhum, então é a leitura da saída
+    que decide se deu certo.
+  - **10 — comprimir imagens** (`compressImageFile`): JPG de qualidade
+    fixa, sem campo na tela. O mjpeg do ffmpeg não conhece a escala 0–100
+    do libjpeg — o que ele aceita é o qscale, de 2 (melhor) a 31 (pior) —
+    e o degrau 3 é o equivalente prático de "qualidade 90"; o 2, que a
+    opção 3 já usa, fica em ~93/95. Diferente da opção 3, um `.jpg` de
+    entrada **não** é ignorado (o propósito aqui é justamente encolher), e
+    por isso a saída ganha o sufixo `_comprimida`.
+
+  **Nível "Tamanho-alvo"** (nível 6 da opção 9): em vez de escolher a
+  qualidade e descobrir o tamanho, o usuário diz quanto o arquivo pode
+  ocupar e `planejarAlvo`/`planejarAlvoAudio` derivam o bitrate. O teto
+  vale **por arquivo** da fila, não para o lote. O orçamento é repartido
+  com o áudio primeiro (no máximo um quinto, nunca acima do original),
+  porque é a parte que não se comprime bem; o que sobra vai para o vídeo,
+  em ABR de uma passada com `-maxrate`/`-bufsize` — duas passadas seriam
+  mais exatas, mas dobrariam um encode que aqui já é lento. Se o bitrate
+  resultante não sustentar a resolução original (menos de 0,04 bit por
+  pixel por quadro), a imagem desce pela escada de larguras: com pouco
+  bitrate, uma imagem menor e nítida serve melhor que a original cheia de
+  blocos. E quando nem o bitrate mínimo utilizável cabe no alvo, o encode
+  segue no mínimo e o arquivo sai maior que o pedido — a estimativa avisa
+  antes, e o console repete na hora. Devolver um borrão do tamanho certo
+  seria pior.
 
   A saída é sempre **H.264 e MP3**, por decisão de compatibilidade: parte
   das máquinas que abrem esses arquivos é modesta, e formatos mais

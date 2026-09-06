@@ -406,6 +406,32 @@
 }
 
 /* =========================================================
+   Instante do quadro (opção 7) e tamanho-alvo (nível 6)
+   ========================================================= */
+.painel-quadro{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:18px 20px;
+  margin-bottom:16px;
+}
+.painel-quadro .campo-inline input[type="text"]{
+  width:120px;
+  font-family:var(--mono);
+}
+.quadro-info,
+.alvo-info{
+  margin:10px 0 0;
+  font-size:12.5px;
+  color:var(--text-muted);
+}
+.quadro-info code,
+.alvo-info code{
+  font-family:var(--mono);
+  font-size:11.5px;
+}
+
+/* =========================================================
    Prévia em tela cheia
    ========================================================= */
 .resultado-acoes{
