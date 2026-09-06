@@ -17,9 +17,17 @@ são bibliotecas e modelos, nunca o conteúdo do usuário.
 | `conferidor.html` | Confere dígito verificador de CPF, CNPJ, IMEI, chassi, placa, título de eleitor e PIS. |
 | `tipificacao.html` | Consulta rápida de tipificação penal, pesquisável por fato ou artigo. |
 
-A navegação entre elas é montada por **`js/comum/nav.js`**, a partir de uma
-lista única: acrescentar uma página é uma linha em `PAGINAS`, e não seis
-menus para manter em sincronia.
+"Acta" é o nome da **suíte**, não de nenhuma das ferramentas: aparece no
+cabeçalho, no título da aba (`Acta — <ferramenta>`) e no rodapé de todas
+as páginas, e nunca no `<h1>`, que é da ferramenta.
+
+Duas partes comuns a todas as páginas são montadas por script, a partir
+de uma lista única, em vez de copiadas: a navegação
+(**`js/comum/nav.js`**) e o rodapé (**`js/comum/rodape.js`**).
+Acrescentar uma página é uma linha em `PAGINAS`. Enquanto o rodapé esteve
+copiado, ele divergiu — a linha da etimologia existia só no index, o que
+fazia "Acta" parecer o nome do gerador. Os testes conferem essas
+invariantes em toda página.
 
 ## Rodando localmente
 
@@ -206,19 +214,22 @@ saiu bem escrita. Uma mudança de fraseado num tipo já usado em produção
 pode alterar retroativamente o texto de casos que ainda não foram
 gerados.
 
-## Carimbo de versão
+## Rodapé e carimbo de versão
 
-O rodapé de todas as páginas mostra os últimos sete caracteres do hash do
-commit que gerou o deploy (o hash inteiro fica no `title`, que é o que
-serve num `git show`). Existe para responder "qual código estava no ar
-quando isso aconteceu?" — o fraseado dos textos gerados muda de versão
-para versão, e um relato de "o texto saiu errado" só é investigável
-sabendo qual commit o usuário tinha na tela.
+**`js/comum/rodape.js`** monta o rodapé inteiro — etimologia, crédito e
+carimbo de versão — em toda página que tiver um `<footer>` vazio. É a
+mesma decisão do `nav.js`, pelo mesmo motivo: sete cópias divergem.
+
+O carimbo mostra os últimos sete caracteres do hash do commit que gerou o
+deploy (o hash inteiro fica no `title`, que é o que serve num `git show`).
+Existe para responder "qual código estava no ar quando isso aconteceu?" —
+o fraseado dos textos gerados muda de versão para versão, e um relato de
+"o texto saiu errado" só é investigável sabendo qual commit o usuário
+tinha na tela.
 
 - **`js/comum/versao.js`** — arquivo commitado com o valor `"dev"`, que é o que
   aparece ao servir os arquivos localmente.
-- **`js/comum/rodape.js`** — lê `window.ACTA_VERSAO` e escreve no rodapé. Sem
-  carimbo, não escreve nada: melhor um rodapé como antes do que
+- Sem carimbo, a linha não é escrita: melhor uma linha a menos do que
   "undefined" na tela.
 
 Como não há build step, quem preenche o valor real é o **comando de build

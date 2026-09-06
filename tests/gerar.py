@@ -112,6 +112,18 @@ PRELUDIO = """
 
   document.addEventListener("DOMContentLoaded", function () {
     try {
+      // Invariantes de marca, conferidas em TODA pagina. Ficam aqui, e
+      // nao em cada caso, porque sao a mesma regra para todas -- e porque
+      // foi justamente essa regra que se perdeu quando o rodape estava
+      // copiado sete vezes ("Acta" virou o nome do gerador).
+      var marca = document.querySelector(".site-title");
+      window.igual("titulo da aba comeca com Acta", document.title.indexOf("Acta — ") === 0, true);
+      window.igual("marca no cabecalho", !!marca && marca.textContent.indexOf("Acta") >= 0, true);
+      window.igual("etimologia no rodape", document.querySelectorAll("footer .footer-etymology").length, 1);
+      window.igual("credito no rodape", document.querySelectorAll("footer .footer-credit").length, 1);
+      window.igual("carimbo de versao no rodape", document.querySelectorAll("footer #carimbo-versao").length, 1);
+      window.igual("h1 nao repete a marca", (document.querySelector(".page-title") || {}).textContent.indexOf("Acta") < 0, true);
+
 """
 
 POSLUDIO = """
