@@ -159,7 +159,7 @@
     worker: { url: CDN_CORE + "/ffmpeg-core.worker.js", tipo: "text/javascript",  bytes: 2213 },
   };
   // Os dois arquivos que continuam locais (7,6 KB somados) — ver README.
-  const LOADER_LOCAL = ["js/vendor/ffmpeg/ffmpeg.js", "js/vendor/ffmpeg/814.ffmpeg.js"];
+  const LOADER_LOCAL = ["js/conversor/vendor/ffmpeg/ffmpeg.js", "js/conversor/vendor/ffmpeg/814.ffmpeg.js"];
 
   // v2: as chaves do cache mudaram de caminhos locais para URLs do jsDelivr.
   // Como este core não chama receiveProgress (o símbolo nem existe no
@@ -948,9 +948,9 @@
         diag("Iniciando o carregamento do motor.", desdeOInicio());
         if (onStatus) onStatus("Carregando o motor de conversão (ffmpeg)…");
         if (!window.FFmpegWASM || !window.FFmpegWASM.FFmpeg) {
-          diagErro("window.FFmpegWASM não existe — js/vendor/ffmpeg/ffmpeg.js não carregou.");
+          diagErro("window.FFmpegWASM não existe — js/conversor/vendor/ffmpeg/ffmpeg.js não carregou.");
           throw new Error(
-            "A biblioteca ffmpeg.js não carregou. Confira se js/vendor/ffmpeg/ffmpeg.js " +
+            "A biblioteca ffmpeg.js não carregou. Confira se js/conversor/vendor/ffmpeg/ffmpeg.js " +
             "está sendo servido (aba Network do navegador)."
           );
         }
@@ -962,7 +962,7 @@
         const urlsDoCore = await baixarCoreComoBlobURLs(onProgresso);
         if (onStatus) onStatus("Inicializando o motor de conversão…");
         // Todas as URLs aqui são blob:, logo absolutas e da nossa origem.
-        // Isso importa: elas são repassadas ao worker js/vendor/ffmpeg/
+        // Isso importa: elas são repassadas ao worker js/conversor/vendor/ffmpeg/
         // 814.ffmpeg.js, que faz importScripts(coreURL) — um caminho
         // relativo resolveria contra a pasta do worker, não a da página — e
         // o Emscripten faz new Worker(workerURL), que recusa outra origem.

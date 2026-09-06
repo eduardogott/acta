@@ -8,7 +8,7 @@
  *
  * COMO CRIAR UM TIPO DE OCORRÊNCIA NOVO
  * ---------------------------------------------------------------------------
- * 1. Crie js/tipos/nome_do_tipo.js
+ * 1. Crie js/gerador/tipos/nome_do_tipo.js
  * 2. Nele, chame:
  *
  *    registrarTipoOcorrencia("chave_unica", {
@@ -23,7 +23,7 @@
  *    estelionato -> golpe do Pix -> lista de transferências).
  *
  * 3. Inclua o arquivo no index.html, ANTES de schema.js:
- *      <script src="js/tipos/nome_do_tipo.js"></script>
+ *      <script src="js/gerador/tipos/nome_do_tipo.js"></script>
  *
  * É só isso. Nenhum outro arquivo precisa ser editado.
  * ---------------------------------------------------------------------------

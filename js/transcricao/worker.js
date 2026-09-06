@@ -19,7 +19,7 @@
  * número de threads quebraria o carregamento em vez de acelerá-lo. Para
  * usar mais de uma, seria preciso baixar `ort-wasm-simd-threaded.jsep.mjs`
  * e o `.wasm` por conta própria e transformá-los em blob: URLs, como
- * js/conversor.js faz com o núcleo do ffmpeg.
+ * js/conversor/conversor.js faz com o núcleo do ffmpeg.
  * ---------------------------------------------------------------------------
  */
 

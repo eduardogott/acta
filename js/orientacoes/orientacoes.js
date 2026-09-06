@@ -1,7 +1,7 @@
 /**
  * ORIENTACOES.JS
  * ---------------------------------------------------------------------------
- * Monta a folha a partir de js/orientacoes-dados.js. Não tem conteúdo
+ * Monta a folha a partir de js/orientacoes/dados.js. Não tem conteúdo
  * próprio: acrescentar um tipo de fato é mexer só no arquivo de dados.
  *
  * A folha é acumulativa — o que vale para todo registro, mais o que vale

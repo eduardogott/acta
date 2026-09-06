@@ -1,7 +1,7 @@
 /**
  * TIPIFICACAO-DADOS.JS
  * ---------------------------------------------------------------------------
- * A tabela de consulta, e só ela. A página (js/tipificacao.js) não sabe
+ * A tabela de consulta, e só ela. A página (js/tipificacao/tipificacao.js) não sabe
  * nada sobre direito penal — quem edita esta lista não precisa ler uma
  * linha de código da outra.
  *

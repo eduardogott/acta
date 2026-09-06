@@ -1,7 +1,7 @@
 /**
  * TRANSCRICAO.JS
  * ---------------------------------------------------------------------------
- * A página. Toda a inferência acontece em js/transcricao-worker.js — aqui
+ * A página. Toda a inferência acontece em js/transcricao/worker.js — aqui
  * ficam a escolha do arquivo, a decodificação do áudio e a apresentação.
  *
  * A decodificação é feita pelo próprio navegador (Web Audio API), e não
@@ -185,7 +185,7 @@
     if (worker) return worker;
     // type: "module" porque o worker importa a biblioteca do CDN, e
     // `import` dinâmico não vale em worker clássico.
-    worker = new Worker("js/transcricao-worker.js", { type: "module" });
+    worker = new Worker("js/transcricao/worker.js", { type: "module" });
     worker.onmessage = (evento) => tratarMensagem(evento.data || {});
     worker.onerror = (evento) => {
       console.error("[transcrição] worker falhou:", evento);

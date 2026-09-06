@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Acta — Gerador de Ocorrências</title>
 <link rel="stylesheet" href="css/style.css" />
-<script src="js/theme.js"></script>
-<script src="js/nav.js"></script>
+<script src="js/comum/theme.js"></script>
+<script src="js/comum/nav.js"></script>
 </head>
 <body>
 
@@ -62,34 +62,34 @@
 </footer>
 
 <!-- núcleo: estado, visibilidade, texto, validadores, renderers -->
-<script src="js/core/estado.js"></script>
-<script src="js/core/visibilidade.js"></script>
-<script src="js/core/texto-helpers.js"></script>
-<script src="js/core/identificadores.js"></script>
-<script src="js/core/validadores.js"></script>
-<script src="js/core/renderers-registry.js"></script>
+<script src="js/gerador/core/estado.js"></script>
+<script src="js/gerador/core/visibilidade.js"></script>
+<script src="js/gerador/core/texto-helpers.js"></script>
+<script src="js/comum/identificadores.js"></script>
+<script src="js/gerador/core/validadores.js"></script>
+<script src="js/gerador/core/renderers-registry.js"></script>
 
 <!-- um arquivo por tipo de pergunta -->
-<script src="js/renderers/multipla.js"></script>
-<script src="js/renderers/selecao.js"></script>
-<script src="js/renderers/texto.js"></script>
-<script src="js/renderers/numero.js"></script>
-<script src="js/renderers/dinheiro.js"></script>
-<script src="js/renderers/multiplo-input.js"></script>
+<script src="js/gerador/renderers/multipla.js"></script>
+<script src="js/gerador/renderers/selecao.js"></script>
+<script src="js/gerador/renderers/texto.js"></script>
+<script src="js/gerador/renderers/numero.js"></script>
+<script src="js/gerador/renderers/dinheiro.js"></script>
+<script src="js/gerador/renderers/multiplo-input.js"></script>
 
 <!-- registro dos tipos de ocorrência -->
-<script src="js/registry.js"></script>
-<script src="js/tipos/estelionato.js"></script>
-<script src="js/tipos/perda.js"></script>
+<script src="js/gerador/registry.js"></script>
+<script src="js/gerador/tipos/estelionato.js"></script>
+<script src="js/gerador/tipos/perda.js"></script>
 
-<script src="js/schema.js"></script>
-<script src="js/core/linter.js"></script>
-<script src="js/engine.js"></script>
-<script src="js/generator.js"></script>
-<script src="js/main.js"></script>
+<script src="js/gerador/schema.js"></script>
+<script src="js/gerador/core/linter.js"></script>
+<script src="js/gerador/engine.js"></script>
+<script src="js/gerador/generator.js"></script>
+<script src="js/gerador/main.js"></script>
 
 <!-- carimbo de versão no rodapé (versao.js é gerado no deploy) -->
-<script src="js/versao.js"></script>
-<script src="js/rodape.js"></script>
+<script src="js/comum/versao.js"></script>
+<script src="js/comum/rodape.js"></script>
 </body>
 </html>

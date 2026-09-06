@@ -486,6 +486,44 @@ input:focus{
 }
 
 /* =========================================================
+   Painel de seleção de arquivo
+   Compartilhado pelo conversor e pela transcrição. Ficava só em
+   conversor.css, e a transcrição herdava o markup sem o estilo: o
+   <label> do botão virava um elemento inline, cuja altura não conta
+   para o fluxo, e o título seguinte era desenhado por cima dele.
+   ========================================================= */
+.painel-arquivos{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:18px 20px;
+  margin-bottom:16px;
+  transition:border-color .12s ease, background .12s ease;
+}
+.painel-arquivos.arrastando{
+  border-color:var(--accent);
+  border-style:dashed;
+  background:var(--accent-soft);
+}
+
+.selecao-arquivos{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-bottom:12px;
+}
+/* inline-flex, e não inline: é um <label> com padding, e como inline a
+   altura dele não entra na conta da linha. */
+.btn-arquivo{display:inline-flex;}
+
+.dica-arrastar{
+  align-self:center;
+  font-size:12.5px;
+  color:var(--text-muted);
+}
+
+/* =========================================================
    Footer
    ========================================================= */
 footer{

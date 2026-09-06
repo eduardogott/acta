@@ -3,7 +3,7 @@
  * ---------------------------------------------------------------------------
  * Cada tipo de pergunta ("multipla", "texto", "dinheiro"...) é um plugin
  * registrado aqui, não um caso fixo dentro do engine. Pra criar um tipo
- * novo (ex.: "data", "cpf"), crie js/renderers/nome.js chamando:
+ * novo (ex.: "data", "cpf"), crie js/gerador/renderers/nome.js chamando:
  *
  *   registrarRenderer("nome_do_tipo", {
  *     valorPadrao(pergunta) { ... },      // valor inicial no estado
@@ -17,7 +17,7 @@
  *     },
  *   });
  *
- * E inclua <script src="js/renderers/nome.js"></script> no index.html,
+ * E inclua <script src="js/gerador/renderers/nome.js"></script> no index.html,
  * depois de renderers-registry.js. Nada em engine.js precisa mudar.
  *
  * SOBRE "revalidaVisibilidade":

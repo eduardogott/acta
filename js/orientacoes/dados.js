@@ -2,7 +2,7 @@
  * ORIENTACOES-DADOS.JS
  * ---------------------------------------------------------------------------
  * O conteúdo da folha de orientações que sai com o comunicante. A página
- * (js/orientacoes.js) só monta e imprime — todo o texto está aqui.
+ * (js/orientacoes/orientacoes.js) só monta e imprime — todo o texto está aqui.
  *
  * FORMATO
  *

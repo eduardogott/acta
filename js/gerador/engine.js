@@ -2,7 +2,7 @@
  * ENGINE.JS
  * ---------------------------------------------------------------------------
  * Orquestrador. Não sabe desenhar nenhum tipo de pergunta específico (isso
- * é dos renderers em js/renderers/), não sabe o que é "exibirSe" (isso é
+ * é dos renderers em js/gerador/renderers/), não sabe o que é "exibirSe" (isso é
  * de core/visibilidade.js), não guarda respostas (isso é de
  * core/estado.js). Aqui só decide: o que está visível agora, como isso
  * vira DOM, e o que ainda falta responder.

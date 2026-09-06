@@ -1,7 +1,7 @@
 /**
  * TIPIFICACAO.JS
  * ---------------------------------------------------------------------------
- * Filtra e desenha a tabela de js/tipificacao-dados.js. Não sabe nada
+ * Filtra e desenha a tabela de js/tipificacao/dados.js. Não sabe nada
  * sobre direito penal — todo o conteúdo está lá, e é lá que se edita.
  *
  * A busca é por termos soltos e sem acento: quem digita "art 155" acha o

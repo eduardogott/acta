@@ -9,7 +9,7 @@
  * commit — ver "Carimbo de versão" no README.
  *
  * Formato: o hash completo (40 caracteres) ou "dev". Quem decide o que
- * mostrar é js/rodape.js.
+ * mostrar é js/comum/rodape.js.
  * ---------------------------------------------------------------------------
  */
 window.ACTA_VERSAO = "dev";

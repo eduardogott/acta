@@ -21,7 +21,7 @@
 const TEXTO_FECHO = "Nada mais.";
 
 // Opções da pergunta inicial vêm do registro de tipos (registry.js +
-// js/tipos/*.js) — nunca precisa editar isto ao adicionar um tipo novo.
+// js/gerador/tipos/*.js) — nunca precisa editar isto ao adicionar um tipo novo.
 // Sem template próprio: é só um seletor de ramificação, a classificação
 // do fato já existe em outro campo do sistema, não precisa virar frase.
 const PERGUNTAS_INICIAIS = [

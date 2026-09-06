@@ -16,7 +16,7 @@ são bibliotecas e modelos, nunca o conteúdo do usuário.
 | `conferidor.html` | Confere dígito verificador de CPF, CNPJ, IMEI, chassi, placa, título de eleitor e PIS. |
 | `tipificacao.html` | Consulta rápida de tipificação penal, pesquisável por fato ou artigo. |
 
-A navegação entre elas é montada por **`js/nav.js`**, a partir de uma
+A navegação entre elas é montada por **`js/comum/nav.js`**, a partir de uma
 lista única: acrescentar uma página é uma linha em `PAGINAS`, e não seis
 menus para manter em sincronia.
 
@@ -33,50 +33,86 @@ ou simplesmente abrir `index.html` diretamente no navegador (algumas
 funcionalidades, como `navigator.clipboard`, podem exigir `http://` em
 vez de `file://` dependendo do navegador).
 
+## Estrutura dos arquivos
+
+Uma pasta por ferramenta em `js/`, e `js/comum/` para o que mais de uma
+usa. As seis páginas ficam na raiz porque são as URLs do site — mexer
+nelas quebraria links já salvos.
+
+```
+index.html  conversor.html  transcricao.html
+orientacoes.html  conferidor.html  tipificacao.html
+
+css/
+  style.css          tokens e componentes de todas as páginas
+  conversor.css      só do conversor
+  ferramentas.css    das quatro ferramentas menores
+
+js/
+  comum/             theme.js, nav.js, rodape.js, versao.js
+                     identificadores.js (gerador + conferidor)
+  gerador/           main.js, engine.js, generator.js, schema.js, registry.js
+    core/            estado, visibilidade, validadores, texto-helpers, linter…
+    renderers/       um arquivo por tipo de campo
+    tipos/           um arquivo por tipo de ocorrência
+  conversor/         conversor.js, zip.js
+    vendor/ffmpeg/   carregador do ffmpeg.wasm (precisa ser local — ver abaixo)
+  transcricao/       transcricao.js (página), worker.js (inferência)
+  orientacoes/       orientacoes.js (página), dados.js (conteúdo)
+  conferidor/        conferidor.js
+  tipificacao/       tipificacao.js (página), dados.js (a tabela)
+
+functions/_middleware.js   Basic Auth + COOP/COEP em toda rota
+_headers                   os mesmos cabeçalhos, como documentação/fallback
+```
+
+Onde há um `dados.js`, ele é o único arquivo a editar para mudar conteúdo:
+a página ao lado só desenha.
+
 ## Arquitetura
 
 O fluxo é: **schema → engine → generator**.
 
-- **`js/registry.js`** — cadastro central dos "tipos de ocorrência"
+- **`js/gerador/registry.js`** — cadastro central dos "tipos de ocorrência"
   (estelionato, perda, etc). Cada arquivo em
-  `js/tipos/*.js` se registra aqui via `registrarTipoOcorrencia(...)`.
-- **`js/schema.js`** — define as perguntas fixas que aparecem antes
+  `js/gerador/tipos/*.js` se registra aqui via `registrarTipoOcorrencia(...)`.
+- **`js/gerador/schema.js`** — define as perguntas fixas que aparecem antes
   (`PERGUNTAS_INICIAIS`, incluindo o seletor "Qual é o fato da
   ocorrência?", montado a partir do registry) e depois
   (`PERGUNTAS_FINAIS`, ex.: motivo do registro, representação criminal)
   das perguntas do tipo escolhido. `getPerguntas(respostas)` monta a
   lista efetiva na ordem em que as frases devem sair no texto final.
-- **`js/core/estado.js`** — única fonte de verdade das respostas (objeto
+- **`js/gerador/core/estado.js`** — única fonte de verdade das respostas (objeto
   de dados puro, sem DOM). Também controla quais perguntas já foram
   "tocadas" pelo usuário.
-- **`js/core/visibilidade.js`** — avalia a condição `exibirSe` de uma
+- **`js/gerador/core/visibilidade.js`** — avalia a condição `exibirSe` de uma
   pergunta de forma pura (recebe as respostas como parâmetro).
-- **`js/core/renderers-registry.js`** + **`js/renderers/*.js`** — cada
+- **`js/gerador/core/renderers-registry.js`** + **`js/gerador/renderers/*.js`** — cada
   tipo de campo (`multipla`, `selecao`, `texto`, `numero`, `dinheiro`,
   `multiplo-input`) é um plugin registrado via `registrarRenderer(...)`,
   responsável por desenhar o controle e dizer se está preenchido.
-- **`js/core/validadores.js`** — validadores nomeados e reutilizáveis
+- **`js/gerador/core/validadores.js`** — validadores nomeados e reutilizáveis
   (ex.: `naoVazio`, `cpfOuCnpj`, `numeroPositivo`), referenciados pelo
   nome no campo `validador` de uma pergunta.
-- **`js/core/texto-helpers.js`** — funções utilitárias passadas como
+- **`js/gerador/core/texto-helpers.js`** — funções utilitárias passadas como
   terceiro argumento (`h`) para todo `template(resposta, respostas, h)`:
   formatação de dinheiro, junção de listas em português
   (`juntarLista`/`juntarClausulas`), ordinais por extenso (`ordinal`),
   pontuação de texto livre (`garantirPonto`), etc.
-- **`js/engine.js`** — orquestrador: decide o que está visível agora,
+- **`js/gerador/engine.js`** — orquestrador: decide o que está visível agora,
   desenha isso como DOM, valida e calcula pendências. Não sabe desenhar
   nenhum tipo de pergunta específico nem o que significa `exibirSe` —
   isso é responsabilidade dos módulos acima.
-- **`js/generator.js`** — percorre as perguntas ativas na ordem do
+- **`js/gerador/generator.js`** — percorre as perguntas ativas na ordem do
   schema e concatena o retorno de cada `template(...)` num único
   parágrafo, fechando sempre com "Nada mais."
-- **`js/core/linter.js`** — roda uma vez no carregamento da página e
+- **`js/gerador/core/linter.js`** — roda uma vez no carregamento da página e
   avisa (console + banner discreto na tela) sobre erros estruturais no
   schema: id duplicado, tipo de pergunta sem renderer, `exibirSe`
   apontando para um id inexistente, etc. Não bloqueia o uso da
   ferramenta — é um aviso para quem edita o questionário, não para quem
   o preenche.
-- **`js/main.js`** — liga os botões da página. O "Copiar texto" tem três
+- **`js/gerador/main.js`** — liga os botões da página. O "Copiar texto" tem três
   degraus: `navigator.clipboard.writeText`, o `document.execCommand("copy")`
   legado (que funciona em `file://` e em navegador antigo) e, se nem
   isso, deixar o texto selecionado e pedir Ctrl+C. Existem porque a API
@@ -88,7 +124,7 @@ O fluxo é: **schema → engine → generator**.
 
 ## Adicionando um tipo de ocorrência novo
 
-1. Crie `js/tipos/nome_do_tipo.js`.
+1. Crie `js/gerador/tipos/nome_do_tipo.js`.
 2. Nele, chame:
 
    ```js
@@ -103,10 +139,10 @@ O fluxo é: **schema → engine → generator**.
    `tipo_ocorrencia`, isso já é implícito. Mas podem usar `exibirSe`
    entre si, para ramificações internas do próprio tipo (ex.: subtipo de
    estelionato → golpe do Pix → lista de transferências).
-3. Inclua o arquivo em `index.html`, antes de `js/schema.js`:
+3. Inclua o arquivo em `index.html`, antes de `js/gerador/schema.js`:
 
    ```html
-   <script src="js/tipos/nome_do_tipo.js"></script>
+   <script src="js/gerador/tipos/nome_do_tipo.js"></script>
    ```
 
 Nenhum outro arquivo precisa ser editado — a lista de tipos na primeira
@@ -114,8 +150,8 @@ pergunta é montada automaticamente a partir do registry.
 
 ## Adicionando um tipo de pergunta (renderer) novo
 
-Crie `js/renderers/nome.js` chamando `registrarRenderer(...)`. Veja o
-cabeçalho de comentários em `js/core/renderers-registry.js` para o
+Crie `js/gerador/renderers/nome.js` chamando `registrarRenderer(...)`. Veja o
+cabeçalho de comentários em `js/gerador/core/renderers-registry.js` para o
 contrato completo (`valorPadrao`, `estaPreenchida`, `criar`,
 `revalidaVisibilidade`, `estaTudoValido`).
 
@@ -136,9 +172,9 @@ quando isso aconteceu?" — o fraseado dos textos gerados muda de versão
 para versão, e um relato de "o texto saiu errado" só é investigável
 sabendo qual commit o usuário tinha na tela.
 
-- **`js/versao.js`** — arquivo commitado com o valor `"dev"`, que é o que
+- **`js/comum/versao.js`** — arquivo commitado com o valor `"dev"`, que é o que
   aparece ao servir os arquivos localmente.
-- **`js/rodape.js`** — lê `window.ACTA_VERSAO` e escreve no rodapé. Sem
+- **`js/comum/rodape.js`** — lê `window.ACTA_VERSAO` e escreve no rodapé. Sem
   carimbo, não escreve nada: melhor um rodapé como antes do que
   "undefined" na tela.
 
@@ -146,7 +182,7 @@ Como não há build step, quem preenche o valor real é o **comando de build
 do Cloudflare Pages** (Settings → Builds & deployments → Build command):
 
 ```
-echo "window.ACTA_VERSAO = \"$CF_PAGES_COMMIT_SHA\";" > js/versao.js
+echo "window.ACTA_VERSAO = \"$CF_PAGES_COMMIT_SHA\";" > js/comum/versao.js
 ```
 
 Sem esse comando o site continua funcionando — o rodapé só mostra
@@ -159,8 +195,8 @@ Converte áudio/vídeo/imagem e comprime vídeo ou áudio, tudo processado
 [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) — nenhum arquivo
 é enviado a servidor algum, igual ao gerador de ocorrências.
 
-- **`conversor.html`** / **`css/conversor.css`** / **`js/conversor.js`** —
-  markup, estilo e lógica da página. `js/conversor.js` partiu das regras
+- **`conversor.html`** / **`css/conversor.css`** / **`js/conversor/conversor.js`** —
+  markup, estilo e lógica da página. `js/conversor/conversor.js` partiu das regras
   do script Python homônimo (a tabela de crf/resolução/fps/áudio por nível
   na opção 9, a padronização de extensões) e se afastou delas onde o
   navegador ou o uso pediram. A opção 9 aceita vídeo **ou** áudio: o tipo
@@ -309,10 +345,10 @@ Converte áudio/vídeo/imagem e comprime vídeo ou áudio, tudo processado
   modal e pede tela cheia. `requestFullscreen()` só vale dentro do gesto
   do usuário — daí ser chamado direto no clique; se o navegador recusar, o
   modal continua servindo como visualização em janela.
-- **`js/zip.js`** — escritor de ZIP mínimo (método STORE, sem ZIP64) usado
+- **`js/conversor/zip.js`** — escritor de ZIP mínimo (método STORE, sem ZIP64) usado
   pelo botão "Baixar tudo". Não usa biblioteca externa: os arquivos de
   saída já são comprimidos, então deflate não traria ganho.
-- **`js/vendor/ffmpeg/`** — só o carregador do `@ffmpeg/ffmpeg`
+- **`js/conversor/vendor/ffmpeg/`** — só o carregador do `@ffmpeg/ffmpeg`
   (`ffmpeg.js` + `814.ffmpeg.js`, 7,6 KB somados). **Precisa continuar
   local**: o `ffmpeg.js` deriva a URL do worker `814.ffmpeg.js` do
   `document.currentScript.src` e chama `new Worker()` com ela — e o
@@ -322,7 +358,7 @@ Converte áudio/vídeo/imagem e comprime vídeo ou áudio, tudo processado
   `ffmpeg-core.wasm` (32 MB) e `ffmpeg-core.worker.js` são buscados de
   `cdn.jsdelivr.net/npm/@ffmpeg/core-mt@<versão>/dist/umd/` com `fetch()`
   e convertidos em `blob:` URLs antes de irem para o `ffmpeg.load()` — ver
-  `ARQUIVOS_CORE`/`baixarCoreComoBlobURLs` em `js/conversor.js`.
+  `ARQUIVOS_CORE`/`baixarCoreComoBlobURLs` em `js/conversor/conversor.js`.
 
   As três **têm** de virar `blob:`, e não ir como URL do CDN direto,
   porque o Emscripten cria os workers de pthread com
@@ -342,7 +378,7 @@ Converte áudio/vídeo/imagem e comprime vídeo ou áudio, tudo processado
   da página. Hoje isso está garantido por serem `blob:`. Como o `ffmpeg.js`
   não escuta o evento `error` do worker, uma falha assim não vira exceção —
   o `load()` só nunca responde. Daí o teto de tempo (`TIMEOUT_LOAD_MS`) e a
-  instrumentação do construtor `Worker` em `js/conversor.js`.
+  instrumentação do construtor `Worker` em `js/conversor/conversor.js`.
 - Os arquivos do núcleo ficam no Cache API sob a chave `acta-ffmpeg-v2`,
   então o download de 32 MB só acontece na primeira visita. Ao trocar a
   versão do ffmpeg, mude também esse nome de cache para invalidar o antigo.
@@ -375,7 +411,7 @@ avisa quando isso é provável.
 
 São duas metades, atualizadas separadamente.
 
-**O núcleo (jsDelivr).** Basta editar `CDN_CORE` em `js/conversor.js`
+**O núcleo (jsDelivr).** Basta editar `CDN_CORE` em `js/conversor/conversor.js`
 apontando para a nova versão de `@ffmpeg/core-mt` e atualizar os `bytes`
 de cada arquivo em `ARQUIVOS_CORE`. Esses tamanhos estão declarados
 porque o jsDelivr responde em chunks, sem `Content-Length`, e sem eles a
@@ -400,7 +436,7 @@ npm pack @ffmpeg/ffmpeg@0.12.15
 ```
 
 e copie `dist/umd/ffmpeg.js` e `dist/umd/814.ffmpeg.js` para
-`js/vendor/ffmpeg/` (o nome do segundo arquivo muda de versão para
+`js/conversor/vendor/ffmpeg/` (o nome do segundo arquivo muda de versão para
 versão — copie o que estiver em `dist/umd/` além de `ffmpeg.js`).
 Mantenha as versões do carregador e do núcleo compatíveis entre si.
 
@@ -418,13 +454,13 @@ navegador via [transformers.js](https://huggingface.co/docs/transformers.js).
 O áudio não sai da máquina; o que vem da rede é a biblioteca (jsDelivr) e
 o modelo (Hugging Face), guardados no cache do navegador.
 
-- **`js/transcricao.js`** — a página. A decodificação do áudio é feita
+- **`js/transcricao/transcricao.js`** — a página. A decodificação do áudio é feita
   pela Web Audio API, não pelo ffmpeg: o Whisper quer amostras em 16 kHz
   mono, que é exatamente o que sai de um `OfflineAudioContext`, e assim
   esta página não carrega os 32 MB do motor de conversão. O preço é que o
   navegador não abre `.mkv`, `.avi` nem `.wma` — para esses, a página
   manda extrair o áudio no conversor (opção 6) e voltar.
-- **`js/transcricao-worker.js`** — a inferência. Roda em worker porque
+- **`js/transcricao/worker.js`** — a inferência. Roda em worker porque
   ocupa a thread por minutos: na página, a aba congelaria inteira.
   **Precisa continuar local** — o construtor `Worker` recusa URL de outra
   origem, a mesma restrição já documentada para o carregador do ffmpeg. O
@@ -439,7 +475,7 @@ accessed from origin`. Não há fallback para blob nesse build, então subir
 `NUM_THREADS` quebraria o carregamento em vez de acelerá-lo. Para usar mais
 de uma, seria preciso baixar `ort-wasm-simd-threaded.jsep.mjs` e o `.wasm`
 por conta própria e convertê-los em `blob:` URLs — exatamente o que
-`js/conversor.js` faz com o núcleo do ffmpeg.
+`js/conversor/conversor.js` faz com o núcleo do ffmpeg.
 
 Modelos oferecidos, com o tamanho somado do codificador e do decodificador
 quantizados em 8 bits: `whisper-tiny` (~41 MB), `whisper-base` (~77 MB,
@@ -457,12 +493,12 @@ não cabe no texto da ocorrência e é justamente o que se esquece no caminho
 de casa: bloquear IMEI, pedir o MED do Pix, preservar imagens de câmera
 antes de serem sobrescritas, prazo de representação.
 
-- **`js/orientacoes-dados.js`** — todo o conteúdo, com o formato explicado
+- **`js/orientacoes/dados.js`** — todo o conteúdo, com o formato explicado
   no cabeçalho do arquivo: itens comuns a qualquer registro, mais um bloco
   por tipo de fato, com subtipos (escolha única) e situações adicionais
   (marcáveis em conjunto). Um item pode declarar `prazo`, que vira
   etiqueta ao lado da frase.
-- **`js/orientacoes.js`** — só monta e imprime; não tem conteúdo próprio.
+- **`js/orientacoes/orientacoes.js`** — só monta e imprime; não tem conteúdo próprio.
 - A regra de escrita: imperativo, endereçado a **quem leva o papel**
   ("Peça ao banco…"), não ao policial que atende.
 - A impressão sai só com a folha — menu, botões e avisos ficam de fora
@@ -475,7 +511,7 @@ Roda todos os verificadores sobre o mesmo valor e diz o que ele pode ser.
 não passa como CPF" resolve mais do que exigir que a pessoa escolha o tipo
 antes de colar.
 
-- **`js/core/identificadores.js`** — a aritmética, com o contrato
+- **`js/comum/identificadores.js`** — a aritmética, com o contrato
   `{ ok, motivo }`. Separado de `validadores.js` porque tem dois
   consumidores com necessidades diferentes: o questionário quer uma
   mensagem para o campo, o conferidor quer o veredito de todos os tipos.
@@ -492,7 +528,7 @@ antes de colar.
 ## Consulta de tipificação (`tipificacao.html`)
 
 Tabela pesquisável por nome do fato, artigo ou pela palavra que a pessoa
-usou ao contar. Alimentada por **`js/tipificacao-dados.js`**, um array de
+usou ao contar. Alimentada por **`js/tipificacao/dados.js`**, um array de
 objetos com o formato documentado no cabeçalho do arquivo — acrescentar um
 fato é uma entrada nova, e nada na página precisa ser tocado.
 

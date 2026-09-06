@@ -10,7 +10,7 @@ Sobre as ferramentas novas:
   threads de pthread a partir da URL do CDN, e o construtor `Worker`
   recusa outra origem (confirmado em teste, ver README). Para acelerar,
   baixar `ort-wasm-simd-threaded.jsep.mjs` e o `.wasm` e convertê-los em
-  `blob:` URLs, como `js/conversor.js` já faz com o núcleo do ffmpeg.
+  `blob:` URLs, como `js/conversor/conversor.js` já faz com o núcleo do ffmpeg.
 * **Transcrição** — não há progresso por trecho, só o tempo decorrido: a
   biblioteca não expõe callback de chunk. Fatiar o áudio nós mesmos daria
   progresso real, ao custo de possíveis cortes de palavra nas emendas.
@@ -19,11 +19,11 @@ Sobre as ferramentas novas:
   além do art. 102, crimes eleitorais, e os tipos da Lei 14.811/2024.
 * **Conferidor** — RENAVAM e CNH ficaram de fora por falta de algoritmo
   confiável. Se aparecer uma referência boa, entram em
-  `js/core/identificadores.js` e ganham linha em `TIPOS`.
+  `js/comum/identificadores.js` e ganham linha em `TIPOS`.
 * **Orientações** — faltam tipos: acidente com vítima fatal, desaparecimento
   de pessoa, crimes contra criança e adolescente, maus-tratos a animais.
 
-Novos tipos de ocorrência (`js/tipos/*.js`) — candidatos fortes a
+Novos tipos de ocorrência (`js/gerador/tipos/*.js`) — candidatos fortes a
 automação, seguindo o padrão de `estelionato.js`/`perda.js`:
 
 - **Furto** — subtração sem violência/grave ameaça. Local do fato, como a
