@@ -8,12 +8,6 @@
    O que é da página do conversor continua em conversor.css.
    ========================================================= */
 
-main {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
 /* ---------------------------------------------------------
    Campo de busca (conferidor, tipificação)
    --------------------------------------------------------- */
@@ -332,6 +326,58 @@ main {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 12px;
+}
+
+/* ---------------------------------------------------------
+   Transcrição de conversas
+   --------------------------------------------------------- */
+.entrada-conversa {
+  width: 100%;
+  min-height: 200px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  resize: vertical;
+  margin-bottom: 10px;
+}
+.opcoes-formato {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.autor-linha {
+  display: grid;
+  grid-template-columns: minmax(120px, 240px) 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.autor-linha label {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text-read);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.autor-linha input[type="text"] {
+  max-width: 260px;
+}
+#painel-participantes:not(:has(.autor-linha)) {
+  display: none;
+}
+/* A saída do termo é monoespaçada: alinhamento de coluna é o que faz uma
+   transcrição numerada ser lida de relance. */
+#saida {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.65;
 }
 
 /* ---------------------------------------------------------

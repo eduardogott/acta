@@ -76,31 +76,17 @@
     rodando: false,
     inicio: 0,
     relogio: null,
+    // Quantas threads o motor conseguiu usar (o worker informa).
+    threads: null,
   };
 
   let worker = null;
 
   // --------------------------------------------------------------- utilidades
 
-  function humanSize(bytes) {
-    if (bytes < 1024) return bytes + " B";
-    const unidades = ["KB", "MB", "GB"];
-    let i = -1;
-    do {
-      bytes /= 1024;
-      i++;
-    } while (bytes >= 1024 && i < unidades.length - 1);
-    return bytes.toFixed(1) + " " + unidades[i];
-  }
+  // Compartilhadas com o conversor — ver js/comum/formatos.js.
+  const { humanSize, formatarTempo } = window.Formatos;
 
-  function formatarTempo(segundos) {
-    const total = Math.max(0, Math.round(segundos));
-    const h = Math.floor(total / 3600);
-    const m = Math.floor((total % 3600) / 60);
-    const s = total % 60;
-    const dois = (n) => (n < 10 ? "0" + n : String(n));
-    return h > 0 ? h + ":" + dois(m) + ":" + dois(s) : m + ":" + dois(s);
-  }
 
   function setStatus(texto, classe) {
     el.painelStatus.classList.remove("escondido");
@@ -206,6 +192,10 @@
         ". Só na primeira vez."
       );
       setBarra(msg.total ? msg.recebido / msg.total : null);
+    } else if (msg.tipo === "modo") {
+      // Guardado para entrar na mensagem final: dizer "em 4 threads" ou
+      // "em 1 thread" explica sozinho por que demorou o que demorou.
+      estado.threads = msg.threads;
     } else if (msg.tipo === "pronto") {
       mostrarResultado(msg.texto, msg.trechos);
     } else if (msg.tipo === "erro") {
@@ -231,8 +221,11 @@
     const decorrido = (performance.now() - estado.inicio) / 1000;
     el.texto.value = montarTexto(texto, trechos) || "(nada foi reconhecido neste áudio)";
     el.painelResultado.classList.remove("escondido");
+    const modo = estado.threads
+      ? " em " + estado.threads + (estado.threads > 1 ? " threads" : " thread")
+      : "";
     terminar(
-      "Concluído em " + formatarTempo(decorrido) + " para " +
+      "Concluído em " + formatarTempo(decorrido) + modo + ", para " +
       formatarTempo(estado.duracao) + " de áudio. Revise antes de usar.",
       false
     );
@@ -377,25 +370,8 @@
     ultimaSaida = null;
   });
 
-  el.btnCopiar.addEventListener("click", async () => {
-    const original = el.btnCopiar.textContent;
-    const restaurar = (msg, classe) => {
-      el.btnCopiar.textContent = msg;
-      el.btnCopiar.classList.add(classe);
-      setTimeout(() => {
-        el.btnCopiar.textContent = original;
-        el.btnCopiar.classList.remove(classe);
-      }, 1800);
-    };
-    try {
-      if (!navigator.clipboard) throw new Error("clipboard indisponível");
-      await navigator.clipboard.writeText(el.texto.value);
-      restaurar("Copiado!", "btn-ok");
-    } catch (err) {
-      el.texto.focus();
-      el.texto.select();
-      restaurar("Use Ctrl+C", "btn-falhou");
-    }
+  el.btnCopiar.addEventListener("click", () => {
+    window.Copiar.copiarComFeedback(el.btnCopiar, el.texto.value, { campo: el.texto });
   });
 
   el.btnBaixar.addEventListener("click", () => {

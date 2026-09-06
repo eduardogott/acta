@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acta — Transcrição de Conversas</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/ferramentas.css" />
+<script src="js/comum/theme.js"></script>
+<script src="js/comum/nav.js"></script>
+<script src="js/comum/copiar.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <p class="site-title">
+    <span class="brand-mark">●</span>
+    Acta
+  </p>
+  <nav class="site-nav" aria-label="Navegação principal"></nav>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">☾</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1 class="page-title"><b>Transcrição</b> de Conversas</h1>
+    <p class="page-lead">Cole a conversa exportada do WhatsApp e receba um termo de
+    transcrição numerado, com os participantes renomeados, um cabeçalho com período e
+    contagem, e os anexos sinalizados. Substitui a transcrição feita à mão.</p>
+    <p class="aviso-privacidade">
+      <span aria-hidden="true">🔒</span>
+      O texto colado aqui não sai do seu navegador. Nada é enviado, registrado ou
+      compartilhado — a transcrição só existe nesta aba até você copiá-la.
+    </p>
+  </section>
+
+  <p class="progresso">1. Cole a conversa exportada</p>
+  <textarea class="entrada-conversa" id="entrada" spellcheck="false"
+    placeholder="No WhatsApp: abra a conversa → menu → Mais → Exportar conversa → Sem mídia.&#10;Abra o arquivo .txt e cole o conteúdo inteiro aqui."></textarea>
+  <p class="status-linha" id="resumo"></p>
+
+  <div id="painel-participantes" class="painel-transcricao">
+    <p class="progresso">2. Quem é quem</p>
+    <p class="quadro-info">Deixe em branco para manter o nome como está no arquivo. O que
+    você escrever substitui o nome em toda a transcrição.</p>
+    <div id="autores"></div>
+  </div>
+
+  <p class="progresso" id="rotulo-formato">2. Formato</p>
+  <div class="opcoes opcoes-formato">
+    <label class="opcao-item"><input type="checkbox" id="op-cabecalho" checked /> Cabeçalho do termo</label>
+    <label class="opcao-item"><input type="checkbox" id="op-numerar" checked /> Numerar mensagens</label>
+    <label class="opcao-item"><input type="checkbox" id="op-unificar" checked /> Agrupar mensagens seguidas</label>
+    <label class="opcao-item"><input type="checkbox" id="op-sistema" /> Ocultar avisos do aplicativo</label>
+  </div>
+
+  <div id="painel-saida" class="escondido">
+    <p class="progresso" id="rotulo-saida">3. Termo — confira antes de usar</p>
+    <textarea class="transcricao-texto" id="saida" spellcheck="false"></textarea>
+    <div class="transcricao-acoes">
+      <button type="button" class="btn-secondary" id="btn-copiar">Copiar texto</button>
+      <button type="button" class="btn-secondary" id="btn-baixar">Baixar .txt</button>
+      <button type="button" class="btn-secondary" id="btn-limpar">Limpar</button>
+    </div>
+  </div>
+
+  <section class="nota-rodape">
+    <h2>O que esperar</h2>
+    <ul>
+      <li><b>Como exportar:</b> no WhatsApp, abra a conversa → menu (⋮ ou nome do contato)
+      → <b>Exportar conversa</b> → <b>Sem mídia</b>. Abra o <code>.txt</code> gerado e cole
+      o conteúdo inteiro aqui.</li>
+      <li><b>Os anexos não vêm.</b> A exportação sem mídia troca cada foto, áudio ou
+      documento por um marcador. Esta página o mantém visível e assinala
+      <code>[ANEXO]</code>, para o que falta ficar registrado — mas o arquivo em si precisa
+      ser obtido do aparelho.</li>
+      <li><b>Mensagens apagadas não aparecem.</b> A exportação traz o que estava na conversa
+      no momento em que foi feita; o que foi apagado antes disso não existe no arquivo.</li>
+      <li><b>Isto não autentica nada.</b> É formatação de um texto que a parte apresentou.
+      Para valor probatório maior, o caminho é a perícia no aparelho ou a ata notarial.</li>
+      <li><b>Formato não reconhecido?</b> A exportação muda de formato conforme a versão e o
+      sistema. Se nada for reconhecido, guarde uma amostra de três linhas do arquivo — com
+      ela dá para acrescentar o padrão em <code>js/conversas/conversas.js</code>.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <p class="footer-credit"><a class="footer-link" href="https://gttr.com.br">Eduardo Gottert</a> · 2026</p>
+  <p class="footer-versao"><span id="carimbo-versao"></span></p>
+</footer>
+
+<script src="js/conversas/conversas.js"></script>
+<script src="js/comum/versao.js"></script>
+<script src="js/comum/rodape.js"></script>
+</body>
+</html>

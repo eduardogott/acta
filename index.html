@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="css/style.css" />
 <script src="js/comum/theme.js"></script>
 <script src="js/comum/nav.js"></script>
+<script src="js/comum/copiar.js"></script>
 </head>
 <body>
 
@@ -36,6 +37,8 @@
 
   <p class="progresso">Preenchimento</p>
 
+  <div id="aviso-rascunho" class="aviso-rascunho escondido"></div>
+
   <form id="perguntas" onsubmit="return false;"></form>
 
   <div id="pendencias" class="pendencias escondido"></div>
@@ -51,6 +54,9 @@
     <textarea id="saida-texto" spellcheck="false"></textarea>
     <div class="saida-acoes">
       <button type="button" class="btn-secondary" id="btn-copiar">Copiar texto</button>
+      <a class="btn-secondary escondido" id="link-orientacoes" href="orientacoes.html" target="_blank" rel="noopener">
+        Orientações para entregar
+      </a>
     </div>
   </div>
 </main>

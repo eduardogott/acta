@@ -17,6 +17,7 @@
     { arquivo: "index.html", rotulo: "Ocorrências", titulo: "Gerador de texto de ocorrência" },
     { arquivo: "conversor.html", rotulo: "Conversor", titulo: "Conversor e compressor de mídia" },
     { arquivo: "transcricao.html", rotulo: "Transcrição", titulo: "Transcrição de áudio no navegador" },
+    { arquivo: "conversas.html", rotulo: "Conversas", titulo: "Transcrição de conversas exportadas do WhatsApp" },
     { arquivo: "orientacoes.html", rotulo: "Orientações", titulo: "Orientações para entregar ao comunicante" },
     { arquivo: "conferidor.html", rotulo: "Conferidor", titulo: "Conferidor de CPF, CNPJ, IMEI, chassi, placa…" },
     { arquivo: "tipificacao.html", rotulo: "Tipificação", titulo: "Consulta rápida de tipificação penal" },

@@ -6,11 +6,6 @@
 
 Sobre as ferramentas novas:
 
-* **Transcrição** — roda em uma thread só porque o onnxruntime cria as
-  threads de pthread a partir da URL do CDN, e o construtor `Worker`
-  recusa outra origem (confirmado em teste, ver README). Para acelerar,
-  baixar `ort-wasm-simd-threaded.jsep.mjs` e o `.wasm` e convertê-los em
-  `blob:` URLs, como `js/conversor/conversor.js` já faz com o núcleo do ffmpeg.
 * **Transcrição** — não há progresso por trecho, só o tempo decorrido: a
   biblioteca não expõe callback de chunk. Fatiar o áudio nós mesmos daria
   progresso real, ao custo de possíveis cortes de palavra nas emendas.
@@ -22,6 +17,17 @@ Sobre as ferramentas novas:
   `js/comum/identificadores.js` e ganham linha em `TIPOS`.
 * **Orientações** — faltam tipos: acidente com vítima fatal, desaparecimento
   de pessoa, crimes contra criança e adolescente, maus-tratos a animais.
+* **Conversas** — só reconhece os dois formatos de exportação do WhatsApp.
+  Telegram e Signal exportam em JSON e HTML, que pediriam outro caminho de
+  leitura. Se aparecer um caso real, guardar uma amostra do arquivo.
+* **Service worker** — gerador, orientações, conferidor, tipificação e
+  conversas são páginas estáticas e funcionariam offline; falta o service
+  worker que as guarde em cache. Cuidado com COOP/COEP e com a
+  invalidação ao trocar de versão.
+* **Ponte conversor → transcrição** — hoje, para transcrever o áudio de um
+  vídeo, é extrair, baixar e subir de novo na outra página. Um botão na
+  linha de resultado poderia guardar o blob no IndexedDB e abrir a
+  transcrição já com ele carregado.
 
 Novos tipos de ocorrência (`js/gerador/tipos/*.js`) — candidatos fortes a
 automação, seguindo o padrão de `estelionato.js`/`perda.js`:

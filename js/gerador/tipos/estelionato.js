@@ -47,6 +47,18 @@ const MODALIDADE_ABERTURA = {
 registrarTipoOcorrencia("estelionato", {
   label: "Estelionato",
 
+  // Qual folha de orientacoes.html entregar. "falso advogado" e "falsa
+  // central" são a mesma conversa do ponto de vista de quem foi vítima:
+  // alguém ligou dizendo ser de uma instituição.
+  orientacoes: {
+    tipo: "estelionato",
+    subtipo: (r) =>
+      ({
+        falso_advogado: "falso_atendente",
+        falso_parente: "falso_parente",
+      }[r.tipo_estelionato] || null),
+  },
+
   perguntas: [
     // Só usada dentro deste tipo (fa_orientado_cancelar_acessos) — nos
     // demais tipos o gênero da vítima ou é irrelevante ou já é conhecido

@@ -12,6 +12,7 @@ são bibliotecas e modelos, nunca o conteúdo do usuário.
 | `index.html` | Gerador de texto de ocorrência: questionário dinâmico → um parágrafo de narrativa em 3ª pessoa ("Comunica que…", "Informa que…"). |
 | `conversor.html` | Converte e comprime áudio, vídeo e imagem com ffmpeg.wasm; extrai áudio e quadros de vídeo. |
 | `transcricao.html` | Transcreve áudio em português com o Whisper, dentro do navegador. |
+| `conversas.html` | Formata a exportação do WhatsApp num termo de transcrição numerado. |
 | `orientacoes.html` | Monta a folha de "o que fazer agora" para imprimir e entregar ao comunicante. |
 | `conferidor.html` | Confere dígito verificador de CPF, CNPJ, IMEI, chassi, placa, título de eleitor e PIS. |
 | `tipificacao.html` | Consulta rápida de tipificação penal, pesquisável por fato ou artigo. |
@@ -36,21 +37,22 @@ vez de `file://` dependendo do navegador).
 ## Estrutura dos arquivos
 
 Uma pasta por ferramenta em `js/`, e `js/comum/` para o que mais de uma
-usa. As seis páginas ficam na raiz porque são as URLs do site — mexer
-nelas quebraria links já salvos.
+usa. As páginas ficam na raiz porque são as URLs do site — mexer nelas
+quebraria links já salvos.
 
 ```
-index.html  conversor.html  transcricao.html
+index.html  conversor.html  transcricao.html  conversas.html
 orientacoes.html  conferidor.html  tipificacao.html
 
 css/
   style.css          tokens e componentes de todas as páginas
   conversor.css      só do conversor
-  ferramentas.css    das quatro ferramentas menores
+  ferramentas.css    das cinco ferramentas menores
 
 js/
   comum/             theme.js, nav.js, rodape.js, versao.js
                      identificadores.js (gerador + conferidor)
+                     formatos.js (tamanho e tempo), copiar.js (copiar com feedback)
   gerador/           main.js, engine.js, generator.js, schema.js, registry.js
     core/            estado, visibilidade, validadores, texto-helpers, linter…
     renderers/       um arquivo por tipo de campo
@@ -58,10 +60,12 @@ js/
   conversor/         conversor.js, zip.js
     vendor/ffmpeg/   carregador do ffmpeg.wasm (precisa ser local — ver abaixo)
   transcricao/       transcricao.js (página), worker.js (inferência)
+  conversas/         conversas.js
   orientacoes/       orientacoes.js (página), dados.js (conteúdo)
   conferidor/        conferidor.js
   tipificacao/       tipificacao.js (página), dados.js (a tabela)
 
+tests/                     servidor.py, gerar.py, rodar.ps1, casos/
 functions/_middleware.js   Basic Auth + COOP/COEP em toda rota
 _headers                   os mesmos cabeçalhos, como documentação/fallback
 ```
@@ -112,15 +116,38 @@ O fluxo é: **schema → engine → generator**.
   apontando para um id inexistente, etc. Não bloqueia o uso da
   ferramenta — é um aviso para quem edita o questionário, não para quem
   o preenche.
-- **`js/gerador/main.js`** — liga os botões da página. O "Copiar texto" tem três
-  degraus: `navigator.clipboard.writeText`, o `document.execCommand("copy")`
-  legado (que funciona em `file://` e em navegador antigo) e, se nem
-  isso, deixar o texto selecionado e pedir Ctrl+C. Existem porque a API
-  moderna rejeita em situações comuns aqui — página aberta como
-  `file://`, permissão negada, foco fora do documento — e antes a
-  promessa rejeitava em silêncio: o botão não mudava e o usuário
-  concluía que tinha copiado sem ter copiado nada. O resultado, qualquer
-  que seja, aparece no próprio botão.
+- **`js/gerador/main.js`** — liga os botões da página, restaura o rascunho
+  e monta o link para as orientações (ver as duas seções abaixo). Copiar
+  fica em `js/comum/copiar.js`, compartilhado com as outras ferramentas:
+  são três degraus — `navigator.clipboard.writeText`, o
+  `document.execCommand("copy")` legado (que funciona em `file://` e em
+  navegador antigo) e, se nem isso, deixar o texto selecionado e pedir
+  Ctrl+C. Existem porque a API moderna rejeita em situações comuns aqui
+  (página aberta como `file://`, permissão negada, foco fora do
+  documento) e antes a promessa rejeitava em silêncio: o botão não
+  mudava e o usuário concluía que tinha copiado sem ter copiado nada.
+
+### Rascunho
+
+As respostas são espelhadas em **`sessionStorage`**, e não em
+`localStorage`. A escolha é deliberada: sessionStorage sobrevive ao F5 e
+à navegação dentro da mesma aba — que é o acidente que se quer cobrir,
+perder meia hora de preenchimento num toque de tecla —, mas morre quando
+a aba fecha. Nada de dado de vítima ficando em disco depois do
+atendimento. (O navegador restaura sessionStorage ao reabrir uma aba
+fechada por engano ou depois de um travamento; é pouco, mas não é zero.)
+
+Quando há rascunho recuperado, um aviso aparece acima do formulário com
+um botão de descartar. Ele precisa existir: sem ele, um formulário que
+volta preenchido depois de um F5 parece o formulário de outra pessoa.
+
+### Ponte para as orientações
+
+Ao gerar o texto, aparece um link para `orientacoes.html` já com o tipo e
+o subtipo do caso — a folha que o comunicante leva embora. O mapeamento
+mora no módulo do tipo, no campo opcional `orientacoes` (ver o cabeçalho
+de `registry.js`), porque é ele que sabe o que as próprias respostas
+significam. Tipo sem esse campo simplesmente não mostra o link.
 
 ## Adicionando um tipo de ocorrência novo
 
@@ -155,13 +182,29 @@ cabeçalho de comentários em `js/gerador/core/renderers-registry.js` para o
 contrato completo (`valorPadrao`, `estaPreenchida`, `criar`,
 `revalidaVisibilidade`, `estaTudoValido`).
 
-## Estado atual
+## Testes
 
-Não há testes automatizados nem CI configurados. As funções de
-`template(...)` concentram a lógica de concordância/pluralização do
-português e merecem atenção redobrada ao editar — uma mudança de
-fraseado num tipo já usado em produção pode alterar retroativamente o
-texto de casos que ainda não foram gerados.
+```powershell
+powershell -ExecutionPolicy Bypass -File tests
+odar.ps1
+```
+
+Sem framework e sem dependência: um servidor da biblioteca padrão do
+Python, o Edge que já está na máquina, e um script. Cada caso é injetado
+**dentro da página real** — mesmo HTML, mesmo CSS, mesmos scripts —, então
+um `style.css` quebrado ou um caminho errado aparecem aqui. O caso da
+transcrição vai até o fim de verdade: cria o worker, baixa o modelo e
+transcreve, que é onde este projeto já tropeçou duas vezes na mesma pedra
+(o construtor `Worker` recusando URL de outra origem).
+
+Detalhes de como escrever um caso novo: `tests/README.md`.
+
+Não há CI. As funções de `template(...)` concentram a lógica de
+concordância e pluralização do português e continuam merecendo atenção
+redobrada — os testes conferem que a página funciona, não que a frase
+saiu bem escrita. Uma mudança de fraseado num tipo já usado em produção
+pode alterar retroativamente o texto de casos que ainda não foram
+gerados.
 
 ## Carimbo de versão
 
@@ -467,15 +510,26 @@ o modelo (Hugging Face), guardados no cache do navegador.
   que vem do CDN é a biblioteca, importada de dentro do worker, e
   `import` cruza origem sem problema quando o servidor manda CORS.
 
-**Uma thread só, de propósito.** O onnxruntime-web cria as threads de
-pthread com `new Worker(new URL(import.meta.url), …)`, e ali
-`import.meta.url` é a URL do jsDelivr. Confirmado em teste: o navegador
-responde `SecurityError: Script at 'https://cdn.jsdelivr.net/…' cannot be
-accessed from origin`. Não há fallback para blob nesse build, então subir
-`NUM_THREADS` quebraria o carregamento em vez de acelerá-lo. Para usar mais
-de uma, seria preciso baixar `ort-wasm-simd-threaded.jsep.mjs` e o `.wasm`
-por conta própria e convertê-los em `blob:` URLs — exatamente o que
-`js/conversor/conversor.js` faz com o núcleo do ffmpeg.
+**Como as threads funcionam aqui.** O onnxruntime-web cria as threads de
+pthread com `new Worker(new URL(import.meta.url), …)`. Se o `.mjs` do
+runtime vier direto do jsDelivr, `import.meta.url` é a URL do CDN e o
+navegador recusa — `SecurityError: Script at 'https://cdn.jsdelivr.net/…'
+cannot be accessed from origin`, confirmado em teste. Não há fallback
+para blob nesse build.
+
+A saída é a mesma do núcleo do ffmpeg: o worker baixa
+`ort-wasm-simd-threaded.jsep.mjs` e o `.wasm` por conta própria e os
+entrega como `blob:` URLs, via
+`env.backends.onnx.wasm.wasmPaths = { mjs, wasm }`. Um blob pertence à
+nossa origem, então `import.meta.url` passa a ser um blob e as threads
+nascem sem reclamação. Os dois arquivos ficam no Cache API sob
+`acta-ort-v1` — ao trocar a versão da biblioteca, troque também esse nome.
+
+São usadas até quatro threads (`TETO_THREADS`), conforme
+`hardwareConcurrency`. Se qualquer parte disso falhar, o worker refaz o
+carregamento com uma thread e os caminhos padrão, e avisa a página, que
+diz no fim em quantas threads rodou. Perder velocidade é melhor que
+perder a transcrição.
 
 Modelos oferecidos, com o tamanho somado do codificador e do decodificador
 quantizados em 8 bits: `whisper-tiny` (~41 MB), `whisper-base` (~77 MB,
@@ -503,6 +557,29 @@ antes de serem sobrescritas, prazo de representação.
   ("Peça ao banco…"), não ao policial que atende.
 - A impressão sai só com a folha — menu, botões e avisos ficam de fora
   pelo `@media print` de `css/ferramentas.css`.
+
+## Transcrição de conversas (`conversas.html`)
+
+Cola-se a exportação do WhatsApp e sai um termo numerado, com os
+participantes renomeados, cabeçalho com período e contagem, separador por
+dia e anexos assinalados. Substitui a transcrição feita à mão.
+
+- **Vários formatos, tentados em ordem.** A exportação muda conforme o
+  sistema e a versão, então `PADROES` é uma lista de expressões, não uma
+  só. Uma linha que não casa com nenhuma é tratada como continuação da
+  mensagem anterior — é assim que mensagem de várias linhas sobrevive.
+- O caractere invisível de direção no começo do padrão de colchetes é a
+  marca que o iOS insere em cada linha. Sem ela na expressão, nenhum
+  export de iPhone casaria.
+- **Renomear participantes é o passo que importa.** Trocar "Maria Silva"
+  e "+55 51 9…" por COMUNICANTE e AUTOR é o que transforma um despejo de
+  conversa em peça de inquérito.
+- **Os avisos do aplicativo não somem por padrão.** "O código de segurança
+  mudou" pode significar troca de aparelho, e isso às vezes importa — há
+  uma opção para ocultá-los, desmarcada.
+- A página diz, na nota de rodapé, o que ela **não** faz: os anexos não
+  vêm na exportação, mensagens apagadas antes dela não existem no
+  arquivo, e formatar um texto apresentado pela parte não o autentica.
 
 ## Conferidor de identificadores (`conferidor.html`)
 
@@ -536,6 +613,15 @@ O campo `busca` existe porque o nome jurídico raramente é a palavra que a
 pessoa usa: quem chega dizendo "mexeram no meu carro" procura por
 "arrombamento", não por "furto qualificado". A busca ignora acento e
 pontuação, e casa também com o termo colado (`art155` acha `Art. 155`).
+
+**A prescrição é calculada, não digitada.** A coluna sai da pena máxima em
+abstrato pelo art. 109 do CP: uma expressão lê a maior faixa citada no
+campo `pena` (`penaMaximaEmMeses`) e a tabela do artigo faz o resto. Assim
+não há um segundo campo para manter em sincronia e envelhecer separado do
+primeiro. O campo `prescricao` só se escreve quando a fórmula não vale —
+crime imprescritível, prazo em lei própria (art. 30 da Lei de Drogas), ou
+pena que remete a outro tipo. O que o cálculo **não** considera está dito
+na página: causas de aumento e de diminuição, e o art. 115.
 
 **Esta tabela é digitada à mão e envelhece a cada lei nova.** É um atalho
 para lembrar onde procurar, nunca a fonte.

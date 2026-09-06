@@ -22,6 +22,60 @@
     semResultados: document.getElementById("sem-resultados"),
   };
 
+  // -------------------------------------------------------------------
+  // Prescrição da pretensão punitiva, pelo art. 109 do CP
+  //
+  // Calculada a partir da pena MÁXIMA em abstrato, que é o que a tabela
+  // já traz — assim não há um segundo campo para manter em sincronia e
+  // envelhecer separado do primeiro.
+  //
+  // O que este cálculo NÃO considera, e está dito na página: causas de
+  // aumento e de diminuição, que mudam a pena máxima; e o art. 115, que
+  // reduz o prazo à metade para quem era menor de 21 ao tempo do fato ou
+  // maior de 70 na data da sentença.
+  // -------------------------------------------------------------------
+
+  const MESES_POR_UNIDADE = { dia: 1 / 30, dias: 1 / 30, mes: 1, mês: 1, meses: 1, ano: 12, anos: 12 };
+
+  // "de 3 meses a 1 ano", "de 15 dias a 2 meses", "de 2 a 4 anos".
+  // A unidade do limite inferior pode faltar ("de 2 a 4 anos"); a do
+  // superior nunca falta, e é a que interessa.
+  const FAIXA_DE_PENA = /de\s+\d+\s*(?:dias?|m[eê]s|meses|anos?)?\s+a\s+(\d+)\s*(dias?|m[eê]s|meses|anos?)/gi;
+
+  /** Maior pena máxima citada no texto, em meses. null = não deu para ler. */
+  function penaMaximaEmMeses(pena) {
+    let maior = null;
+    let achado;
+    FAIXA_DE_PENA.lastIndex = 0;
+    while ((achado = FAIXA_DE_PENA.exec(pena)) !== null) {
+      const quantidade = Number(achado[1]);
+      const unidade = achado[2].toLowerCase().replace(/s$/, "");
+      const fator = MESES_POR_UNIDADE[unidade] ?? MESES_POR_UNIDADE[unidade + "s"];
+      if (!fator) continue;
+      const meses = quantidade * fator;
+      if (maior === null || meses > maior) maior = meses;
+    }
+    return maior;
+  }
+
+  /** Art. 109 do CP: da pena máxima para o prazo prescricional. */
+  function prazoDoArt109(meses) {
+    const anos = meses / 12;
+    if (anos > 12) return "20 anos";
+    if (anos > 8) return "16 anos";
+    if (anos > 4) return "12 anos";
+    if (anos > 2) return "8 anos";
+    if (anos >= 1) return "4 anos";
+    return "3 anos";
+  }
+
+  /** O que mostrar na coluna. A entrada pode trazer o valor pronto. */
+  function prescricaoDe(entrada) {
+    if (entrada.prescricao) return entrada.prescricao;
+    const meses = penaMaximaEmMeses(entrada.pena);
+    return meses === null ? "—" : prazoDoArt109(meses);
+  }
+
   const ROTULO_ACAO = {
     incondicionada: "Pública incondicionada",
     condicionada: "Pública condicionada",
@@ -95,6 +149,10 @@
     const tdPena = document.createElement("td");
     tdPena.textContent = e.pena;
 
+    const tdPrescricao = document.createElement("td");
+    tdPrescricao.className = "tipificacao-artigo";
+    tdPrescricao.textContent = prescricaoDe(e);
+
     const tdAcao = document.createElement("td");
     if (e.acao === "incondicionada" || e.acao === "outra") {
       tdAcao.textContent = ROTULO_ACAO[e.acao];
@@ -105,6 +163,7 @@
     tr.appendChild(tdFato);
     tr.appendChild(tdArtigo);
     tr.appendChild(tdPena);
+    tr.appendChild(tdPrescricao);
     tr.appendChild(tdAcao);
     return tr;
   }

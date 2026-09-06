@@ -186,8 +186,19 @@ const Engine = (() => {
     document.getElementById("saida-wrapper")?.classList.add("escondido");
   }
 
+  /**
+   * Primeira montagem da tela. Devolve true quando um rascunho foi
+   * recuperado — quem avisa o usuário é main.js, porque isto aqui não
+   * mexe em nada fora do formulário.
+   */
+  function init() {
+    const tinhaRascunho = Estado.restaurar();
+    renderTudo();
+    return tinhaRascunho;
+  }
+
   return {
-    init: renderTudo,
+    init,
     reset,
     calcularPendencias,
   };

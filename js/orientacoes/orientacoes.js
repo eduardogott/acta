@@ -37,6 +37,47 @@
     extras: new Set(),
   };
 
+  /**
+   * Estado inicial vindo da URL: ?tipo=perda&sub=celular&extras=a,b
+   *
+   * Serve a duas coisas: o link que o gerador de ocorrências oferece ao
+   * fim do texto ("entregar as orientações deste caso"), e o atalho que
+   * se salva para o fato que se atende toda semana.
+   *
+   * Uma chave que não existe mais nos dados é ignorada em silêncio — um
+   * link velho deve abrir a página, não uma mensagem de erro.
+   */
+  function lerDaURL() {
+    const params = new URLSearchParams(location.search);
+
+    const tipo = DADOS.tipos.find((t) => t.chave === params.get("tipo"));
+    if (!tipo) return;
+    estado.tipo = tipo.chave;
+
+    const subtipo = (tipo.subtipos || []).find((x) => x.chave === params.get("sub"));
+    if (subtipo) estado.subtipo = subtipo.chave;
+
+    const pedidos = (params.get("extras") || "").split(",").filter(Boolean);
+    (tipo.extras || []).forEach((x) => {
+      if (pedidos.includes(x.chave)) estado.extras.add(x.chave);
+    });
+  }
+
+  /** O inverso: mantém a barra de endereços refletindo a escolha atual. */
+  function escreverNaURL() {
+    const params = new URLSearchParams();
+    if (estado.tipo) params.set("tipo", estado.tipo);
+    if (estado.subtipo) params.set("sub", estado.subtipo);
+    if (estado.extras.size > 0) params.set("extras", Array.from(estado.extras).join(","));
+    // A vírgula da lista de extras volta a ser vírgula: ela é permitida
+    // sem escape numa query, e este endereço existe para ser guardado e
+    // mandado a um colega — "%2C" no meio atrapalha a leitura.
+    const busca = params.toString().replace(/%2C/g, ",");
+    // replaceState, e não pushState: cada clique num rádio virando uma
+    // entrada de histórico faria o botão "voltar" andar de um em um.
+    history.replaceState(null, "", busca ? "?" + busca : location.pathname);
+  }
+
   function tipoAtual() {
     return DADOS.tipos.find((t) => t.chave === estado.tipo) || null;
   }
@@ -170,6 +211,7 @@
   function renderTudo() {
     renderEscolhas();
     renderFolha();
+    escreverNaURL();
   }
 
   /** A mesma folha em texto puro, para colar num e-mail ou no sistema. */
@@ -190,25 +232,8 @@
 
   el.btnImprimir.addEventListener("click", () => window.print());
 
-  el.btnCopiar.addEventListener("click", async () => {
-    const original = el.btnCopiar.textContent;
-    const texto = folhaComoTexto();
-    const restaurar = (msg, classe) => {
-      el.btnCopiar.textContent = msg;
-      el.btnCopiar.classList.add(classe);
-      setTimeout(() => {
-        el.btnCopiar.textContent = original;
-        el.btnCopiar.classList.remove(classe);
-      }, 1800);
-    };
-    try {
-      if (!navigator.clipboard) throw new Error("clipboard indisponível");
-      await navigator.clipboard.writeText(texto);
-      restaurar("Copiado!", "btn-ok");
-    } catch (err) {
-      console.warn("[orientacoes] não consegui copiar:", err);
-      restaurar("Não consegui copiar", "btn-falhou");
-    }
+  el.btnCopiar.addEventListener("click", () => {
+    window.Copiar.copiarComFeedback(el.btnCopiar, folhaComoTexto());
   });
 
   el.btnLimpar.addEventListener("click", () => {
@@ -218,5 +243,6 @@
     renderTudo();
   });
 
+  lerDaURL();
   renderTudo();
 })();

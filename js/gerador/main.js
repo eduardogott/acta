@@ -1,81 +1,80 @@
 document.addEventListener("DOMContentLoaded", () => {
   Linter.executar();
-  Engine.init();
+
+  // ---------------------------------------------------------------------
+  // Rascunho
+  //
+  // O aviso só aparece quando havia algo salvo. Ele precisa existir: sem
+  // ele, um formulário que volta preenchido depois de um F5 parece um
+  // formulário de outra pessoa — e o usuário não saberia como zerá-lo.
+  // ---------------------------------------------------------------------
+  const aviso = document.getElementById("aviso-rascunho");
+  if (Engine.init() && aviso) {
+    const texto = document.createElement("span");
+    texto.textContent = "Respostas recuperadas desta aba. Fechar a aba apaga tudo.";
+
+    const descartar = document.createElement("button");
+    descartar.type = "button";
+    descartar.className = "btn-descartar";
+    descartar.textContent = "Descartar e recomeçar";
+    descartar.addEventListener("click", () => {
+      Engine.reset();
+      aviso.classList.add("escondido");
+    });
+
+    aviso.appendChild(texto);
+    aviso.appendChild(descartar);
+    aviso.classList.remove("escondido");
+  }
+
+  // ---------------------------------------------------------------------
+  // Ponte para as orientações
+  //
+  // O tipo de ocorrência diz qual folha o comunicante leva embora. O
+  // mapeamento vive no módulo do tipo (campo "orientacoes" — ver
+  // registry.js), porque é ele que sabe o que as próprias respostas
+  // significam. Tipo sem esse campo simplesmente não mostra o link.
+  // ---------------------------------------------------------------------
+  function atualizarLinkOrientacoes() {
+    const link = document.getElementById("link-orientacoes");
+    if (!link) return;
+
+    const respostas = Estado.obterRespostas();
+    const modulo = window.TIPOS_OCORRENCIA[respostas.tipo_ocorrencia];
+    const ponte = modulo && modulo.orientacoes;
+    if (!ponte || !ponte.tipo) {
+      link.classList.add("escondido");
+      return;
+    }
+
+    const params = new URLSearchParams({ tipo: ponte.tipo });
+    const subtipo = typeof ponte.subtipo === "function" ? ponte.subtipo(respostas) : null;
+    if (subtipo) params.set("sub", subtipo);
+
+    link.href = "orientacoes.html?" + params.toString();
+    link.classList.remove("escondido");
+  }
 
   document.getElementById("btn-gerar").addEventListener("click", () => {
     const texto = Generator.gerar();
     const saida = document.getElementById("saida-texto");
     saida.value = texto;
     document.getElementById("saida-wrapper").classList.remove("escondido");
+    atualizarLinkOrientacoes();
     saida.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  // ---------------------------------------------------------------------
-  // Copiar
-  //
-  // navigator.clipboard.writeText rejeita em situações comuns aqui: página
-  // aberta como file://, permissão negada, ou foco fora do documento. Sem
-  // tratamento a promessa rejeitava em silêncio — o botão não mudava e o
-  // usuário concluía que tinha copiado sem ter copiado nada.
-  //
-  // Por isso há três degraus: a API moderna, o execCommand("copy") legado
-  // (funciona em file:// e em navegadores antigos), e, se nem isso, deixar
-  // o texto selecionado e pedir Ctrl+C.
-  // ---------------------------------------------------------------------
+  // O botão de copiar, com os degraus de reserva, mora em
+  // js/comum/copiar.js — as orientações e a transcrição usam o mesmo.
   const btnCopiar = document.getElementById("btn-copiar");
-  let timerFeedback = null;
-
-  function feedback(mensagem, classe) {
-    if (timerFeedback) clearTimeout(timerFeedback);
-    btnCopiar.textContent = mensagem;
-    btnCopiar.classList.remove("btn-ok", "btn-falhou");
-    if (classe) btnCopiar.classList.add(classe);
-    timerFeedback = setTimeout(() => {
-      btnCopiar.textContent = "Copiar texto";
-      btnCopiar.classList.remove("btn-ok", "btn-falhou");
-      timerFeedback = null;
-    }, classe === "btn-falhou" ? 6000 : 1500);
-  }
-
-  /** Último recurso: seleciona o texto e tenta o comando legado. */
-  function copiarPelaSelecao(saida) {
-    saida.focus();
-    saida.select();
-    saida.setSelectionRange(0, saida.value.length);
-    try {
-      return document.execCommand("copy");
-    } catch (err) {
-      return false;
-    }
-  }
-
-  btnCopiar.addEventListener("click", async () => {
+  btnCopiar.addEventListener("click", () => {
     const saida = document.getElementById("saida-texto");
-    if (!saida.value.trim()) {
-      feedback("Não há texto para copiar", "btn-falhou");
-      return;
-    }
-
-    try {
-      if (!navigator.clipboard) throw new Error("clipboard indisponível");
-      await navigator.clipboard.writeText(saida.value);
-      feedback("Copiado!", "btn-ok");
-      return;
-    } catch (err) {
-      console.warn("[copiar] navigator.clipboard falhou:", err);
-    }
-
-    if (copiarPelaSelecao(saida)) {
-      feedback("Copiado!", "btn-ok");
-      return;
-    }
-
-    // O texto fica selecionado pela tentativa acima, então o Ctrl+C que
-    // pedimos aqui funciona sem o usuário precisar selecionar nada.
-    feedback("Não consegui copiar — o texto está selecionado, use Ctrl+C", "btn-falhou");
+    window.Copiar.copiarComFeedback(btnCopiar, saida.value, { campo: saida });
   });
 
   document.getElementById("btn-reiniciar").addEventListener("click", () => {
-    if (confirm("Limpar todas as respostas e recomeçar?")) Engine.reset();
+    if (!confirm("Limpar todas as respostas e recomeçar?")) return;
+    Engine.reset();
+    if (aviso) aviso.classList.add("escondido");
   });
 });

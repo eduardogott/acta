@@ -8,6 +8,8 @@
 <link rel="stylesheet" href="css/ferramentas.css" />
 <script src="js/comum/theme.js"></script>
 <script src="js/comum/nav.js"></script>
+<script src="js/comum/formatos.js"></script>
+<script src="js/comum/copiar.js"></script>
 </head>
 <body>
 
@@ -80,9 +82,9 @@
   <section class="nota-rodape">
     <h2>O que esperar</h2>
     <ul>
-      <li><b>É lento.</b> A biblioteca roda em uma thread só — o construtor <code>Worker</code>
-      recusa as threads que o motor tentaria criar a partir do CDN. Conte com um tempo próximo
-      ao da duração do áudio, ou mais, na primeira vez que rodar.</li>
+      <li><b>Leva tempo.</b> O motor usa até quatro threads, conforme o processador;
+      quando o navegador não permite, cai para uma só e avisa no fim. Contar com algo entre
+      um quarto e o tempo inteiro do áudio é uma expectativa realista.</li>
       <li><b>O modelo é baixado uma vez.</b> Depois disso ele fica no cache do navegador e a
       transcrição funciona mesmo sem internet.</li>
       <li><b>Formato não reconhecido?</b> O navegador não sabe abrir <code>.mkv</code>,

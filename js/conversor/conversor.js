@@ -29,6 +29,10 @@
 (function () {
   "use strict";
 
+  // Formatação de tamanho e de tempo mora em js/comum/formatos.js: a
+  // transcrição usa as mesmas funções.
+  const { humanSize, formatarTempo, parseTempo } = window.Formatos;
+
   // ---------------------------------------------------------------------
   // Configuração (mesmas regras do script Python)
   // ---------------------------------------------------------------------
@@ -389,16 +393,6 @@
     return Math.max(n, 2);
   }
 
-  function humanSize(bytes) {
-    if (bytes < 1024) return bytes + " B";
-    const units = ["KB", "MB", "GB"];
-    let i = -1;
-    do {
-      bytes /= 1024;
-      i++;
-    } while (bytes >= 1024 && i < units.length - 1);
-    return bytes.toFixed(1) + " " + units[i];
-  }
 
   /** Caminho a exibir: arquivos vindos de pasta (input ou arrasto) mostram o caminho. */
   function caminhoDe(file) {
@@ -2147,30 +2141,6 @@
   // Corte de trecho (opção 9, vale para qualquer nível)
   // ---------------------------------------------------------------------
 
-  /**
-   * Lê "90", "1:30" ou "1:02:03" e devolve segundos. null = não entendi.
-   * Aceita vírgula ou ponto nos décimos, porque teclado brasileiro.
-   */
-  function parseTempo(texto) {
-    const limpo = String(texto || "").trim().replace(",", ".");
-    if (!limpo) return null;
-    if (!/^\d+(\.\d+)?(:\d{1,2}(\.\d+)?){0,2}$/.test(limpo)) return null;
-    const partes = limpo.split(":").map(parseFloat);
-    if (partes.some((n) => !Number.isFinite(n) || n < 0)) return null;
-    // os campos à direita dos minutos não podem passar de 59
-    if (partes.length > 1 && partes.slice(1).some((n) => n >= 60)) return null;
-    return partes.reduce((total, n) => total * 60 + n, 0);
-  }
-
-  /** Segundos → "m:ss" ou "h:mm:ss". */
-  function formatarTempo(segundos) {
-    const total = Math.max(0, Math.round(segundos));
-    const h = Math.floor(total / 3600);
-    const m = Math.floor((total % 3600) / 60);
-    const s = total % 60;
-    const dois = (n) => (n < 10 ? "0" + n : String(n));
-    return h > 0 ? h + ":" + dois(m) + ":" + dois(s) : m + ":" + dois(s);
-  }
 
   /**
    * Acompanha um encode.

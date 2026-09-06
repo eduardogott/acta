@@ -12,3 +12,7 @@ desktop.ini
 
 # Arquivos internos (não versionados)
 base/
+
+# Testes (gerados a cada execução)
+tests/build/
+tests/relato.txt

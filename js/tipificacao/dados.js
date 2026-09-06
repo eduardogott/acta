@@ -16,6 +16,7 @@
  *     jecrim:  false,                         // infração de menor potencial ofensivo
  *     busca:   "subtrair levar sumiu",        // sinônimos extras, opcional
  *     obs:     "…",                           // ressalva curta, opcional
+ *     prescricao: "imprescritível",           // só quando o art. 109 não vale
  *   }
  *
  * `acao` aceita: "incondicionada", "condicionada", "privada" e "outra"
@@ -25,6 +26,11 @@
  * contravenção — os dois casos do art. 61 da Lei 9.099/1995. Repare que
  * violência doméstica contra a mulher fica de fora mesmo com pena baixa,
  * por força do art. 41 da Lei 11.340/2006.
+ *
+ * `prescricao` normalmente NÃO se escreve: a página calcula o prazo a
+ * partir da pena máxima, pelo art. 109 do CP. Só se preenche quando a
+ * fórmula não vale — crime imprescritível, prazo fixado em lei própria
+ * (art. 30 da Lei de Drogas), ou pena que remete a outro tipo.
  *
  * `busca` existe porque o nome jurídico raramente é a palavra que a
  * pessoa usa: quem chega dizendo "mexeram no meu carro" procura por
@@ -138,12 +144,14 @@ window.TIPIFICACAO = [
   {
     fato: "Injúria racial", artigo: "Art. 2º-A", diploma: "Lei 7.716/1989",
     pena: "reclusão, de 2 a 5 anos, e multa", acao: "incondicionada", jecrim: false,
+    prescricao: "imprescritível",
     busca: "racismo xingamento racial cor raça etnia religião",
     obs: "Deixou de ser o art. 140, § 3º, do CP com a Lei 14.532/2023. Imprescritível e inafiançável.",
   },
   {
     fato: "Racismo", artigo: "Art. 20", diploma: "Lei 7.716/1989",
     pena: "reclusão, de 1 a 3 anos, e multa", acao: "incondicionada", jecrim: false,
+    prescricao: "imprescritível",
     obs: "Pelos meios de comunicação ou redes sociais (§ 2º): reclusão, de 2 a 5 anos, e multa.",
   },
 
@@ -336,6 +344,7 @@ window.TIPIFICACAO = [
   {
     fato: "Uso de documento falso", artigo: "Art. 304", diploma: "CP",
     pena: "a mesma do documento falsificado", acao: "incondicionada", jecrim: false,
+    prescricao: "conforme o documento",
   },
   {
     fato: "Adulteração de sinal identificador de veículo", artigo: "Art. 311", diploma: "CP",
@@ -444,6 +453,7 @@ window.TIPIFICACAO = [
     diploma: "Lei 11.343/2006",
     pena: "advertência, prestação de serviços à comunidade ou medida educativa",
     acao: "outra", jecrim: true,
+    prescricao: "2 anos",
     busca: "usuário maconha porte pequena quantidade",
     obs: "Não há pena privativa de liberdade. Termo circunstanciado.",
   },

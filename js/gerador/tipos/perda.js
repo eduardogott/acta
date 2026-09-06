@@ -23,6 +23,19 @@ function montarFraseCelular(respostas, h, imei) {
 registrarTipoOcorrencia("perda", {
   label: "Perda",
 
+  // "placa_veicular" aqui, "placa" lá: as chaves nasceram separadas e o
+  // mapa é o lugar certo para reconciliá-las.
+  orientacoes: {
+    tipo: "perda",
+    subtipo: (r) =>
+      ({
+        celular: "celular",
+        documento_pessoal: "documento_pessoal",
+        documento_veicular: "documento_veicular",
+        placa_veicular: "placa",
+      }[r.perda_o_que] || null),
+  },
+
   perguntas: [
     {
       id: "perda_o_que",

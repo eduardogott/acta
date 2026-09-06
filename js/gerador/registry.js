@@ -26,6 +26,20 @@
  *      <script src="js/gerador/tipos/nome_do_tipo.js"></script>
  *
  * É só isso. Nenhum outro arquivo precisa ser editado.
+ *
+ * CAMPO OPCIONAL "orientacoes"
+ * ---------------------------------------------------------------------------
+ * Liga este tipo à folha de orientações (orientacoes.html), para o gerador
+ * poder oferecer, ao fim do texto, o papel que o comunicante leva embora:
+ *
+ *    orientacoes: {
+ *      tipo: "perda",                       // chave em js/orientacoes/dados.js
+ *      subtipo: (respostas) => "celular",   // opcional; null quando não se sabe
+ *    },
+ *
+ * O mapeamento fica aqui, e não lá, porque é este módulo que sabe o que as
+ * próprias respostas significam. Sem o campo, o gerador simplesmente não
+ * mostra o link — nada quebra.
  * ---------------------------------------------------------------------------
  */
 
