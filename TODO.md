@@ -2,8 +2,6 @@
 
 ## NEW
 
-* Calculadora de prazos para decadenciais e prescricionais
-
 Sobre as ferramentas novas:
 
 * **Transcrição** — não há progresso por trecho, só o tempo decorrido: a
@@ -17,9 +15,20 @@ Sobre as ferramentas novas:
   `js/comum/identificadores.js` e ganham linha em `TIPOS`.
 * **Orientações** — faltam tipos: acidente com vítima fatal, desaparecimento
   de pessoa, crimes contra criança e adolescente, maus-tratos a animais.
+  Cada tipo novo pode ganhar entradas na tipificação pelo campo
+  `orientacoes` (a tabela já aponta 31 fatos para uma folha).
 * **Conversas** — só reconhece os dois formatos de exportação do WhatsApp.
   Telegram e Signal exportam em JSON e HTML, que pediriam outro caminho de
   leitura. Se aparecer um caso real, guardar uma amostra do arquivo.
+* **Conversor** — `conversor.js` ficou com as operações e a interface
+  (~2.000 linhas). Separar as operações exigiria injetar cinco funções da
+  tela (`etapa`, `iniciar`, `acompanharEncode`, `argumentosDeCorte`,
+  `duracaoDoTrabalho`) — mais acoplamento disfarçado, não menos. Fica
+  para quando a interface encolher.
+* **Teste de conversão** — `tests/casos/conversao.js` cobre áudio
+  (converter e comprimir). Vídeo e imagem não têm caso: exigiriam um MP4
+  e um JPG de verdade, e sintetizá-los com `-f lavfi` amarraria o teste
+  aos filtros do build do ffmpeg.
 * **Service worker** — gerador, orientações, conferidor, tipificação e
   conversas são páginas estáticas e funcionariam offline; falta o service
   worker que as guarde em cache. Cuidado com COOP/COEP e com a

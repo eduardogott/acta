@@ -65,7 +65,7 @@ js/
     core/            estado, visibilidade, validadores, texto-helpers, linter…
     renderers/       um arquivo por tipo de campo
     tipos/           um arquivo por tipo de ocorrência
-  conversor/         conversor.js, zip.js
+  conversor/         regras.js (contas), motor.js (ffmpeg), conversor.js (página), zip.js
     vendor/ffmpeg/   carregador do ffmpeg.wasm (precisa ser local — ver abaixo)
   transcricao/       transcricao.js (página), worker.js (inferência)
   conversas/         conversas.js
@@ -249,11 +249,32 @@ Converte áudio/vídeo/imagem e comprime vídeo ou áudio, tudo processado
 [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) — nenhum arquivo
 é enviado a servidor algum, igual ao gerador de ocorrências.
 
+**Três arquivos de JavaScript, e a ordem no HTML importa** (regras, motor,
+página):
+
+| Arquivo | O que faz | Conhece… |
+| --- | --- | --- |
+| `js/conversor/regras.js` | Configuração, planejamento de tamanho-alvo, estimativa, leitura do log do `ffmpeg -i`. | nada — nem DOM, nem ffmpeg, nem rede |
+| `js/conversor/motor.js` | Baixa o núcleo do ffmpeg, monta os `blob:`, carrega a instância, roda comandos. Mais o diagnóstico do carregamento. | o ffmpeg |
+| `js/conversor/conversor.js` | As operações (as linhas de comando de cada opção) e a interface. | tudo |
+
+A separação existe pelo `regras.js`: as decisões mais delicadas da
+ferramenta são aritmética — quanto de bitrate cabe num alvo, quando
+encolher a imagem em vez de insistir na resolução, se a conversão vale a
+pena — e, dentro de três mil linhas de interface, não havia como
+exercitá-las sem abrir a página e converter um arquivo. Agora
+`tests/casos/conversao.js` chama a função e confere o número.
+
+O `motor.js` recebe por parâmetro quem acompanha o carregamento, e expõe
+o andamento de um encode pelo objeto `ganchos` (`ganchos.progresso`,
+`ganchos.log`). Quem escreve um gancho limpa no `finally`: gancho vivo
+depois do trabalho faz a barra de um arquivo mexer com o log do próximo.
+
 - **`conversor.html`** / **`css/conversor.css`** / **`js/conversor/conversor.js`** —
-  markup, estilo e lógica da página. `js/conversor/conversor.js` partiu das regras
-  do script Python homônimo (a tabela de crf/resolução/fps/áudio por nível
-  na opção 9, a padronização de extensões) e se afastou delas onde o
-  navegador ou o uso pediram. A opção 9 aceita vídeo **ou** áudio: o tipo
+  markup, estilo e lógica da página. As regras partiram do script Python
+  homônimo (a tabela de crf/resolução/fps/áudio por nível na opção 9, a
+  padronização de extensões) e se afastaram delas onde o navegador ou o
+  uso pediram. A opção 9 aceita vídeo **ou** áudio: o tipo
   é detectado pela extensão e só os campos daquele tipo aparecem, e apenas
   no nível "Personalizada".
 
@@ -412,7 +433,8 @@ Converte áudio/vídeo/imagem e comprime vídeo ou áudio, tudo processado
   `ffmpeg-core.wasm` (32 MB) e `ffmpeg-core.worker.js` são buscados de
   `cdn.jsdelivr.net/npm/@ffmpeg/core-mt@<versão>/dist/umd/` com `fetch()`
   e convertidos em `blob:` URLs antes de irem para o `ffmpeg.load()` — ver
-  `ARQUIVOS_CORE`/`baixarCoreComoBlobURLs` em `js/conversor/conversor.js`.
+  `ARQUIVOS_CORE` (em `js/conversor/regras.js`) e
+  `baixarCoreComoBlobURLs` (em `js/conversor/motor.js`).
 
   As três **têm** de virar `blob:`, e não ir como URL do CDN direto,
   porque o Emscripten cria os workers de pthread com
@@ -432,7 +454,7 @@ Converte áudio/vídeo/imagem e comprime vídeo ou áudio, tudo processado
   da página. Hoje isso está garantido por serem `blob:`. Como o `ffmpeg.js`
   não escuta o evento `error` do worker, uma falha assim não vira exceção —
   o `load()` só nunca responde. Daí o teto de tempo (`TIMEOUT_LOAD_MS`) e a
-  instrumentação do construtor `Worker` em `js/conversor/conversor.js`.
+  instrumentação do construtor `Worker` em `js/conversor/motor.js`.
 - Os arquivos do núcleo ficam no Cache API sob a chave `acta-ffmpeg-v2`,
   então o download de 32 MB só acontece na primeira visita. Ao trocar a
   versão do ffmpeg, mude também esse nome de cache para invalidar o antigo.
@@ -465,7 +487,7 @@ avisa quando isso é provável.
 
 São duas metades, atualizadas separadamente.
 
-**O núcleo (jsDelivr).** Basta editar `CDN_CORE` em `js/conversor/conversor.js`
+**O núcleo (jsDelivr).** Basta editar `CDN_CORE` em `js/conversor/regras.js`
 apontando para a nova versão de `@ffmpeg/core-mt` e atualizar os `bytes`
 de cada arquivo em `ARQUIVOS_CORE`. Esses tamanhos estão declarados
 porque o jsDelivr responde em chunks, sem `Content-Length`, e sem eles a

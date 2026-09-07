@@ -24,6 +24,17 @@
  * arquivo — bitrate, sample rate e resolução nunca sobem acima do
  * original, e um vídeo que já esteja abaixo da linha de base é apenas
  * remuxado, sem recompressão nenhuma.
+ *
+ * TRÊS ARQUIVOS
+ * Este é o da página: as operações (que montam as linhas de comando do
+ * ffmpeg) e a interface. Os outros dois não conhecem a página:
+ *
+ *   js/conversor/regras.js  configuração, planejamento de tamanho e
+ *                           leitura do log — só contas, testáveis sozinhas
+ *   js/conversor/motor.js   baixar o núcleo do ffmpeg, carregá-lo e rodar
+ *                           comandos, mais o diagnóstico do carregamento
+ *
+ * A ordem no HTML importa: regras, motor, e só então este.
  */
 
 (function () {
@@ -33,535 +44,57 @@
   // transcrição usa as mesmas funções.
   const { humanSize, formatarTempo, parseTempo } = window.Formatos;
 
-  // ---------------------------------------------------------------------
-  // Configuração (mesmas regras do script Python)
-  // ---------------------------------------------------------------------
+  // As regras e as contas — configuração, planejamento de tamanho, leitura
+  // do log do ffmpeg — moram em js/conversor/regras.js, longe do DOM, para
+  // poderem ser testadas sem abrir a página.
+  const {
+    AUDIO_EXTS,
+    CONVERSAO_AUDIO,
+    CONVERSAO_VIDEO,
+    EXTENSION_MAP,
+    IMAGE_EXTS,
+    LEVEL_AUDIO,
+    LEVEL_AUDIO_ONLY,
+    LEVEL_VIDEO,
+    LIMITE_AVISO_MEMORIA,
+    QSCALE_JPEG_90,
+    RESUMO_AUDIO,
+    RESUMO_VIDEO,
+    VIDEO_EXTS,
+    argsAudioAac,
+    baseName,
+    estimarConversaoVideo,
+    estimarTamanho,
+    extOf,
+    planejarAlvo,
+    planejarAlvoAudio,
+    problemaDeCodec,
+    roundEven,
+    tipoComumDeCompressao,
+    tipoDoArquivo,
+  } = window.ConversorRegras;
 
-  const AUDIO_EXTS = [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus", ".aiff", ".au"];
-  const VIDEO_EXTS = [".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".mpg", ".mpeg", ".m4v", ".3gp", ".ts"];
-  // .heic ficou de fora de propósito: o build padrão do ffmpeg.wasm não traz
-  // decodificador HEIC, então esses arquivos só produziriam um erro obscuro.
-  const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp"];
-
-  const EXTENSION_MAP = {
-    ".jpeg": ".jpg",
-    ".mpeg": ".mpg",
-    ".tiff": ".tif",
-    ".mpg4": ".mp4",
-  };
-
-  // Compressão de vídeo (opção 9 quando o arquivo é um vídeo). "maxFps" é
-  // teto, não alvo: um vídeo que já esteja abaixo dele passa intacto.
-  const LEVEL_VIDEO = {
-    "1": { nome: "Baixa",   crf: 26, scale: null, maxFps: 30, preset: "medium" },
-    "2": { nome: "Média",   crf: 30, scale: null, maxFps: 24, preset: "medium" },
-    "3": { nome: "Alta",    crf: 32, scale: 0.75, maxFps: 24, preset: "medium" },
-    "4": { nome: "Extrema", crf: 34, scale: 0.5,  maxFps: 19, preset: "slow" },
-  };
-
-  // Faixa de áudio dentro do vídeo (AAC). Bitrate e sample rate são tetos:
-  // montarAudio() nunca sobe acima do que o arquivo já tem.
-  const LEVEL_AUDIO = {
-    "1": { bitrate: 128, samplerate: null,  mono: false },
-    "2": { bitrate: 96,  samplerate: 24000, mono: true },
-    "3": { bitrate: 64,  samplerate: 22050, mono: true },
-    "4": { bitrate: 32,  samplerate: 16000, mono: true },
-  };
-
-  // Compressão de arquivos de áudio (opção 9 quando o arquivo é um áudio).
-  // Saída sempre MP3; bitrate/sample rate nunca sobem acima do original.
-  //
-  // O libmp3lame não conhece -preset (isso é do x264): o equivalente é
-  // -compression_level, a escala de qualidade do LAME, em que 0 é o mais
-  // lento e caprichado e 9 o mais apressado. Daí 1 fazer as vezes de
-  // "slower" e 0 as de "veryslow".
-  //
-  // Os quatro pares bitrate/sample rate são combinações válidas de MP3:
-  // 128 kbps a 32 kHz cai em MPEG-1, e os demais em MPEG-2 (16–24 kHz),
-  // cuja faixa de bitrate vai de 8 a 160 kbps.
-  const LEVEL_AUDIO_ONLY = {
-    "1": { nome: "Baixa",   bitrate: 128, samplerate: 32000, mono: false, compressionLevel: 3 },
-    "2": { nome: "Média",   bitrate: 80,  samplerate: 24000, mono: true,  compressionLevel: 2 },
-    "3": { nome: "Alta",    bitrate: 48,  samplerate: 24000, mono: true,  compressionLevel: 1 },
-    "4": { nome: "Extrema", bitrate: 24,  samplerate: 16000, mono: true,  compressionLevel: 0 },
-  };
-
-  const RESUMO_VIDEO = {
-    "1": "CRF 26 · até 30 fps · resolução original · áudio AAC 128 kbps",
-    "2": "CRF 30 · até 24 fps · resolução original · áudio AAC 96 kbps mono 24 kHz",
-    "3": "CRF 32 · até 24 fps · 75% da resolução · áudio AAC 64 kbps mono 22,05 kHz",
-    "4": "CRF 34 · até 19 fps · 50% da resolução · áudio AAC 32 kbps mono 16 kHz · preset slow",
-    "5": "Você define cada parâmetro abaixo.",
-    "6": "O bitrate sai da conta do tamanho pedido — e a resolução cai se o bitrate não sustentar a original.",
-  };
-
-  const RESUMO_AUDIO = {
-    "1": "MP3 128 kbps · canais originais · até 32 kHz",
-    "2": "MP3 80 kbps · mono · até 24 kHz",
-    "3": "MP3 48 kbps · mono · até 24 kHz",
-    "4": "MP3 24 kbps · mono · até 16 kHz",
-    "5": "Você define cada parâmetro abaixo.",
-    "6": "O bitrate sai da conta do tamanho pedido; sample rate e canais acompanham.",
-  };
-
-  // -------------------------------------------------------------------
-  // Nível "Tamanho-alvo" (nível 6 da opção 9)
-  //
-  // Em vez de escolher a qualidade e descobrir o tamanho, o usuário diz o
-  // tamanho e o bitrate sai da divisão. É o caminho natural quando o
-  // limite é externo — anexo de e-mail, campo de upload de um sistema.
-  // -------------------------------------------------------------------
-
-  // Sobra para o overhead do contêiner e para o erro do controle de taxa
-  // do x264, que mira a média mas não a acerta na casa do byte.
-  const ALVO_MARGEM = 0.95;
-  // Abaixo disto o vídeo vira um borrão sem serventia: o encode passa a
-  // ignorar o alvo e o aviso vai para a estimativa.
-  const ALVO_VIDEO_KBPS_MINIMO = 64;
-  // Bits por pixel por quadro. Abaixo disto compensa mais encolher a
-  // imagem do que insistir na resolução original com bitrate insuficiente.
-  const ALVO_BPP_MINIMO = 0.04;
-  // Degraus de largura para essa redução (só desce, nunca sobe).
-  const ESCADA_LARGURA = [1920, 1280, 854, 640, 480, 320];
-  // Bitrates de áudio candidatos, do melhor para o pior.
-  const ALVO_AUDIO_KBPS = [128, 96, 64, 48, 32, 24, 16];
-  // Bitrates que o libmp3lame aceita, na compressão de áudio puro.
-  const ALVO_MP3_KBPS = [320, 256, 192, 160, 128, 112, 96, 80, 64, 56, 48, 40, 32, 24, 16, 8];
-  const ALVO_MP3_KBPS_MINIMO = 8;
-
-  // -------------------------------------------------------------------
-  // Linha de base das conversões (opções 1, 2 e 3)
-  //
-  // Converter e comprimir são a mesma operação aqui: o sistema de destino
-  // aceita no máximo 20 MB por arquivo, e entregar um MP4 remuxado de
-  // 300 MB seria devolver o problema ao usuário. Os números abaixo são o
-  // teto, nunca o alvo — nenhuma conversão sobe bitrate, sample rate ou
-  // resolução acima do que o arquivo já tem.
-  // -------------------------------------------------------------------
-  const CONVERSAO_VIDEO = { crf: 23, preset: "medium", audioKbps: 128, audioHz: 32000 };
-  const CONVERSAO_AUDIO = { kbps: 128, hz: 32000 };
-
-  // Qualidade das imagens convertidas para JPG.
-  //
-  // O mjpeg do ffmpeg não conhece a escala 0–100 do libjpeg: o que ele
-  // aceita é o qscale, de 2 (melhor) a 31 (pior). O degrau 3 é o
-  // equivalente prático de "qualidade 90"; o 2, usado antes, fica em
-  // ~93/95 e praticamente não comprime nada.
-  const QSCALE_JPEG_90 = "3";
-
-  // O núcleo do ffmpeg (32 MB) vem do jsDelivr, não deste site. Versões
-  // fixadas de propósito: a URL vira imutável e cacheável para sempre.
-  //
-  // O "bytes" de cada arquivo está declarado porque o jsDelivr responde em
-  // chunks, sem Content-Length, e sem ele a barra de progresso ficaria sem
-  // denominador. Ao trocar de versão, atualize os números — o código avisa
-  // no console se divergirem do que o servidor mandar.
-  const CDN_CORE = "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/umd";
-  const ARQUIVOS_CORE = {
-    core:   { url: CDN_CORE + "/ffmpeg-core.js",        tipo: "text/javascript",  bytes: 129115 },
-    wasm:   { url: CDN_CORE + "/ffmpeg-core.wasm",      tipo: "application/wasm", bytes: 32718323 },
-    worker: { url: CDN_CORE + "/ffmpeg-core.worker.js", tipo: "text/javascript",  bytes: 2213 },
-  };
-  // Os dois arquivos que continuam locais (7,6 KB somados) — ver README.
-  const LOADER_LOCAL = ["js/conversor/vendor/ffmpeg/ffmpeg.js", "js/conversor/vendor/ffmpeg/814.ffmpeg.js"];
-
-  // v2: as chaves do cache mudaram de caminhos locais para URLs do jsDelivr.
-  // Como este core não chama receiveProgress (o símbolo nem existe no
-  // .wasm), o andamento vem de `-progress pipe:1`: o ffmpeg escreve blocos
-  // de `chave=valor` no stdout, terminados em newline — que é o que o
-  // Emscripten precisa para entregar a linha ao logger. As linhas de
-  // estatística normais terminam em CR e ficam presas no buffer.
-  const ARGS_PROGRESSO = ["-progress", "pipe:1"];
-
-  const CACHE_MOTOR = "acta-ffmpeg-v2";
-
-  // ffmpeg.load() nunca rejeita sozinho se o worker morrer: sem um teto de
-  // tempo a página fica "Inicializando…" para sempre.
-  const TIMEOUT_LOAD_MS = 90000;
-
-  // O ffmpeg.wasm carrega o arquivo inteiro no heap do WebAssembly; acima
-  // disso é comum a aba ficar sem memória com um erro pouco informativo.
-  const LIMITE_AVISO_MEMORIA = 500 * 1024 * 1024;
-
-  // Bits por pixel do x264 (preset medium) em CRF 23, usado só na estimativa
-  // de tamanho. Cada 6 pontos de CRF dobram ou reduzem o bitrate pela metade.
-  const BPP_CRF23 = 0.07;
-  const FPS_PRESUMIDO = 30;
-
-  // ---------------------------------------------------------------------
-  // Diagnóstico
-  //
-  // Os logs abaixo existem para responder "por que o motor não carregou?"
-  // sem precisar de um depurador. O bloco resumido sai sempre; o log
-  // linha-a-linha do próprio ffmpeg só sai com ?debug=1 na URL, porque são
-  // centenas de linhas por conversão.
-  // ---------------------------------------------------------------------
-
-  const VERBOSE = new URLSearchParams(location.search).get("debug") === "1";
-  const ESTILO_DIAG = "color:#2d4a63;font-weight:bold";
-
-  function diag(...args) {
-    console.log("%c[conversor]", ESTILO_DIAG, ...args);
-  }
-
-  function diagAviso(...args) {
-    console.warn("%c[conversor]", ESTILO_DIAG, ...args);
-  }
-
-  function diagErro(...args) {
-    console.error("%c[conversor]", ESTILO_DIAG, ...args);
-  }
-
-  const t0 = performance.now();
-  function desdeOInicio() {
-    return "+" + Math.round(performance.now() - t0) + "ms";
-  }
-
-  /**
-   * Diz se a página está isolada e, se não estiver, por quê: mostra o que o
-   * navegador reporta e o que o servidor realmente devolveu no documento.
-   */
-  async function diagnosticarIsolamento() {
-    const ambiente = {
-      url: location.href,
-      protocolo: location.protocol,
-      origem: location.origin,
-      "isSecureContext": window.isSecureContext,
-      "crossOriginIsolated": window.crossOriginIsolated,
-      "SharedArrayBuffer disponível": typeof SharedArrayBuffer !== "undefined",
-      "dentro de iframe": window.self !== window.top,
-    };
-    diag("Ambiente da página:");
-    if (console.table) console.table(ambiente);
-    else diag(ambiente);
-
-    if (location.protocol === "file:") {
-      diagAviso(
-        "A página foi aberta via file://. COOP/COEP só existem em resposta HTTP, " +
-        "então o isolamento nunca vai ligar assim. Sirva a pasta por HTTP " +
-        "(ex.: `python -m http.server`) com os cabeçalhos, ou use o deploy."
-      );
-      return ambiente;
-    }
-
-    // Refaz a requisição do próprio documento para ler os cabeçalhos que o
-    // servidor mandou. cache:"no-store" evita ler uma cópia antiga do disco.
-    try {
-      const resp = await fetch(location.href, { cache: "no-store" });
-      const coop = resp.headers.get("cross-origin-opener-policy");
-      const coep = resp.headers.get("cross-origin-embedder-policy");
-      diag("Resposta do servidor para este documento:", {
-        status: resp.status,
-        "Cross-Origin-Opener-Policy": coop || "(ausente)",
-        "Cross-Origin-Embedder-Policy": coep || "(ausente)",
-      });
-
-      if (coop === "same-origin" && coep === "require-corp") {
-        if (!window.crossOriginIsolated) {
-          diagAviso(
-            "Os dois cabeçalhos chegaram corretos, mas a página ainda não está " +
-            "isolada. Isso costuma ser um documento carregado ANTES de os " +
-            "cabeçalhos existirem (cache do navegador ou bfcache): recarregue " +
-            "com Ctrl+Shift+R. Se a página estiver dentro de um iframe, o pai " +
-            "também precisa mandar COEP."
-          );
-        }
-      } else {
-        diagAviso(
-          "O servidor não mandou o par COOP/COEP neste documento — é esta a " +
-          "causa do erro. Caminho pedido: " + location.pathname
-        );
-        if (location.pathname !== "/conversor.html") {
-          diagAviso(
-            "Atenção: functions/_middleware.js só aplica os cabeçalhos quando o " +
-            "pathname é exatamente \"/conversor.html\", e este é \"" +
-            location.pathname + "\". Acesse /conversor.html ou ajuste a " +
-            "condição do middleware."
-          );
-        }
-      }
-    } catch (err) {
-      diagErro("Não consegui reler o documento para inspecionar os cabeçalhos:", err);
-    }
-
-    return ambiente;
-  }
-
-  /**
-   * Envolve o construtor Worker para logar cada worker criado e, sobretudo,
-   * para escutar o evento "error" — o ffmpeg.js não escuta, então um worker
-   * que morre ao carregar deixa o load() pendurado sem nenhuma pista.
-   */
-  function instrumentarWorkers() {
-    if (typeof Worker !== "function" || Worker.__actaInstrumentado) return;
-    const Original = Worker;
-    const Envolvido = function (url, opcoes) {
-      const alvo = String(url);
-      diag("Novo Worker:", alvo, opcoes || "");
-      const w = new Original(url, opcoes);
-      w.addEventListener("error", (ev) => {
-        diagErro(
-          "Worker falhou:", alvo,
-          "| mensagem:", ev.message || "(vazia — o script não chegou a rodar)",
-          "| origem:", (ev.filename || "?") + ":" + (ev.lineno || "?")
-        );
-        // Um ErrorEvent vazio não distingue 404, 401 e falha de política.
-        // Buscar a URL na hora responde qual dos três foi.
-        if (alvo.startsWith("blob:")) return;
-        fetch(alvo, { cache: "no-store" }).then(
-          (resp) => {
-            diagErro("Investigando " + alvo + ":", {
-              status: resp.status,
-              "Content-Type": resp.headers.get("content-type") || "(ausente)",
-              "Cross-Origin-Embedder-Policy": resp.headers.get("cross-origin-embedder-policy") || "(AUSENTE)",
-              "Cross-Origin-Resource-Policy": resp.headers.get("cross-origin-resource-policy") || "(ausente)",
-            });
-            if (resp.ok && !resp.headers.get("cross-origin-embedder-policy")) {
-              diagErro(
-                "O script do worker existe (" + resp.status + ") mas veio SEM " +
-                "Cross-Origin-Embedder-Policy. Num documento isolado, o worker " +
-                "precisa desse cabeçalho para poder usar SharedArrayBuffer — " +
-                "aplique COOP/COEP a todas as rotas, não só à página."
-              );
-            }
-          },
-          (err) => diagErro("Nem o fetch de " + alvo + " passou:", err)
-        );
-      });
-      w.addEventListener("messageerror", (ev) => diagErro("Worker messageerror:", alvo, ev));
-      return w;
-    };
-    Envolvido.prototype = Original.prototype;
-    Envolvido.__actaInstrumentado = true;
-    try {
-      window.Worker = Envolvido;
-    } catch (e) {
-      diagAviso("Não consegui instrumentar o construtor Worker:", e);
-    }
-  }
-
-  /** Confere se os arquivos do motor estão realmente no ar (locais e do CDN). */
-  async function diagnosticarArquivosDoMotor() {
-    const alvos = LOADER_LOCAL.concat(
-      Object.keys(ARQUIVOS_CORE).map((k) => ARQUIVOS_CORE[k].url)
-    );
-
-    const linhas = {};
-    await Promise.all(
-      alvos.map(async (url) => {
-        try {
-          const ehCDN = url.startsWith("http");
-          const resp = await fetch(url, {
-            method: "HEAD",
-            cache: "no-store",
-            mode: ehCDN ? "cors" : "same-origin",
-            credentials: ehCDN ? "omit" : "same-origin",
-          });
-          linhas[url] = {
-            status: resp.status,
-            bytes: resp.headers.get("content-length") || "(sem content-length)",
-            tipo: resp.headers.get("content-type") || "(sem content-type)",
-            CORP: resp.headers.get("cross-origin-resource-policy") || "-",
-          };
-        } catch (err) {
-          linhas[url] = { status: "ERRO", bytes: "-", tipo: String(err.message || err) };
-        }
-      })
-    );
-    diag("Arquivos do motor ffmpeg:");
-    if (console.table) console.table(linhas);
-    else diag(linhas);
-  }
-
-  // ---------------------------------------------------------------------
-  // Utilitários
-  // ---------------------------------------------------------------------
-
-  function extOf(name) {
-    const idx = name.lastIndexOf(".");
-    return idx === -1 ? "" : name.slice(idx).toLowerCase();
-  }
-
-  function baseName(name) {
-    const idx = name.lastIndexOf(".");
-    return idx === -1 ? name : name.slice(0, idx);
-  }
-
-  function roundEven(n) {
-    n = Math.round(n);
-    if (n % 2 !== 0) n -= 1;
-    return Math.max(n, 2);
-  }
-
+  // O ffmpeg.wasm — baixar, carregar e rodar — mora em
+  // js/conversor/motor.js, que não conhece esta página.
+  const {
+    VERBOSE,
+    cauda,
+    derrubarMotor,
+    diag,
+    diagAviso,
+    diagnosticarArquivosDoMotor,
+    diagnosticarIsolamento,
+    execComLog,
+    execCompressao,
+    fileToUint8,
+    ganchos,
+    getFFmpeg,
+    probeArquivoEscrito,
+  } = window.ConversorMotor;
 
   /** Caminho a exibir: arquivos vindos de pasta (input ou arrasto) mostram o caminho. */
   function caminhoDe(file) {
     return file.caminhoRelativo || file.webkitRelativePath || file.name;
-  }
-
-  /** Rejeita a promessa depois de `ms` caso ela não resolva sozinha. */
-  function comTeto(promessa, ms, mensagem) {
-    let timer;
-    const estouro = new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error(mensagem)), ms);
-    });
-    return Promise.race([promessa, estouro]).finally(() => clearTimeout(timer));
-  }
-
-  async function fileToUint8(file) {
-    return new Uint8Array(await file.arrayBuffer());
-  }
-
-  function tipoDoArquivo(file) {
-    const ext = extOf(file.name);
-    if (VIDEO_EXTS.includes(ext)) return "video";
-    if (AUDIO_EXTS.includes(ext)) return "audio";
-    return null;
-  }
-
-  /**
-   * Tipo único de toda a seleção da opção 9, ou null.
-   *
-   * A fila exige que os arquivos sejam todos vídeo ou todos áudio: as
-   * tabelas de nível são diferentes entre os dois, e os campos manuais na
-   * tela são de um tipo só. Misturar significaria uma tela que fala de
-   * duas coisas ao mesmo tempo — melhor pedir duas passadas.
-   */
-  function tipoComumDeCompressao(arquivos) {
-    if (arquivos.length === 0) return null;
-    const tipos = new Set(arquivos.map(tipoDoArquivo));
-    if (tipos.size !== 1) return null;
-    const unico = tipos.values().next().value;
-    return unico === "video" || unico === "audio" ? unico : null;
-  }
-
-  /**
-   * Extrai o que interessa do log do `ffmpeg -i`.
-   *
-   * Trabalha uma linha de cada vez em vez de uma regex só. A versão anterior
-   * tentava alcançar o fps a partir da resolução na mesma expressão, e só
-   * funcionava quando havia exatamente um campo entre os dois — o ffmpeg
-   * costuma intercalar dois ou três (`[SAR 1:1 DAR 16:9]`, `4988 kb/s`),
-   * então o fps quase nunca era encontrado.
-   */
-  /**
-   * Codecs de vídeo que este build não consegue decodificar.
-   *
-   * O @ffmpeg/core-mt 0.12.10 é compilado sem libdav1d, libaom e libgav1
-   * (conferido na linha de configuration do .wasm). Sem elas, o decoder
-   * "av1" do ffmpeg é só um invólucro para aceleração de hardware — que não
-   * existe em WebAssembly. O sintoma é "Your platform doesn't suppport
-   * hardware accelerated AV1 decoding" seguido de "Function not
-   * implemented", e a conversão morre antes do primeiro quadro.
-   */
-  const CODECS_SEM_DECODER = {
-    av1: "AV1",
-  };
-
-  /** Devolve a explicação se o arquivo não puder ser decodificado; senão null. */
-  function problemaDeCodec(info) {
-    if (!info || !info.vCodec) return null;
-    const nome = CODECS_SEM_DECODER[info.vCodec];
-    if (!nome) return null;
-    return (
-      "Este vídeo está codificado em " + nome + ", e o motor ffmpeg deste site " +
-      "não traz decodificador de " + nome + " — não há como convertê-lo aqui. " +
-      "Baixe o arquivo em H.264 na origem (o YouTube, por exemplo, oferece as " +
-      "duas versões) ou converta antes num programa de desktop."
-    );
-  }
-
-  /**
-   * Traduz o fim do log do ffmpeg para uma frase útil. Serve para o caso em
-   * que a falha não foi prevista pela checagem de codec.
-   */
-  function explicarFalha(linhas) {
-    const texto = linhas.join("\n");
-    const temAv1 = /\bav1\b/i.test(texto);
-
-    if (/hardware accelerated AV1 decoding|Missing Sequence Header/i.test(texto) && temAv1) {
-      return problemaDeCodec({ vCodec: "av1" });
-    }
-    if (/Protocol not found/i.test(texto)) {
-      return "O ffmpeg recusou uma das URLs do comando (protocolo indisponível neste build).";
-    }
-    if (/Function not implemented/i.test(texto)) {
-      return "O ffmpeg encontrou um recurso que este build não implementa — " +
-             "normalmente um codec de entrada sem decodificador.";
-    }
-    if (/Cannot determine format of input stream/i.test(texto)) {
-      return "O ffmpeg não conseguiu decodificar o vídeo de entrada. " +
-             "O arquivo pode estar corrompido ou usar um codec sem suporte aqui.";
-    }
-    if (/No space left|Cannot allocate memory|out of memory/i.test(texto)) {
-      return "Faltou memória. Arquivos grandes estouram o heap do WebAssembly — " +
-             "tente cortar um trecho menor.";
-    }
-    if (/Invalid data found when processing input/i.test(texto)) {
-      return "O ffmpeg achou dados inválidos na entrada. O arquivo pode estar " +
-             "truncado ou incompleto.";
-    }
-    return null;
-  }
-
-  function parseMediaInfo(log) {
-    const info = {
-      width: null, height: null, fps: null, duration: null,
-      vCodec: null, aCodec: null,
-      hasAudio: false, aBitrate: null, aSampleRate: null, aChannels: null,
-    };
-
-    const linhaVideo = (log.match(/^.*\bVideo:.*$/m) || [])[0];
-    if (linhaVideo) {
-      const cv = linhaVideo.match(/Video:\s*([a-zA-Z0-9_]+)/);
-      if (cv) info.vCodec = cv[1].toLowerCase();
-      // a resolução precisa ser um token isolado: assim "0x31637661" (a tag
-      // do codec) não é confundida com dimensões
-      const dim = linhaVideo.match(/(?:^|[\s,(\[])(\d{2,5})x(\d{2,5})(?:[\s,)\]]|$)/);
-      if (dim) {
-        info.width = parseInt(dim[1], 10);
-        info.height = parseInt(dim[2], 10);
-      }
-      // "29.97 fps" é o valor real; "tbr" é a base de tempo e serve de
-      // segunda opção quando o fps não vem declarado
-      const fps = linhaVideo.match(/([\d.]+)\s*fps\b/) || linhaVideo.match(/([\d.]+)\s*tbr\b/);
-      if (fps) {
-        const valor = parseFloat(fps[1]);
-        if (Number.isFinite(valor) && valor > 0) info.fps = valor;
-      }
-    }
-
-    const dur = log.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
-    if (dur) {
-      info.duration = Number(dur[1]) * 3600 + Number(dur[2]) * 60 + parseFloat(dur[3]);
-    }
-
-    const linhaAudio = (log.match(/^.*\bAudio:.*$/m) || [])[0];
-    if (linhaAudio) {
-      info.hasAudio = true;
-      const ca = linhaAudio.match(/Audio:\s*([a-zA-Z0-9_]+)/);
-      if (ca) info.aCodec = ca[1].toLowerCase();
-      const hz = linhaAudio.match(/(\d+)\s*Hz\b/);
-      if (hz) info.aSampleRate = parseInt(hz[1], 10);
-
-      if (/\bmono\b/i.test(linhaAudio)) info.aChannels = 1;
-      else if (/\bstereo\b/i.test(linhaAudio)) info.aChannels = 2;
-      else {
-        // formatos como "5.1", "7.1" ou "6 channels"
-        const canais = linhaAudio.match(/(\d+)(?:\.(\d+))?\s*channels?\b/) ||
-                       linhaAudio.match(/\b(\d)\.(\d)\b(?!\s*(?:kb|Hz))/);
-        if (canais) {
-          const principais = parseInt(canais[1], 10) || 0;
-          const graves = canais[2] ? parseInt(canais[2], 10) : 0;
-          info.aChannels = principais + graves || null;
-        }
-      }
-
-      const kbps = linhaAudio.match(/(\d+)\s*kb\/s/);
-      if (kbps) info.aBitrate = parseInt(kbps[1], 10);
-    }
-
-    return info;
   }
 
   /**
@@ -598,488 +131,6 @@
     });
   }
 
-  /**
-   * Traduz "este vídeo tem de caber em N bytes" em bitrate de vídeo, de
-   * áudio e, se preciso, uma resolução menor.
-   *
-   * Devolve também `cabe: false` quando nem o bitrate mínimo utilizável
-   * cabe no alvo — nesse caso o encode segue no mínimo e o arquivo sai
-   * maior que o pedido, o que é melhor que devolver um borrão inútil do
-   * tamanho certo.
-   */
-  function planejarAlvo(info, duracao, alvoBytes) {
-    const kbpsTotal = (alvoBytes * 8 * ALVO_MARGEM) / duracao / 1000;
-
-    // O áudio vem primeiro porque é a parte que não se comprime bem: fica
-    // com no máximo um quinto do orçamento e nunca acima do original.
-    let audioKbps = 0;
-    if (info.hasAudio) {
-      const teto = Math.max(16, kbpsTotal * 0.2);
-      audioKbps = ALVO_AUDIO_KBPS.find((k) => k <= teto) || 16;
-      if (info.aBitrate && info.aBitrate < audioKbps) audioKbps = info.aBitrate;
-    }
-
-    let videoKbps = Math.floor(kbpsTotal - audioKbps);
-    let cabe = true;
-    if (videoKbps < ALVO_VIDEO_KBPS_MINIMO) {
-      videoKbps = ALVO_VIDEO_KBPS_MINIMO;
-      cabe = false;
-    }
-
-    // Com bitrate curto, uma imagem menor e nítida serve melhor que a
-    // resolução original cheia de blocos.
-    let width = info.width;
-    let height = info.height;
-    const fps = info.fps || FPS_PRESUMIDO;
-    if (width && height) {
-      const bpp = () => (videoKbps * 1000) / (width * height * fps);
-      for (const degrau of ESCADA_LARGURA) {
-        if (bpp() >= ALVO_BPP_MINIMO) break;
-        if (degrau >= width) continue; // a escada só desce
-        // sempre a partir das dimensões originais, para o arredondamento
-        // de um degrau não se acumular no seguinte
-        height = roundEven((degrau * info.height) / info.width);
-        width = roundEven(degrau);
-      }
-    }
-
-    return {
-      videoKbps,
-      audioKbps,
-      samplerate: audioKbps > 0 && audioKbps <= 64 ? 24000 : null,
-      mono: audioKbps > 0 && audioKbps <= 64,
-      width,
-      height,
-      cabe,
-    };
-  }
-
-  /** Mesma ideia de planejarAlvo, para arquivo de áudio puro (saída MP3). */
-  function planejarAlvoAudio(info, duracao, alvoBytes) {
-    const bruto = (alvoBytes * 8 * ALVO_MARGEM) / duracao / 1000;
-    const bitrate = ALVO_MP3_KBPS.find((k) => k <= bruto) || ALVO_MP3_KBPS_MINIMO;
-
-    // Sample rate e canais acompanham o bitrate: 24 kbps em estéreo a
-    // 44,1 kHz soa pior que 24 kbps em mono a 16 kHz — e o MP3 nem aceita
-    // bitrate baixo com taxa de amostragem alta (MPEG-1 x MPEG-2).
-    let samplerate = null;
-    let mono = false;
-    if (bitrate < 40) {
-      samplerate = 16000;
-      mono = true;
-    } else if (bitrate < 64) {
-      samplerate = 24000;
-      mono = true;
-    } else if (bitrate < 112) {
-      samplerate = 32000;
-    }
-
-    return { bitrate, samplerate, mono, compressionLevel: 2, cabe: bruto >= ALVO_MP3_KBPS_MINIMO };
-  }
-
-  /** Piso de tamanho do nível Tamanho-alvo: abaixo disso o encoder não desce. */
-  function pisoDoAlvo(tipo, duracao) {
-    const kbps = tipo === "video" ? ALVO_VIDEO_KBPS_MINIMO + 16 : ALVO_MP3_KBPS_MINIMO;
-    return ((kbps * 1000) / 8) * duracao;
-  }
-
-  /**
-   * Argumentos da faixa AAC, com bitrate e sample rate limitados ao que o
-   * arquivo já tem. Recomprimir para cima só aumentaria o arquivo sem
-   * devolver nada do que a compressão anterior jogou fora.
-   */
-  function argsAudioAac(info, bitrateAlvo, samplerateAlvo, monoAlvo) {
-    let bitrate = bitrateAlvo;
-    if (info.aBitrate && info.aBitrate < bitrate) bitrate = info.aBitrate;
-    let samplerate = samplerateAlvo;
-    if (samplerate && info.aSampleRate && info.aSampleRate < samplerate) samplerate = info.aSampleRate;
-    const mono = monoAlvo || info.aChannels === 1;
-    const args = ["-c:a", "aac", "-b:a", bitrate + "k", "-ac", mono ? "1" : String(info.aChannels || 2)];
-    if (samplerate) args.push("-ar", String(samplerate));
-    return args;
-  }
-
-  /**
-   * Bytes que a linha de base da opção 2 produziria neste vídeo, ou null
-   * quando falta dado para calcular. Mesmo modelo de bits por pixel da
-   * estimativa da tela — grosseiro, mas suficiente para a única decisão
-   * que depende dele: recomprimir ou apenas remuxar.
-   */
-  function estimarConversaoVideo(info) {
-    if (!info || !info.duration || !info.width || !info.height) return null;
-    const fps = info.fps || FPS_PRESUMIDO;
-    const bpp = BPP_CRF23 * Math.pow(2, (23 - CONVERSAO_VIDEO.crf) / 6);
-    const audioBps = info.hasAudio
-      ? (Math.min(CONVERSAO_VIDEO.audioKbps, info.aBitrate || CONVERSAO_VIDEO.audioKbps) * 1000) / 8
-      : 0;
-    return ((bpp * info.width * info.height * fps) / 8 + audioBps) * info.duration;
-  }
-
-  /** Estimativa grosseira do tamanho da saída, em bytes. null = não dá para estimar. */
-  function estimarTamanho(tipo, meta, nivel, custom) {
-    if (!meta || !meta.duracao) return null;
-
-    // No Tamanho-alvo a estimativa é o próprio alvo — a menos que ele
-    // esteja abaixo do que o bitrate mínimo produz nessa duração.
-    if (nivel === "6") {
-      if (!custom || !custom.alvoBytes) return null;
-      return Math.max(custom.alvoBytes, pisoDoAlvo(tipo, meta.duracao));
-    }
-
-    if (tipo === "audio") {
-      const alvo = nivel === "5" ? custom : LEVEL_AUDIO_ONLY[nivel];
-      if (!alvo || !alvo.bitrate) return null;
-      return ((alvo.bitrate * 1000) / 8) * meta.duracao;
-    }
-
-    if (!meta.largura || !meta.altura) return null;
-    let crf;
-    let largura = meta.largura;
-    let altura = meta.altura;
-    let fps = meta.fps || FPS_PRESUMIDO;
-    let audioKbps;
-
-    if (nivel === "5") {
-      crf = custom.crf;
-      if (custom.width) {
-        altura = Math.round((custom.width * meta.altura) / meta.largura);
-        largura = custom.width;
-      }
-      if (custom.fps) fps = Math.min(fps, custom.fps);
-      audioKbps = custom.removeAudio ? 0 : custom.audioBitrate;
-    } else {
-      const v = LEVEL_VIDEO[nivel];
-      if (!v) return null;
-      crf = v.crf;
-      if (v.scale) {
-        largura = Math.round(largura * v.scale);
-        altura = Math.round(altura * v.scale);
-      }
-      if (v.maxFps) fps = Math.min(fps, v.maxFps);
-      audioKbps = LEVEL_AUDIO[nivel].bitrate;
-    }
-
-    const bpp = BPP_CRF23 * Math.pow(2, (23 - crf) / 6);
-    const bytesPorSegundo = (bpp * largura * altura * fps) / 8 + (audioKbps * 1000) / 8;
-    return bytesPorSegundo * meta.duracao;
-  }
-
-  // ---------------------------------------------------------------------
-  // Motor ffmpeg (instância única, carregada sob demanda e cacheada)
-  // ---------------------------------------------------------------------
-
-  let ffmpegInstance = null;
-  let ffmpegLoadingPromise = null;
-  let ffmpegEmConstrucao = null;
-  let logSink = null;
-  let logWatcher = null;
-  // ultimas linhas do ffmpeg, para explicar uma falha
-  const CAUDA_MAX = 40;
-  let logCauda = [];
-  // null = ainda nao sei se este core aceita -progress pipe:1
-  let progressoSuportado = null;
-  let progressCallback = null;
-  let cancelado = false;
-
-  function attachSinks(ffmpeg) {
-    ffmpeg.on("log", ({ message }) => {
-      if (logSink) logSink.push(message);
-      logCauda.push(message);
-      if (logCauda.length > CAUDA_MAX) logCauda.shift();
-      if (logWatcher) logWatcher(message);
-      if (VERBOSE) console.debug("[ffmpeg]", message);
-    });
-    // repassa o payload inteiro: o campo `time` (microssegundos) é o que
-    // realmente serve para medir andamento — ver criarAcompanhante()
-    ffmpeg.on("progress", (evento) => {
-      if (progressCallback) progressCallback(evento || {});
-    });
-  }
-
-  async function abrirCache() {
-    if (!("caches" in window)) {
-      diagAviso("Cache API indisponível — o motor será baixado toda vez.");
-      return null;
-    }
-    try {
-      return await caches.open(CACHE_MOTOR);
-    } catch (e) {
-      // modo privado / storage bloqueado: segue sem cache
-      diagAviso("Não consegui abrir o cache \"" + CACHE_MOTOR + "\":", e);
-      return null;
-    }
-  }
-
-  /** Lê o corpo de uma Response reportando cada pedaço recebido. */
-  async function lerCorpo(resp, onDelta) {
-    if (!resp.body || typeof resp.body.getReader !== "function") {
-      const buf = await resp.arrayBuffer();
-      onDelta(buf.byteLength);
-      return buf;
-    }
-    const leitor = resp.body.getReader();
-    const pedacos = [];
-    let tamanho = 0;
-    for (;;) {
-      const { done, value } = await leitor.read();
-      if (done) break;
-      pedacos.push(value);
-      tamanho += value.length;
-      onDelta(value.length);
-    }
-    const out = new Uint8Array(tamanho);
-    let pos = 0;
-    for (const p of pedacos) {
-      out.set(p, pos);
-      pos += p.length;
-    }
-    return out.buffer;
-  }
-
-  /**
-   * Baixa do jsDelivr (ou recupera do cache) os três arquivos do núcleo e
-   * devolve blob: URLs para cada um, reportando o progresso em bytes.
-   *
-   * Por que blob: URL e não a URL do CDN direto? Porque o Emscripten cria os
-   * workers de pthread com `new Worker(workerURL)`, e o construtor Worker
-   * rejeita qualquer URL de outra origem — nem CORS nem CORP mudam isso. Um
-   * blob: URL pertence à nossa origem e passa. De quebra, buscar nós mesmos
-   * mantém a barra de progresso e o cache.
-   */
-  async function baixarCoreComoBlobURLs(onProgresso) {
-    const cache = await abrirCache();
-    const chaves = ["core", "worker", "wasm"]; // wasm por último: é o pesado
-    const totalDeclarado = chaves.reduce((n, k) => n + ARQUIVOS_CORE[k].bytes, 0);
-
-    // Resolve as três respostas antes de ler qualquer corpo: assim os
-    // Content-Length somados dão o denominador da barra, e o que faltar
-    // baixa em paralelo em vez de um depois do outro.
-    const fontes = await Promise.all(
-      chaves.map(async (chave) => {
-        const spec = ARQUIVOS_CORE[chave];
-        let doCache = null;
-        if (cache) {
-          try { doCache = await cache.match(spec.url); } catch (e) { doCache = null; }
-        }
-        if (doCache) return { chave, spec, resp: doCache, veioDoCache: true };
-        // credentials omitidas: o site fica atrás de Basic Auth, e mandar
-        // credenciais para uma origem que responde ACAO:* quebra o CORS.
-        const resp = await fetch(spec.url, { mode: "cors", credentials: "omit" });
-        if (!resp.ok) throw new Error("Falha ao baixar " + spec.url + " (" + resp.status + ")");
-        return { chave, spec, resp, veioDoCache: false };
-      })
-    );
-
-    const todasEmCache = fontes.every((f) => f.veioDoCache);
-    diag(
-      "Núcleo do ffmpeg:",
-      fontes
-        .map((f) => f.spec.url.split("/").pop() + (f.veioDoCache ? " (cache)" : " (jsDelivr " + f.resp.status + ")"))
-        .join(", ")
-    );
-
-    // O denominador tem de ser o tamanho DESCOMPRIMIDO, porque lerCorpo()
-    // conta bytes já decodificados. O Content-Length do jsDelivr é o tamanho
-    // comprimido (br/gzip) — usá-lo faria a barra bater 100% com um terço do
-    // download. Por isso o valor declarado manda, e o Content-Length só
-    // entra se não houver declaração.
-    let total = 0;
-    let origemDoTotal = "tamanhos declarados em ARQUIVOS_CORE";
-    for (const f of fontes) {
-      if (f.spec.bytes) {
-        total += f.spec.bytes;
-      } else {
-        const n = Number(f.resp.headers.get("content-length"));
-        total += Number.isFinite(n) && n > 0 ? n : 0;
-        origemDoTotal = "Content-Length (pode estar comprimido)";
-      }
-    }
-    diag("Total do download:", humanSize(total), "(via " + origemDoTotal + ")");
-
-    let recebido = 0;
-    const urls = {};
-    for (const f of fontes) {
-      const buf = await lerCorpo(f.resp, (delta) => {
-        recebido += delta;
-        if (onProgresso) onProgresso(recebido, total, todasEmCache);
-      });
-      // Comparação honesta: bytes efetivamente lidos (já descomprimidos)
-      // contra o valor declarado. Pega constante desatualizada de verdade.
-      if (f.spec.bytes && buf.byteLength !== f.spec.bytes) {
-        diagAviso(
-          "O tamanho declarado de " + f.spec.url.split("/").pop() + " (" + f.spec.bytes +
-          " bytes) não bate com o recebido (" + buf.byteLength + " bytes). Atualize ARQUIVOS_CORE."
-        );
-      }
-      if (!f.veioDoCache && cache) {
-        try {
-          await cache.put(f.spec.url, new Response(buf, { headers: { "Content-Type": f.spec.tipo } }));
-        } catch (e) {
-          // cota estourada ou storage bloqueado: só perde o cache
-        }
-      }
-      urls[f.chave] = URL.createObjectURL(new Blob([buf], { type: f.spec.tipo }));
-    }
-
-    diag("Núcleo pronto:", humanSize(recebido), "convertido em blob: URLs", desdeOInicio());
-    return { coreURL: urls.core, wasmURL: urls.wasm, workerURL: urls.worker };
-  }
-
-  async function getFFmpeg(onStatus, onProgresso) {
-    if (ffmpegInstance) return ffmpegInstance;
-    if (!ffmpegLoadingPromise) {
-      ffmpegLoadingPromise = (async () => {
-        if (!window.crossOriginIsolated) {
-          diagErro("Abortando: a página não está isolada. Diagnóstico completo abaixo.");
-          await diagnosticarIsolamento();
-          await diagnosticarArquivosDoMotor();
-          throw new Error(
-            "A página não está isolada (COOP/COEP). O motor de conversão multi-thread " +
-            "não pode ser carregado. Abra o console do navegador (F12) — há um " +
-            "diagnóstico detalhado lá dizendo qual cabeçalho faltou."
-          );
-        }
-        diag("Iniciando o carregamento do motor.", desdeOInicio());
-        if (onStatus) onStatus("Carregando o motor de conversão (ffmpeg)…");
-        if (!window.FFmpegWASM || !window.FFmpegWASM.FFmpeg) {
-          diagErro("window.FFmpegWASM não existe — js/conversor/vendor/ffmpeg/ffmpeg.js não carregou.");
-          throw new Error(
-            "A biblioteca ffmpeg.js não carregou. Confira se js/conversor/vendor/ffmpeg/ffmpeg.js " +
-            "está sendo servido (aba Network do navegador)."
-          );
-        }
-        instrumentarWorkers();
-        const { FFmpeg } = window.FFmpegWASM;
-        const ffmpeg = new FFmpeg();
-        ffmpegEmConstrucao = ffmpeg;
-        attachSinks(ffmpeg);
-        const urlsDoCore = await baixarCoreComoBlobURLs(onProgresso);
-        if (onStatus) onStatus("Inicializando o motor de conversão…");
-        // Todas as URLs aqui são blob:, logo absolutas e da nossa origem.
-        // Isso importa: elas são repassadas ao worker js/conversor/vendor/ffmpeg/
-        // 814.ffmpeg.js, que faz importScripts(coreURL) — um caminho
-        // relativo resolveria contra a pasta do worker, não a da página — e
-        // o Emscripten faz new Worker(workerURL), que recusa outra origem.
-        diag("Carregando o core:", urlsDoCore);
-
-        await comTeto(
-          ffmpeg.load(urlsDoCore),
-          TIMEOUT_LOAD_MS,
-          "O motor não respondeu em " + TIMEOUT_LOAD_MS / 1000 + "s. Isso costuma " +
-          "significar que o worker do ffmpeg morreu ao carregar o core — veja no " +
-          "console se houve erro de Worker ou um 404 em ffmpeg-core.js."
-        );
-        ffmpegEmConstrucao = null;
-        ffmpegInstance = ffmpeg;
-        diag("Motor pronto.", desdeOInicio());
-        if (onStatus) onStatus("");
-        return ffmpeg;
-      })();
-      // permite uma nova tentativa depois de um erro ou de um cancelamento
-      ffmpegLoadingPromise.catch((err) => {
-        diagErro("Falha ao carregar o motor:", err);
-        ffmpegLoadingPromise = null;
-        ffmpegEmConstrucao = null;
-      });
-    }
-    return ffmpegLoadingPromise;
-  }
-
-  /** Mata o worker do ffmpeg; a instância recarrega (do cache) na próxima vez. */
-  function derrubarMotor() {
-    diag("Derrubando o worker do ffmpeg.");
-    const alvo = ffmpegInstance || ffmpegEmConstrucao;
-    if (alvo) {
-      try { alvo.terminate(); } catch (e) {}
-    }
-    ffmpegInstance = null;
-    ffmpegLoadingPromise = null;
-    ffmpegEmConstrucao = null;
-    progressCallback = null;
-    logSink = null;
-  }
-
-  /** Envolve ffmpeg.exec logando o argv, o código de saída e o tempo gasto. */
-  async function execComLog(ffmpeg, args, opcoes) {
-    // a sonda sai com código 1 de propósito (não há arquivo de saída),
-    // então nesse caso o log não é sintoma de nada
-    const falhaEsperada = !!(opcoes && opcoes.falhaEsperada);
-    diag("ffmpeg", args.join(" "));
-    const inicio = performance.now();
-    logCauda = [];
-    try {
-      const code = await ffmpeg.exec(args);
-      const ms = Math.round(performance.now() - inicio);
-      if (code) {
-        if (!falhaEsperada) {
-          diagAviso("ffmpeg saiu com código", code, "em " + ms + "ms");
-          despejarCauda();
-        }
-      } else {
-        diag("ffmpeg ok em " + ms + "ms");
-      }
-      return code;
-    } catch (err) {
-      diagErro("ffmpeg lançou exceção em " + Math.round(performance.now() - inicio) + "ms:", err);
-      despejarCauda();
-      throw err;
-    }
-  }
-
-  /** Mostra o fim do log do ffmpeg — é onde a razão da falha aparece. */
-  function despejarCauda() {
-    if (logCauda.length === 0) {
-      diagAviso("O ffmpeg não deixou nenhuma linha de log.");
-      return;
-    }
-    const explicacao = explicarFalha(logCauda);
-    if (explicacao) diagErro("Provável causa:", explicacao);
-    diagErro("Últimas " + logCauda.length + " linhas do ffmpeg:");
-    for (const linha of logCauda) console.error("    " + linha);
-  }
-
-  /**
-   * Roda a compressão pedindo andamento. Se falhar COM `-progress pipe:1`,
-   * tenta uma vez sem: nem todo core aceita abrir esse pipe, e é melhor
-   * perder a barra do que perder a conversão.
-   */
-  async function execCompressao(ffmpeg, args, outName) {
-    const tentarProgresso = progressoSuportado !== false;
-    let code = await execComLog(ffmpeg, tentarProgresso ? [...ARGS_PROGRESSO, ...args] : args);
-
-    // Só vale repetir se o log realmente acusar o pipe. Repetir por
-    // qualquer falha dobraria a espera de um encode longo à toa.
-    const culpaDoPipe = logCauda.some((l) => /pipe:|progress/i.test(l) && /not found|Invalid|error/i.test(l));
-    if (code && tentarProgresso && culpaDoPipe) {
-      try { await ffmpeg.deleteFile(outName); } catch (e) {}
-      diagAviso("O log acusa o -progress pipe:1. Repetindo sem ele…");
-      code = await execComLog(ffmpeg, args);
-      if (!code) {
-        progressoSuportado = false;
-        diagAviso(
-          "Confirmado: este core recusa -progress pipe:1. O andamento detalhado " +
-          "fica desativado nesta sessão; o tempo decorrido continua contando."
-        );
-      }
-    } else if (!code && tentarProgresso) {
-      progressoSuportado = true;
-    }
-    return code;
-  }
-
-  /** Sonda um arquivo que ja esta no FS do ffmpeg, sem reescreve-lo. */
-  async function probeArquivoEscrito(ffmpeg, inName) {
-    logSink = [];
-    try {
-      await execComLog(ffmpeg, ["-i", inName], { falhaEsperada: true });
-    } catch (e) {
-      // esperado: sem arquivo de saida, ffmpeg "falha" - so queremos o log
-    }
-    const texto = logSink.join(String.fromCharCode(10));
-    logSink = null;
-    return parseMediaInfo(texto);
-  }
-
   async function probeMediaInfo(ffmpeg, file) {
     const inName = "probe" + extOf(file.name);
     await etapa("Sonda: escrever " + humanSize(file.size) + " no FS",
@@ -1113,7 +164,7 @@
     const inName = "in" + ext;
     const outName = baseName(file.name) + ".mp3";
     await ffmpeg.writeFile(inName, await fileToUint8(file));
-    progressCallback = onProgress
+    ganchos.progresso = onProgress
       ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
       : null;
     let code;
@@ -1131,7 +182,7 @@
         "-b:a", bitrate + "k", "-ar", String(samplerate), outName,
       ]);
     } finally {
-      progressCallback = null;
+      ganchos.progresso = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
     if (code) throw new Error("ffmpeg retornou erro ao converter áudio");
@@ -1189,7 +240,7 @@
                            : "recodificar em CRF " + CONVERSAO_VIDEO.crf,
       });
 
-      progressCallback = onProgress
+      ganchos.progresso = onProgress
         ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
         : null;
 
@@ -1220,7 +271,7 @@
         ]);
       }
     } finally {
-      progressCallback = null;
+      ganchos.progresso = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
     if (code) throw new Error("ffmpeg retornou erro ao converter vídeo");
@@ -1245,14 +296,14 @@
     const inName = "in" + ext;
     const outName = baseName(file.name) + ".jpg";
     await ffmpeg.writeFile(inName, await fileToUint8(file));
-    progressCallback = onProgress
+    ganchos.progresso = onProgress
       ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
       : null;
     let code;
     try {
       code = await execComLog(ffmpeg, ["-i", inName, "-frames:v", "1", "-q:v", QSCALE_JPEG_90, outName]);
     } finally {
-      progressCallback = null;
+      ganchos.progresso = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
     if (code) throw new Error("ffmpeg retornou erro ao converter imagem");
@@ -1278,20 +329,20 @@
     const inName = "ex" + ext;
     const outName = baseName(file.name) + ".mp3";
     await ffmpeg.writeFile(inName, await fileToUint8(file));
-    progressCallback = onProgress
+    ganchos.progresso = onProgress
       ? (ev) => onProgress(Math.min(1, Math.max(0, (ev && ev.progress) || 0)))
       : null;
     let code;
     try {
       code = await execComLog(ffmpeg, ["-i", inName, "-vn", "-c:a", "libmp3lame", "-q:a", "2", outName]);
     } finally {
-      progressCallback = null;
+      ganchos.progresso = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
     if (code) {
       // O caso comum de falha aqui é o vídeo simplesmente não ter som —
       // vale dizer isso em vez de repetir "o ffmpeg deu erro".
-      const semSom = logCauda.some((l) => /does not contain any stream|Output file .* empty/i.test(l));
+      const semSom = cauda().some((l) => /does not contain any stream|Output file .* empty/i.test(l));
       throw new Error(semSom ? "Este vídeo não tem faixa de áudio." : "ffmpeg retornou erro ao extrair o áudio");
     }
     const data = await ffmpeg.readFile(outName);
@@ -1528,6 +579,10 @@
   // ---------------------------------------------------------------------
   // Estado da UI
   // ---------------------------------------------------------------------
+
+  // Vivia junto do motor, mas nunca foi dele: quem cancela é o usuário, e
+  // quem consulta são os laços da fila.
+  let cancelado = false;
 
   const estado = {
     opcao: null,
@@ -2141,7 +1196,6 @@
   // Corte de trecho (opção 9, vale para qualquer nível)
   // ---------------------------------------------------------------------
 
-
   /**
    * Acompanha um encode.
    *
@@ -2284,12 +1338,12 @@
       }
     };
 
-    progressCallback = (evento) => {
+    ganchos.progresso = (evento) => {
       acompanhante.observarProgresso(evento);
       if (performance.now() - ultimaPublicacao >= 250) publicar();
       relatar(false);
     };
-    logWatcher = (mensagem) => {
+    ganchos.log = (mensagem) => {
       acompanhante.observarLog(mensagem);
       if (performance.now() - ultimaPublicacao >= 250) publicar();
     };
@@ -2305,8 +1359,8 @@
       clearInterval(timer);
       relatar(true);
       diag("Encode terminou em", formatarTempo(acompanhante.decorrido()), "de relógio.");
-      logWatcher = null;
-      progressCallback = null;
+      ganchos.log = null;
+      ganchos.progresso = null;
     };
   }
 

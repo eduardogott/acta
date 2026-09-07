@@ -15,7 +15,8 @@
 param(
   # Quais casos rodar. Vazio = todos.
   [string[]] $Casos = @(),
-  # Pula o caso da transcrição, que baixa ~40 MB na primeira execução.
+  # Pula os casos que baixam dezenas de MB na primeira execucao: a
+  # transcricao (modelo do Whisper) e a conversao (nucleo do ffmpeg).
   [switch] $PularLentos,
   [int] $Porta = 8731,
   [int] $TimeoutSegundos = 420
@@ -63,8 +64,29 @@ Start-Sleep -Seconds 2
 
 $build = Join-Path $raizTestes "build"
 $todos = Get-ChildItem -Path $build -Filter *.html | ForEach-Object { $_.BaseName }
-if ($Casos.Count -gt 0) { $todos = $todos | Where-Object { $Casos -contains $_ } }
-if ($PularLentos) { $todos = $todos | Where-Object { $_ -ne "transcricao" } }
+
+# Invocado como `powershell -File rodar.ps1 -Casos a,b`, o PowerShell nao
+# separa a lista: $Casos chega como um unico "a,b". Separar aqui e o que
+# faz a forma documentada la em cima funcionar de verdade.
+$pedidos = @($Casos | ForEach-Object { $_ -split "," } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+if ($pedidos.Count -gt 0) {
+  $desconhecidos = @($pedidos | Where-Object { $todos -notcontains $_ })
+  if ($desconhecidos.Count -gt 0) {
+    Write-Host ("caso inexistente: " + ($desconhecidos -join ", ")) -ForegroundColor Red
+    Write-Host ("disponiveis: " + ($todos -join ", "))
+    exit 1
+  }
+  $todos = $todos | Where-Object { $pedidos -contains $_ }
+}
+$LENTOS = @("transcricao", "conversao")
+if ($PularLentos) { $todos = $todos | Where-Object { $LENTOS -notcontains $_ } }
+
+# Zero caso rodado com "tudo passou" em verde e pior do que uma falha:
+# parece confirmacao e nao e nada.
+if (@($todos).Count -eq 0) {
+  Write-Host "nenhum caso para rodar" -ForegroundColor Red
+  exit 1
+}
 
 $falharam = @()
 

@@ -20,6 +20,8 @@ BUILD = os.path.join(AQUI, "build")
 PAGINAS = {
     "index": "index.html",
     "conversor": "conversor.html",
+    # mesma pagina, outro caso: este roda o ffmpeg de verdade (lento)
+    "conversao": "conversor.html",
     "conferidor": "conferidor.html",
     "tipificacao": "tipificacao.html",
     "orientacoes": "orientacoes.html",
