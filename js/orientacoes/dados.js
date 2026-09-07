@@ -27,6 +27,14 @@
  *
  * Escreva os itens no imperativo e endereçados à pessoa que vai levar o
  * papel ("Peça ao banco…"), não ao policial que atende. É ela quem lê.
+ *
+ * E escreva do ponto de vista de DEPOIS do registro, que é quando o papel
+ * chega às mãos dela. Orientação do momento do fato ("anote a placa do
+ * outro condutor", "fotografe antes de remover os veículos") já nasce
+ * vencida aqui: ou a pessoa fez, e a frase é ruído, ou não fez, e a folha
+ * só informa que ela perdeu alguma coisa. O que se pede é sempre algo
+ * que ainda dê para fazer hoje — inclusive levar à delegacia o que
+ * ficou de fora do registro.
  * ---------------------------------------------------------------------------
  */
 
@@ -69,8 +77,6 @@ window.ORIENTACOES = {
           label: "Falso parente ou conhecido (golpe do WhatsApp)",
           itens: [
             "Avise a família e os contatos por outro meio de que o número é falso, para ninguém mais pagar.",
-            "Sempre contate seu advogado diretamente; nunca retorne pelo número que ligou para você.",
-            "Não há mecanismo para pagar menos impostos ou \"agilizar\" processos; são pretextos de golpes.",
           ],
         },
         {
@@ -78,6 +84,8 @@ window.ORIENTACOES = {
           label: "Falso advogado",
           itens: [
             "Contate seu advogado e informe que estão utilizando suas informações para aplicar golpes.",
+            "Sempre contate seu advogado diretamente; nunca retorne pelo número que ligou para você.",
+            "Não há mecanismo para pagar menos impostos ou \"agilizar\" processos; são pretextos de golpes.",
           ],
         },
         {
@@ -92,7 +100,7 @@ window.ORIENTACOES = {
           chave: "venda_internet",
           label: "Compra ou venda pela internet não concluída",
           itens: [
-            "Salve o anúncio inteiro: endereço da página, data, valor, fotos e o perfil do vendedor. Anúncio de golpe é apagado em poucas horas.",
+            "Salve o anúncio enquanto ele existir: endereço da página, data, valor, fotos e o perfil do vendedor. Anúncio de golpe some em poucas horas — o que você conseguir salvar, leve à delegacia.",
             "Se pagou com cartão, peça o estorno (chargeback) ao banco emissor por escrito, dentro do prazo da bandeira.",
             "Registre a reclamação também no consumidor.gov.br e no Procon — é o caminho da devolução do valor, que este boletim não resolve sozinho.",
           ],
@@ -103,7 +111,7 @@ window.ORIENTACOES = {
           itens: [
             "Guarde o arquivo do boleto pago, não apenas a impressão. Os dados do beneficiário ficam registrados nele.",
             "Avise o credor verdadeiro imediatamente: a dívida original continua em aberto, e ele precisa saber que houve fraude.",
-            "Compare o nome do beneficiário do boleto com o de quem deveria receber. Divergência é o indício mais direto.",
+            "Leve o boleto e o comprovante de pagamento à delegacia. A divergência entre quem recebeu e quem deveria receber é o indício mais direto, e é por ela que a apuração começa.",
           ],
         },
       ],
@@ -203,7 +211,7 @@ window.ORIENTACOES = {
           chave: "cartao",
           label: "Cartão bancário",
           itens: [
-            "Bloqueie pelo aplicativo ou pela central do banco antes de qualquer outra coisa, e anote o protocolo.",
+            "Bloqueie o cartão pelo aplicativo ou pela central do banco, se ainda não fez, e anote o protocolo.",
             "Confira a fatura e o extrato dos últimos dias e conteste por escrito tudo o que não reconhecer.",
           ],
         },
@@ -215,12 +223,12 @@ window.ORIENTACOES = {
       chave: "furto_roubo",
       label: "Furto ou roubo",
       itens: [
-        "Faça uma lista completa do que foi levado, com marca, modelo, cor e número de série. Objeto sem identificação é praticamente irrecuperável, mesmo quando encontrado.",
+        "Se lembrar de outros bens levados, leve a relação à delegacia para complementar o registro. Objeto sem marca, modelo e número de série é praticamente irrecuperável, mesmo quando encontrado.",
         {
           texto: "Procure câmeras na vizinhança e peça ao responsável que preserve as imagens. A maioria dos sistemas apaga sozinho em poucos dias, e depois disso não há como recuperar.",
           prazo: "poucos dias",
         },
-        "Reúna notas fiscais, fotos dos bens e embalagens com número de série. Serve para a investigação e para o seguro.",
+        "Procure em casa as notas fiscais, as fotos dos bens e as embalagens com número de série, e leve à delegacia. É o que identifica o objeto na investigação e o que o seguro pede.",
         "Se você localizar o bem à venda em algum site ou rede social, não vá ao encontro do anunciante: leve o anúncio à delegacia.",
       ],
       subtipos: [
@@ -250,7 +258,7 @@ window.ORIENTACOES = {
           chave: "residencia",
           label: "Residência ou estabelecimento",
           itens: [
-            "Se houver vestígios (marcas de arrombamento, objetos revirados), não limpe nem reorganize antes da perícia.",
+            "Enquanto a perícia não for feita, não limpe nem reorganize o local: marca de arrombamento e objeto revirado são vestígio, e um pano passado apaga os dois.",
             "Fotografe os danos e o local antes de qualquer reparo.",
             "Confira se documentos, cartões e talões também sumiram — costumam ser levados junto e usados depois.",
           ],
@@ -259,7 +267,7 @@ window.ORIENTACOES = {
           chave: "documentos",
           label: "Documentos e cartões",
           itens: [
-            "Bloqueie os cartões e avise o banco antes de qualquer outra providência.",
+            "Bloqueie os cartões e avise o banco, se ainda não fez. É a providência que não pode esperar o resto.",
             "Peça as segundas vias nos órgãos emissores, apresentando este boletim.",
             "Cadastre alerta de CPF nos birôs de crédito: documento levado costuma reaparecer em tentativa de crédito.",
           ],
@@ -286,7 +294,7 @@ window.ORIENTACOES = {
           chave: "vinculo_domestico",
           label: "O autor é cônjuge, companheiro, ex ou familiar",
           itens: [
-            "Sendo violência doméstica contra a mulher, você tem direito a medidas protetivas de urgência — afastamento do lar, proibição de aproximação e de contato — pedidas aqui mesmo, sem advogado e sem custo.",
+            "Sendo violência doméstica contra a mulher, você tem direito a medidas protetivas de urgência — afastamento do lar, proibição de aproximação e de contato —, pedidas na delegacia sem advogado e sem custo. Se não pediu no registro, pode voltar e pedir a qualquer tempo.",
             "Descumprir medida protetiva é crime, com prisão em flagrante. Se acontecer, ligue 190 na hora e registre.",
             "Central de Atendimento à Mulher: 180, 24 horas, gratuito e sigiloso.",
           ],
@@ -296,7 +304,7 @@ window.ORIENTACOES = {
           label: "A ameaça veio pela internet ou por rede social",
           itens: [
             "Preserve o endereço da página ou do perfil (a URL completa), além do conteúdo. Sem ela, a plataforma não localiza o registro.",
-            "Denuncie o perfil na própria plataforma, mas só depois de guardar as provas — a denúncia pode derrubar o conteúdo antes de você registrá-lo.",
+            "Denuncie o perfil na própria plataforma, mas só depois de guardar as provas — a denúncia pode derrubar o conteúdo antes de você copiá-lo.",
             "Para conteúdo que possa sumir, a ata notarial feita em cartório é a forma de prova mais difícil de contestar.",
           ],
         },
@@ -308,12 +316,12 @@ window.ORIENTACOES = {
       chave: "violencia_domestica",
       label: "Violência doméstica",
       itens: [
-        "Você tem direito a medidas protetivas de urgência, que podem ser pedidas neste atendimento, sem advogado e sem custo. O juiz deve decidir em até 48 horas.",
+        "Você tem direito a medidas protetivas de urgência, pedidas na delegacia sem advogado e sem custo. Se não pediu no registro, pode voltar e pedir a qualquer tempo — o juiz deve decidir em até 48 horas.",
         "Não é preciso ter marca no corpo. Violência psicológica, moral, patrimonial e sexual também são previstas na Lei Maria da Penha.",
         "Havendo lesão, faça o exame de corpo de delito no IML o quanto antes: as marcas desaparecem em poucos dias e com elas a prova.",
         {
-          texto: "Fotografe as lesões com data, de vários ângulos, e guarde atestados, receitas e prontuários.",
-          prazo: "primeiras horas",
+          texto: "Fotografe as lesões hoje e nos dias seguintes, com data e de vários ângulos, e guarde atestados, receitas e prontuários.",
+          prazo: "hoje",
         },
         "Descumprimento de medida protetiva é crime e admite prisão em flagrante. Ligue 190 no momento em que acontecer.",
         "Central de Atendimento à Mulher: 180. Emergência: 190. A Defensoria Pública atende gratuitamente na parte cível (divórcio, guarda, alimentos).",
@@ -327,12 +335,12 @@ window.ORIENTACOES = {
       label: "Lesão corporal / agressão",
       itens: [
         {
-          texto: "Faça o exame de corpo de delito no IML assim que possível. É a prova central, e as lesões somem em dias.",
+          texto: "Leve ao IML a requisição de exame de corpo de delito entregue com este registro, e faça o exame assim que possível. É a prova central, e as lesões somem em dias.",
           prazo: "primeiras 72 h",
         },
         "Fotografe as lesões com data, de mais de um ângulo, todos os dias enquanto durarem.",
         "Guarde atestados, receitas, prontuários e comprovantes de despesas médicas.",
-        "Anote nome e contato de quem presenciou. Testemunha localizada semanas depois raramente é encontrada.",
+        "Se souber quem presenciou, leve nome e contato à delegacia. Testemunha procurada semanas depois raramente é localizada.",
         {
           texto: "Lesão leve depende de representação sua, no prazo de seis meses. Em contexto de violência doméstica contra a mulher, o processo corre independentemente disso.",
           prazo: "6 meses",
@@ -376,11 +384,11 @@ window.ORIENTACOES = {
       chave: "transito",
       label: "Acidente de trânsito",
       itens: [
-        "Anote placa, modelo, seguradora e os dados pessoais do outro condutor, além do nome de quem presenciou.",
-        "Fotografe a posição dos veículos antes de removê-los, e depois os danos de cada um.",
+        "Leve à delegacia o que você anotou no local e não entrou neste registro: placa, modelo e seguradora do outro veículo, e o nome de quem presenciou.",
+        "As fotos feitas no local — posição dos veículos, danos, sinalização da via — valem mais que a descrição escrita. Guarde-as e leve-as, ainda que estejam só no celular.",
         "Comunique a seguradora dentro do prazo da apólice, que costuma ser curto.",
         "Havendo pessoa ferida, o caso deixa de ser apenas administrativo: lesão corporal na direção é crime, e o ferido deve fazer exame de corpo de delito.",
-        "Se o outro condutor fugiu, informe tudo o que conseguiu ver: placa parcial, cor, modelo, direção da fuga e horário.",
+        "Se o outro condutor fugiu, qualquer detalhe lembrado depois ainda serve — placa parcial, cor, adesivo, direção da fuga. Comunique: a ocorrência pode ser complementada.",
       ],
     },
   ],

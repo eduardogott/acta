@@ -566,6 +566,13 @@ antes de serem sobrescritas, prazo de representação.
 - **`js/orientacoes/orientacoes.js`** — só monta e imprime; não tem conteúdo próprio.
 - A regra de escrita: imperativo, endereçado a **quem leva o papel**
   ("Peça ao banco…"), não ao policial que atende.
+- **E sempre pós-registro.** A folha só existe depois do BO, então
+  orientação do momento do fato ("anote a placa do outro condutor",
+  "fotografe antes de remover os veículos") nasce vencida: ou a pessoa
+  fez, e a linha é ruído, ou não fez, e a folha só lhe informa uma perda.
+  Todo item tem de caber em "dá para fazer hoje" — inclusive levar à
+  delegacia o que ficou de fora do registro, que é a forma pós-BO de
+  quase toda orientação de preservar prova.
 - A impressão sai só com a folha — menu, botões e avisos ficam de fora
   pelo `@media print` de `css/ferramentas.css`.
 
