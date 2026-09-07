@@ -17,7 +17,7 @@
  *     },
  *   });
  *
- * E inclua <script src="js/gerador/renderers/nome.js"></script> no index.html,
+ * E inclua <script src="js/gerador/renderers/nome.js"></script> no gerador.html,
  * depois de renderers-registry.js. Nada em engine.js precisa mudar.
  *
  * SOBRE "revalidaVisibilidade":

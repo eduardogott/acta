@@ -14,6 +14,8 @@
 (function () {
   "use strict";
 
+  const log = window.Log.criar("conferidor");
+
   const el = {
     entrada: document.getElementById("entrada"),
     resumo: document.getElementById("resumo"),
@@ -108,7 +110,17 @@
     }
 
     linhas.forEach((l) => el.lista.appendChild(criarLinha(l.tipo, l.resultado, l.candidato)));
+
+    // O número NUNCA entra no log: aqui se colam CPF, PIS e título de
+    // eleitor de terceiros. Só o tamanho e o veredito.
+    log.debug(
+      "Conferido:", valor.length, "caracteres — válido como",
+      validos.length ? validos.map((l) => l.tipo.chave).join("/") : "nada",
+      "· formato de", quaseLa.length ? quaseLa.map((l) => l.tipo.chave).join("/") : "nada"
+    );
   }
+
+  log.info("Conferidor pronto:", window.Identificadores.TIPOS.length, "formatos conhecidos.");
 
   el.entrada.addEventListener("input", conferir);
   el.entrada.focus();

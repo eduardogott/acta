@@ -21,6 +21,8 @@
  * ---------------------------------------------------------------------------
  */
 (function () {
+  const log = window.Log.criar("comum");
+
   const CARACTERES_DO_HASH = 7;
 
   const ETIMOLOGIA_HTML =
@@ -68,6 +70,10 @@
     rodape.appendChild(credito);
 
     const versao = carimbo();
+    // A primeira coisa que se pergunta diante de um relato de erro é "qual
+    // versão estava no ar?" — então ela vai para o console também, e não
+    // só para o rodapé, onde ninguém pensa em olhar.
+    log.info(versao ? versao.texto : "sem carimbo de versão (js/comum/versao.js ausente).");
     if (versao) {
       const linha = criarLinha("footer-versao");
       const span = document.createElement("span");

@@ -13,7 +13,20 @@
 (function () {
   "use strict";
 
+  const log = window.Log.criar("orientacoes");
+
   const DADOS = window.ORIENTACOES;
+
+  log.info(
+    "Orientações prontas:", DADOS.tipos.length, "fatos,",
+    DADOS.tipos.reduce(
+      (n, t) => n + (t.itens || []).length +
+        (t.subtipos || []).reduce((k, s) => k + s.itens.length, 0) +
+        (t.extras || []).reduce((k, x) => k + x.itens.length, 0),
+      DADOS.comuns.itens.length
+    ),
+    "itens no total."
+  );
 
   const el = {
     opcoesTipo: document.getElementById("opcoes-tipo"),
@@ -57,17 +70,30 @@
   function lerDaURL() {
     const params = new URLSearchParams(location.search);
 
-    const tipo = DADOS.tipos.find((t) => t.chave === params.get("tipo"));
-    if (!tipo) return;
+    const pedidoTipo = params.get("tipo");
+    const tipo = DADOS.tipos.find((t) => t.chave === pedidoTipo);
+    if (!tipo) {
+      // Em silêncio na tela, mas nunca no console: link velho que abre a
+      // página em branco é indistinguível de link certo com dados quebrados.
+      if (pedidoTipo) log.aviso('Parâmetro tipo="' + pedidoTipo + '" ignorado: não existe em dados.js.');
+      return;
+    }
     estado.tipo = tipo.chave;
 
-    const subtipo = (tipo.subtipos || []).find((x) => x.chave === params.get("sub"));
+    const pedidoSub = params.get("sub");
+    const subtipo = (tipo.subtipos || []).find((x) => x.chave === pedidoSub);
     if (subtipo) estado.subtipo = subtipo.chave;
+    else if (pedidoSub) log.aviso('Parâmetro sub="' + pedidoSub + '" ignorado: não é subtipo de ' + tipo.chave + ".");
 
     const pedidos = (params.get("extras") || "").split(",").filter(Boolean);
     (tipo.extras || []).forEach((x) => {
       if (pedidos.includes(x.chave)) estado.extras.add(x.chave);
     });
+    pedidos.forEach((chave) => {
+      if (!estado.extras.has(chave)) log.aviso('Extra "' + chave + '" ignorado: não existe em ' + tipo.chave + ".");
+    });
+
+    log.info("Estado lido da URL:", location.search || "(vazio)");
   }
 
   /**
@@ -242,6 +268,11 @@
       linha.appendChild(celula);
       el.grupos.appendChild(linha);
     });
+
+    log.debug(
+      "Folha montada:", grupos.length, "grupos,",
+      grupos.reduce((n, g) => n + g.itens.length, 0), "itens."
+    );
   }
 
 
@@ -404,6 +435,12 @@
 
   el.btnImprimir.addEventListener("click", () => {
     renderCabecalho();
+    const grupos = gruposDaFolha();
+    log.info(
+      "Imprimindo:", grupos.length, "grupos,",
+      grupos.reduce((n, g) => n + g.itens.length, 0), "itens, boletim",
+      numeroFormatado() || "(sem número)"
+    );
     window.print();
   });
 
@@ -417,6 +454,7 @@
     estado.extras.clear();
     // Vazia, e não [""]: renderOutras devolve a caixa em branco.
     estado.outras = [];
+    log.info("Folha limpa.");
     renderTudo();
   });
 

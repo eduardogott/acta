@@ -198,7 +198,10 @@ async function carregarModelo(modeloId) {
       // Uma falha aqui é quase sempre o navegador recusando as threads
       // (SharedArrayBuffer ausente, isolamento de origem cruzada
       // desligado) ou o CDN inacessível. Vale tentar do jeito simples.
-      console.warn("[transcrição] threads indisponíveis, caindo para uma só:", err);
+      // Sem window aqui dentro: js/comum/log.js não carrega num worker,
+      // então a marca [acta.transcricao] vai escrita à mão. Se mudar o
+      // formato lá, mude aqui também.
+      console.warn("[acta.transcricao] threads indisponíveis, caindo para uma só:", err);
       threadsOk = false;
       transcritor = null;
     }

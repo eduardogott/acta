@@ -9,7 +9,7 @@
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File tests\rodar.ps1
-  powershell -ExecutionPolicy Bypass -File tests\rodar.ps1 -Casos index,conversas
+  powershell -ExecutionPolicy Bypass -File tests\rodar.ps1 -Casos gerador,conversas
   powershell -ExecutionPolicy Bypass -File tests\rodar.ps1 -PularLentos
 #>
 param(

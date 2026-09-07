@@ -25,8 +25,9 @@ function resolverValidador(pergunta) {
   if (typeof pergunta.validador === "string") {
     const fn = window.VALIDADORES[pergunta.validador];
     if (!fn) {
-      console.warn(
-        `[validadores] "${pergunta.validador}" não está registrado (pergunta "${pergunta.id}").`
+      window.Log.criar("gerador").aviso(
+        `Validador "${pergunta.validador}" não está registrado — a pergunta "${pergunta.id}" ` +
+          "vai aceitar qualquer valor."
       );
     }
     return fn || null;

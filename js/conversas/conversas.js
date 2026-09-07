@@ -21,6 +21,8 @@
 (function () {
   "use strict";
 
+  const log = window.Log.criar("conversas");
+
   /**
    * Cada padrão devolve, nos grupos: data, hora, autor, texto.
    *
@@ -78,10 +80,16 @@
 
   // ------------------------------------------------------------- parse ---
 
+  // Qual padrão casou por último. Só serve ao log: export de iPhone e de
+  // Android falham de jeitos diferentes, e saber qual dos dois o parser
+  // reconheceu é o primeiro passo quando a transcrição sai torta.
+  let padraoUsado = null;
+
   function casar(linha) {
     for (const padrao of PADROES) {
       const achado = padrao.re.exec(linha);
       if (achado) {
+        padraoUsado = padrao.nome;
         return {
           data: achado[padrao.grupos.data],
           hora: achado[padrao.grupos.hora],
@@ -105,6 +113,7 @@
   function analisar(bruto) {
     const linhas = String(bruto || "").split(/\r?\n/);
     const mensagens = [];
+    padraoUsado = null;
 
     linhas.forEach((linha) => {
       const casado = casar(linha);
@@ -297,6 +306,16 @@
     const reais = ultimaAnalise.filter((m) => !m.sistema);
     const autores = autoresDe(ultimaAnalise);
 
+    // O parser é heurístico e a exportação do WhatsApp muda de formato
+    // entre versões: estes números são o primeiro lugar a olhar quando a
+    // transcrição sai estranha. O CONTEÚDO das mensagens nunca entra aqui.
+    log.info(
+      "Conversa lida:", bruto.split(/\r?\n/).length, "linhas coladas →",
+      reais.length, "mensagens de", autores.length, "participante(s),",
+      ultimaAnalise.length - reais.length, "linhas de sistema · padrão",
+      padraoUsado || "nenhum"
+    );
+
     // Autores que sumiram entre uma colagem e outra não devem manter o
     // papel antigo pendurado.
     Array.from(papeis.keys()).forEach((a) => {
@@ -304,6 +323,10 @@
     });
 
     if (reais.length === 0) {
+      log.aviso(
+        "Nenhuma mensagem reconhecida — o texto colado provavelmente não é " +
+        'a exportação "Sem mídia" do WhatsApp.'
+      );
       el.resumo.className = "status-linha erro";
       el.resumo.textContent =
         "Não reconheci nenhuma mensagem. Esta página espera a exportação do WhatsApp " +
@@ -324,6 +347,11 @@
   }
 
   // ----------------------------------------------------------- eventos ---
+
+  log.info(
+    "Conversas pronto:", PADROES.length, "formatos de exportação reconhecidos (" +
+    PADROES.map((p) => p.nome).join(", ") + ")."
+  );
 
   el.entrada.addEventListener("input", processar);
   [el.numerar, el.unificar, el.ocultarSistema, el.cabecalho].forEach((op) =>

@@ -22,7 +22,7 @@
  *    si, pra ramificações internas do próprio tipo (ex: subtipo de
  *    estelionato -> golpe do Pix -> lista de transferências).
  *
- * 3. Inclua o arquivo no index.html, ANTES de schema.js:
+ * 3. Inclua o arquivo no gerador.html, ANTES de schema.js:
  *      <script src="js/gerador/tipos/nome_do_tipo.js"></script>
  *
  * É só isso. Nenhum outro arquivo precisa ser editado.
@@ -47,7 +47,9 @@ window.TIPOS_OCORRENCIA = {};
 
 window.registrarTipoOcorrencia = function registrarTipoOcorrencia(chave, definicao) {
   if (window.TIPOS_OCORRENCIA[chave]) {
-    console.warn(`Tipo de ocorrência "${chave}" registrado mais de uma vez — sobrescrevendo.`);
+    window.Log.criar("gerador").aviso(
+      `Tipo de ocorrência "${chave}" registrado mais de uma vez — sobrescrevendo.`
+    );
   }
   window.TIPOS_OCORRENCIA[chave] = definicao;
 };

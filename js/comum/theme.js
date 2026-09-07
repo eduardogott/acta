@@ -6,6 +6,8 @@
  * prefers-color-scheme do sistema.
  */
 (function () {
+  const log = window.Log.criar("comum");
+
   const CHAVE = "ocorrencias-tema";
   const raiz = document.documentElement;
 
@@ -13,7 +15,9 @@
     try {
       return localStorage.getItem(CHAVE);
     } catch (e) {
-      return null; // localStorage bloqueado (modo privado, iframe, etc.) — segue sem persistir
+        // localStorage bloqueado (modo privado, iframe, etc.) — segue sem persistir
+      log.aviso("localStorage indisponível; o tema não vai persistir entre visitas.", e);
+      return null;
     }
   }
 
@@ -22,6 +26,7 @@
   }
 
   function aplicarTema(tema) {
+    log.debug("Tema aplicado:", tema);
     if (tema === "dark") raiz.setAttribute("data-theme", "dark");
     else raiz.removeAttribute("data-theme");
     const btn = document.getElementById("theme-toggle");

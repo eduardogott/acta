@@ -14,6 +14,8 @@
  */
 
 const Linter = (() => {
+  const log = window.Log.criar("gerador");
+
   function todasPerguntasComOrigem() {
     // Junta as perguntas base + de TODOS os tipos registrados (não só o
     // ativo), pra checar o schema inteiro de uma vez.
@@ -142,13 +144,17 @@ const Linter = (() => {
 
   function relatar({ erros, avisos }) {
     if (erros.length === 0 && avisos.length === 0) {
-      console.info("[linter] schema OK — nenhum problema encontrado.");
+      log.info("Linter: schema OK, nenhum problema encontrado.");
       return;
     }
-    console.group(`[linter] ${erros.length} erro(s), ${avisos.length} aviso(s)`);
-    erros.forEach((e) => console.error("ERRO:", e));
-    avisos.forEach((a) => console.warn("AVISO:", a));
-    console.groupEnd();
+    log.grupo(`Linter: ${erros.length} erro(s), ${avisos.length} aviso(s).`);
+    try {
+      erros.forEach((e) => log.erro("ERRO:", e));
+      avisos.forEach((a) => log.aviso("AVISO:", a));
+    } finally {
+      // No finally: um grupo que fica aberto engole todo log posterior.
+      log.fimDoGrupo();
+    }
 
     if (erros.length > 0) mostrarBannerNaTela(erros);
   }

@@ -18,9 +18,12 @@ BUILD = os.path.join(AQUI, "build")
 
 # caso -> pagina do site que ele exercita
 PAGINAS = {
+    # a pagina inicial: o nome do caso e "index" para que o arquivo
+    # gerado se chame index.html e nav.js se reconheca como a inicial
     "index": "index.html",
+    "gerador": "gerador.html",
     # mesma pagina, outro caso: este confere o paragrafo gerado, frase a frase
-    "texto": "index.html",
+    "texto": "gerador.html",
     "conversor": "conversor.html",
     # mesma pagina, outro caso: este roda o ffmpeg de verdade (lento)
     "conversao": "conversor.html",

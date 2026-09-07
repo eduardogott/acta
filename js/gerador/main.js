@@ -1,4 +1,17 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const log = window.Log.criar("gerador");
+
+  // Uma linha de inventário na carga. É ela que responde "o tipo novo
+  // entrou?" e "o renderer foi incluído no HTML?" sem abrir arquivo
+  // nenhum — os dois erros mais comuns ao editar o questionário.
+  log.info(
+    "Gerador pronto:",
+    Object.keys(window.TIPOS_OCORRENCIA).length, "tipos de ocorrência,",
+    window.SCHEMA.PERGUNTAS_BASE.length, "perguntas base,",
+    Object.keys(window.RENDERERS).length, "renderers,",
+    Object.keys(window.VALIDADORES).length, "validadores."
+  );
+
   Linter.executar();
 
   // ---------------------------------------------------------------------
@@ -9,7 +22,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // formulário de outra pessoa — e o usuário não saberia como zerá-lo.
   // ---------------------------------------------------------------------
   const aviso = document.getElementById("aviso-rascunho");
-  if (Engine.init() && aviso) {
+  const tinhaRascunho = Engine.init();
+  log.info(
+    tinhaRascunho
+      ? "Rascunho desta aba recuperado: " +
+        Object.keys(Estado.obterRespostas()).length + " respostas."
+      : "Sem rascunho — formulário começa em branco."
+  );
+  if (tinhaRascunho && aviso) {
     const texto = document.createElement("span");
     texto.textContent = "Respostas recuperadas desta aba. Fechar a aba apaga tudo.";
 
@@ -18,6 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
     descartar.className = "btn-descartar";
     descartar.textContent = "Descartar e recomeçar";
     descartar.addEventListener("click", () => {
+      log.info("Rascunho descartado pelo usuário.");
       Engine.reset();
       aviso.classList.add("escondido");
     });
@@ -43,6 +64,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const modulo = window.TIPOS_OCORRENCIA[respostas.tipo_ocorrencia];
     const ponte = modulo && modulo.orientacoes;
     if (!ponte || !ponte.tipo) {
+      log.debug(
+        "Tipo", respostas.tipo_ocorrencia,
+        "não declara folha de orientações — link escondido."
+      );
       link.classList.add("escondido");
       return;
     }
@@ -53,6 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     link.href = "orientacoes.html?" + params.toString();
     link.classList.remove("escondido");
+    log.info("Folha de orientações ligada:", params.toString());
   }
 
   document.getElementById("btn-gerar").addEventListener("click", () => {
@@ -73,7 +99,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("btn-reiniciar").addEventListener("click", () => {
-    if (!confirm("Limpar todas as respostas e recomeçar?")) return;
+    if (!confirm("Limpar todas as respostas e recomeçar?")) {
+      log.debug("Reiniciar cancelado na confirmação.");
+      return;
+    }
     Engine.reset();
     if (aviso) aviso.classList.add("escondido");
   });

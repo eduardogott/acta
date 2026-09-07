@@ -24,6 +24,8 @@
  */
 
 const Estado = (() => {
+  const log = window.Log.criar("gerador");
+
   const CHAVE_RASCUNHO = "acta-rascunho";
 
   const respostas = {};
@@ -75,7 +77,7 @@ const Estado = (() => {
       return Object.keys(respostas).length > 0;
     } catch (e) {
       // rascunho corrompido não pode impedir o uso da ferramenta
-      console.warn("[estado] rascunho ilegível, descartando:", e);
+      log.aviso("Rascunho ilegível no sessionStorage, descartando:", e);
       descartarRascunho();
       return false;
     }

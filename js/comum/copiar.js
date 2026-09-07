@@ -19,6 +19,8 @@
  * ---------------------------------------------------------------------------
  */
 window.Copiar = (() => {
+  const log = window.Log.criar("comum");
+
   const MS_SUCESSO = 1600;
   const MS_FALHA = 6000;
 
@@ -85,16 +87,23 @@ window.Copiar = (() => {
     try {
       if (!navigator.clipboard) throw new Error("clipboard indisponível");
       await navigator.clipboard.writeText(texto);
+      // O tamanho, nunca o texto: o que se copia daqui é narrativa de
+      // ocorrência e transcrição de conversa.
+      log.debug("Copiado pela API do navegador:", texto.length, "caracteres.");
       feedback(botao, "Copiado!", "btn-ok");
       return true;
     } catch (err) {
-      console.warn("[copiar] navigator.clipboard falhou:", err);
+      log.aviso("navigator.clipboard recusou, tentando o execCommand legado:", err);
     }
 
     if (copiarPelaSelecao(texto, campo)) {
+      log.info("Copiado pelo execCommand legado:", texto.length, "caracteres.");
       feedback(botao, "Copiado!", "btn-ok");
       return true;
     }
+
+    log.erro("Nenhum dos três caminhos de cópia funcionou" +
+             (campo ? " — o texto ficou selecionado para o Ctrl+C." : "."));
 
     // A tentativa acima deixou o texto selecionado, então o Ctrl+C que
     // pedimos aqui funciona sem o usuário precisar selecionar nada.

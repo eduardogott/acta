@@ -12,7 +12,7 @@ conferidor     PASSOU  (18 verificacoes)
 conversao      PASSOU  (37 verificacoes)
 conversas      PASSOU  (27 verificacoes)
 conversor      PASSOU  (25 verificacoes)
-index          PASSOU  (30 verificacoes)
+gerador        PASSOU  (33 verificacoes)
 orientacoes    PASSOU  (25 verificacoes)
 texto          PASSOU  (20 verificacoes)
 tipificacao    PASSOU  (29 verificacoes)
@@ -20,14 +20,14 @@ transcricao    PASSOU  (17 verificacoes)
 ```
 
 Duas páginas têm dois casos cada, porque são duas perguntas diferentes:
-`index`/`texto` (o formulário responde? o parágrafo sai certo?) e
+`gerador`/`texto` (o formulário responde? o parágrafo sai certo?) e
 `conversor`/`conversao` (a tela reage? o ffmpeg converte de verdade?).
 
 Opções úteis:
 
 ```powershell
 tests\rodar.ps1 -PularLentos          # sem transcricao nem conversao (dezenas de MB na 1ª vez)
-tests\rodar.ps1 -Casos index,conversas
+tests\rodar.ps1 -Casos gerador,conversas
 ```
 
 ## Como funciona

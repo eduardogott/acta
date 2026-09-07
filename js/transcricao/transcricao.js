@@ -15,6 +15,8 @@
 (function () {
   "use strict";
 
+  const log = window.Log.criar("transcricao");
+
   // Whisper trabalha nessa taxa; qualquer outra teria de ser reamostrada
   // do outro lado de qualquer jeito.
   const TAXA_ALVO = 16000;
@@ -146,8 +148,19 @@
       estado.audio = amostras;
       estado.duracao = duracao;
 
+      // O nome do arquivo vai junto: aqui ele é o identificador da mídia
+      // que o agente escolheu, e sem ele não dá para ligar o log ao caso.
+      log.info(
+        "Decodificado:", arquivo.name, "·", humanSize(arquivo.size), "·",
+        Math.round(duracao) + "s ·", amostras.length, "amostras a", TAXA_ALVO + "Hz."
+      );
+
       let texto = arquivo.name + " · " + humanSize(arquivo.size) + " · " + formatarTempo(duracao);
       if (duracao > AVISO_DURACAO_S) {
+        log.aviso(
+          "Áudio de", Math.round(duracao) + "s, acima do limite de", AVISO_DURACAO_S +
+          "s — risco de faltar memória."
+        );
         texto += " — áudio longo: a transcrição pode levar bem mais que isso, e há risco " +
                  "de faltar memória. Considere cortar em partes no conversor.";
         el.infoArquivo.className = "status-linha erro";
@@ -156,7 +169,7 @@
       el.btnTranscrever.disabled = false;
     } catch (err) {
       if (estado.arquivo !== arquivo) return;
-      console.warn("[transcrição] não consegui decodificar:", err);
+      log.aviso("O navegador não decodificou", arquivo.name + ":", err);
       el.infoArquivo.className = "status-linha erro";
       el.infoArquivo.textContent =
         "O navegador não conseguiu abrir este arquivo (" + arquivo.name + "). " +
@@ -171,10 +184,11 @@
     if (worker) return worker;
     // type: "module" porque o worker importa a biblioteca do CDN, e
     // `import` dinâmico não vale em worker clássico.
+    log.info("Criando o worker de transcrição.");
     worker = new Worker("js/transcricao/worker.js", { type: "module" });
     worker.onmessage = (evento) => tratarMensagem(evento.data || {});
     worker.onerror = (evento) => {
-      console.error("[transcrição] worker falhou:", evento);
+      log.erro("Worker falhou:", evento.message || evento);
       terminar("Falha ao iniciar o motor de transcrição: " + (evento.message || "erro desconhecido"), true);
     };
     return worker;
@@ -192,13 +206,16 @@
         ". Só na primeira vez."
       );
       setBarra(msg.total ? msg.recebido / msg.total : null);
+      log.debug("Baixando o modelo:", msg.recebido, "de", msg.total || "?");
     } else if (msg.tipo === "modo") {
+      log.info("Motor pronto em", msg.threads, msg.threads === 1 ? "thread." : "threads.");
       // Guardado para entrar na mensagem final: dizer "em 4 threads" ou
       // "em 1 thread" explica sozinho por que demorou o que demorou.
       estado.threads = msg.threads;
     } else if (msg.tipo === "pronto") {
       mostrarResultado(msg.texto, msg.trechos);
     } else if (msg.tipo === "erro") {
+      log.erro("O worker devolveu erro:", msg.mensagem);
       terminar("Falhou: " + msg.mensagem, true);
     }
   }
@@ -217,6 +234,11 @@
   }
 
   function mostrarResultado(texto, trechos) {
+    log.info(
+      "Transcrição concluída em",
+      Math.round((performance.now() - estado.inicio) / 1000) + "s:",
+      (texto || "").length, "caracteres,", (trechos || []).length, "trechos."
+    );
     ultimaSaida = { texto, trechos };
     const decorrido = (performance.now() - estado.inicio) / 1000;
     el.texto.value = montarTexto(texto, trechos) || "(nada foi reconhecido neste áudio)";
@@ -284,6 +306,11 @@
     });
   }
 
+  log.info(
+    "Transcrição pronta:", MODELOS.length, "modelos,", TAXA_ALVO + "Hz,",
+    "aviso de áudio longo a partir de", AVISO_DURACAO_S + "s."
+  );
+
   el.input.addEventListener("change", () => receberArquivo(el.input.files[0]));
 
   ["dragenter", "dragover"].forEach((evt) => {
@@ -336,6 +363,9 @@
     // em vez de ser duplicado de novo do outro lado). A cópia existe para
     // o original sobreviver: transferir o vetor decodificado significaria
     // ter de decodificar o arquivo inteiro outra vez a cada nova tentativa.
+    log.info(
+      "Transcrevendo:", Math.round(estado.duracao) + "s de áudio, modelo", estado.modelo + "."
+    );
     const copia = estado.audio.slice();
     garantirWorker().postMessage(
       {
@@ -351,6 +381,7 @@
     if (!worker) return;
     // Não há como interromper a inferência por dentro: a única saída é
     // matar o worker, o que também joga fora o modelo já carregado.
+    log.aviso("Interrompido pelo usuário — o worker vai ser morto e o modelo, recarregado.");
     worker.terminate();
     worker = null;
     terminar("Interrompido. O modelo será carregado de novo na próxima vez (do cache).", false);

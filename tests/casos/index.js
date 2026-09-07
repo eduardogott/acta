@@ -1,94 +1,63 @@
-// Gerador de ocorrências: schema saudável, validadores e rascunho.
+// Página inicial: um cartão por ferramenta, na mesma lista do menu.
 //
-// Este caso prova que o FORMULÁRIO funciona — as perguntas aparecem, o
-// validador recusa o que deve, o botão destrava, o rascunho grava. O que
-// o texto gerado DIZ é conferido em casos/texto.js, frase a frase; aqui a
-// saída só precisa existir.
+// O que este caso protege é a lista única. A página inicial e o menu saem
+// os dois de window.Ferramentas.PAGINAS (js/comum/nav.js) justamente para
+// não divergirem — e uma segunda lista escrita em qualquer lugar aparece
+// aqui como diferença entre as duas ordens.
 
-igual("linter não acusou nada", document.querySelectorAll(".linter-banner, .aviso-linter").length, 0);
-ok("perguntas visíveis no início", document.querySelectorAll("#perguntas .pergunta").length);
-igual("botão gerar começa desabilitado", document.getElementById("btn-gerar").disabled, true);
+var ORDEM = [
+  "gerador.html",
+  "conversor.html",
+  "orientacoes.html",
+  "transcricao.html",
+  "conversas.html",
+  "conferidor.html",
+  "tipificacao.html",
+];
 
-// --- validadores (delegam a js/comum/identificadores.js) --------------
-igual("CPF válido", window.VALIDADORES.cpfOuCnpj("529.982.247-25"), true);
-igual("CPF de dígito errado é recusado", window.VALIDADORES.cpfOuCnpj("529.982.247-26") === true, false);
-igual("CPF de dígitos iguais é recusado", window.VALIDADORES.cpfOuCnpj("111.111.111-11") === true, false);
-igual("CNPJ válido", window.VALIDADORES.cpfOuCnpj("11.222.333/0001-81"), true);
-igual("IMEI válido", window.VALIDADORES.imei("490154203237518"), true);
-igual("IMEI de Luhn errado é recusado", window.VALIDADORES.imei("490154203237519") === true, false);
-igual("placa Mercosul", window.VALIDADORES.placa("ABC1D23"), true);
-igual("placa antiga", window.VALIDADORES.placa("ABC1234"), true);
-igual("placa curta é recusada", window.VALIDADORES.placa("AB123") === true, false);
-igual("chassi de 17 caracteres", window.VALIDADORES.chassi("9BWZZZ377VT004251"), true);
-igual("chassi com I é recusado", window.VALIDADORES.chassi("9BWZZZ377VT00425I") === true, false);
-igual("telefone com DDD", window.VALIDADORES.telefone("51987654321"), true);
+function hrefs(seletor) {
+  return [].map.call(document.querySelectorAll(seletor), function (a) {
+    return a.getAttribute("href");
+  });
+}
 
-// --- ponte para as orientações ----------------------------------------
-// O botão "Gerar" só destrava com o questionário inteiro respondido, e é
-// no clique dele que o link é montado — daí preencher tudo aqui.
-igual("link de orientações começa escondido", vis("link-orientacoes"), false);
-clicar('input[name="tipo_ocorrencia"][value="perda"]');
-clicar('input[name="perda_o_que"][value="celular"]');
-digitar("perda_cel_marca", "Samsung");
-digitar("perda_cel_modelo", "Galaxy A54");
-digitar("perda_cel_operadora", "Vivo");
-digitar("perda_cel_numero", "51987654321");
-clicar('input[name="perda_cel_sabe_imei"][value="nao"]');
-clicar('input[name="motivo_registro"][value="preservar_direitos"]');
-clicar('input[name="deseja_representar"][value="incondicionada"]');
-clicar('input[name="outra_orientacao_houve"][value="nao"]');
-igual("questionário completo destrava o gerar", document.getElementById("btn-gerar").disabled, false);
+igual("a lista de ferramentas é pública", typeof window.Ferramentas, "object");
+igual("um cartão por ferramenta",
+      document.querySelectorAll("#cartoes .cartao").length,
+      window.Ferramentas.PAGINAS.length);
+igual("os cartões saem na ordem declarada", hrefs("#cartoes .cartao"), ORDEM);
+igual("o menu sai da mesma lista", hrefs(".site-nav .nav-link"), hrefs("#cartoes .cartao"));
 
-clicar("#btn-gerar");
-igual("gerar produziu texto", document.getElementById("saida-texto").value.length > 40, true);
-igual("link aparece depois de gerar", vis("link-orientacoes"), true);
-igual(
-  "link leva ao subtipo certo",
-  document.getElementById("link-orientacoes").getAttribute("href"),
-  "orientacoes.html?tipo=perda&sub=celular"
-);
-
-// --- rascunho em sessionStorage ---------------------------------------
-ok("rascunho gravado", sessionStorage.getItem("acta-rascunho") !== null);
-var salvo = JSON.parse(sessionStorage.getItem("acta-rascunho"));
-igual("rascunho guarda o tipo escolhido", salvo.respostas.tipo_ocorrencia, "perda");
-igual("rascunho guarda as tocadas", salvo.tocadas.indexOf("perda_o_que") >= 0, true);
-
-Estado.reset();
-igual("reset apaga o rascunho", sessionStorage.getItem("acta-rascunho"), null);
-
-// --- o linter confere o VALOR do exibirSe, não só o id ------------------
-// Comparar com um valor que não é opção da pergunta-alvo esconde a
-// pergunta para sempre, em silêncio. Como a checagem existe justamente
-// para um erro que não dá sintoma nenhum, ela precisa de um schema
-// quebrado de propósito para provar que morde — registrado aqui e
-// removido logo em seguida.
-window.TIPOS_OCORRENCIA.__teste = {
-  label: "Tipo de teste",
-  perguntas: [
-    {
-      id: "teste_ramo",
-      tipo: "multipla",
-      texto: "Ramo?",
-      opcoes: [
-        { valor: "a", texto: "A" },
-        { valor: "b", texto: "B" },
-      ],
-      template: function () { return ""; },
-    },
-    {
-      id: "teste_filha",
-      tipo: "texto",
-      texto: "Detalhe",
-      exibirSe: { pergunta: "teste_ramo", igual: "c" },
-      template: function () { return ""; },
-    },
-  ],
-};
-var acusados = Linter.checarSchema().erros.filter(function (e) {
-  return e.indexOf("teste_filha") >= 0;
+// Cartão sem título ou sem descrição é cartão pela metade, e o sintoma na
+// tela é discreto o bastante para passar batido: um retângulo vazio.
+var incompletos = [];
+[].forEach.call(document.querySelectorAll("#cartoes .cartao"), function (cartao) {
+  var titulo = cartao.querySelector(".cartao-titulo");
+  var descricao = cartao.querySelector(".cartao-descricao");
+  var onde = cartao.getAttribute("href");
+  if (!titulo || !titulo.textContent.trim()) incompletos.push(onde + ": sem título");
+  if (!descricao || !descricao.textContent.trim()) incompletos.push(onde + ": sem descrição");
 });
-igual("linter pega valor de exibirSe que não existe", acusados.length, 1);
-ok("o erro nomeia o valor errado", acusados[0].indexOf('"c"') >= 0);
-delete window.TIPOS_OCORRENCIA.__teste;
-igual("e o schema de verdade segue limpo", Linter.checarSchema().erros.length, 0);
+igual("todo cartão tem título e descrição", incompletos, []);
+
+// Cada arquivo apontado precisa existir de verdade: um cartão que leva a
+// 404 é o modo de falha mais provável depois de renomear uma página.
+var pendentes = window.Ferramentas.PAGINAS.length;
+window.manterVivo();
+window.Ferramentas.PAGINAS.forEach(function (pagina) {
+  fetch("/" + pagina.arquivo, { method: "HEAD" })
+    .then(function (r) {
+      igual("existe " + pagina.arquivo, r.ok, true);
+    })
+    .catch(function (e) {
+      igual("existe " + pagina.arquivo, String(e), true);
+    })
+    .then(function () {
+      if (--pendentes === 0) window.pronto();
+    });
+});
+
+// Na própria inicial a marca não vira link: recarregar onde já se está não
+// leva a lugar nenhum (ver ligarAMarca em js/comum/nav.js).
+igual("a marca não é link na página inicial",
+      document.querySelectorAll(".site-title .site-home").length, 0);

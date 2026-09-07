@@ -42,27 +42,20 @@
   // sem precisar de um depurador. O bloco resumido sai sempre; o log
   // linha-a-linha do próprio ffmpeg só sai com ?debug=1 na URL, porque são
   // centenas de linhas por conversão.
+  //
+  // A marca e o filtro de ?debug=1 vieram para js/comum/log.js quando as
+  // outras ferramentas ganharam log: os nomes locais ficam como apelidos
+  // para não reescrever as duas centenas de chamadas deste arquivo e do
+  // conversor.js.
   // ---------------------------------------------------------------------
 
-  const VERBOSE = new URLSearchParams(location.search).get("debug") === "1";
-  const ESTILO_DIAG = "color:#2d4a63;font-weight:bold";
+  const log = window.Log.criar("conversor");
 
-  function diag(...args) {
-    console.log("%c[conversor]", ESTILO_DIAG, ...args);
-  }
-
-  function diagAviso(...args) {
-    console.warn("%c[conversor]", ESTILO_DIAG, ...args);
-  }
-
-  function diagErro(...args) {
-    console.error("%c[conversor]", ESTILO_DIAG, ...args);
-  }
-
-  const t0 = performance.now();
-  function desdeOInicio() {
-    return "+" + Math.round(performance.now() - t0) + "ms";
-  }
+  const VERBOSE = log.verbose;
+  const diag = log.info;
+  const diagAviso = log.aviso;
+  const diagErro = log.erro;
+  const desdeOInicio = log.desdeOInicio;
 
   /**
    * Diz se a página está isolada e, se não estiver, por quê: mostra o que o

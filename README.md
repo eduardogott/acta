@@ -9,7 +9,8 @@ são bibliotecas e modelos, nunca o conteúdo do usuário.
 
 | Página | O que faz |
 | --- | --- |
-| `index.html` | Gerador de texto de ocorrência: questionário dinâmico → um parágrafo de narrativa em 3ª pessoa ("Comunica que…", "Informa que…"). |
+| `index.html` | A porta de entrada: um cartão por ferramenta, montado da mesma lista que alimenta o menu. |
+| `gerador.html` | Gerador de texto de ocorrência: questionário dinâmico → um parágrafo de narrativa em 3ª pessoa ("Comunica que…", "Informa que…"). |
 | `conversor.html` | Converte e comprime áudio, vídeo e imagem com ffmpeg.wasm; extrai áudio e quadros de vídeo. |
 | `transcricao.html` | Transcreve áudio em português com o Whisper, dentro do navegador. |
 | `conversas.html` | Formata a exportação do WhatsApp numa transcrição numerada. |
@@ -24,10 +25,43 @@ as páginas, e nunca no `<h1>`, que é da ferramenta.
 Duas partes comuns a todas as páginas são montadas por script, a partir
 de uma lista única, em vez de copiadas: a navegação
 (**`js/comum/nav.js`**) e o rodapé (**`js/comum/rodape.js`**).
-Acrescentar uma página é uma linha em `PAGINAS`. Enquanto o rodapé esteve
+Acrescentar uma página é uma linha em `PAGINAS` — dela saem tanto o menu
+quanto os cartões da página inicial, que por isso nunca divergem. Enquanto o rodapé esteve
 copiado, ele divergiu — a linha da etimologia existia só no index, o que
 fazia "Acta" parecer o nome do gerador. Os testes conferem essas
 invariantes em toda página.
+
+## O log no console
+
+Toda ferramenta escreve no console com a mesma marca:
+
+```
+[acta.gerador]      Gerador pronto: 2 tipos de ocorrência, 6 perguntas base…
+[acta.orientacoes]  Imprimindo: 5 grupos, 27 itens, boletim 48271/2026/100930
+[acta.conversas]    Conversa lida: 903 linhas → 412 mensagens de 2 participantes…
+```
+
+O console é o único relatório que existe: a suíte roda inteira no
+navegador, não há servidor para consultar depois, e um "deu erro"
+relatado no dia seguinte só se reconstitui pelo que ficou na tela.
+Filtrar por `acta.` mostra a suíte e mais nada; por `acta.conversor`, só
+o conversor.
+
+`window.Log.criar("<ferramenta>")` (em **`js/comum/log.js`**) devolve
+`info`, `aviso`, `erro` e `debug`. O `debug` só aparece com **`?debug=1`**
+na URL, e é onde vai o que sai às centenas — uma linha por render, por
+tecla, por quadro do ffmpeg. Sem esse filtro, o volume esconde
+exatamente a linha que interessa.
+
+**O que não entra no log:** nada que o usuário digitou — nome, CPF,
+telefone, endereço, o texto da ocorrência, a conversa colada. Estas
+ferramentas lidam com dado de vítima, e um console aberto numa máquina
+de balcão não é lugar para isso. Registre a forma — quantos itens, qual
+pergunta, qual veredito —, nunca o conteúdo. O conferidor, por exemplo,
+loga "12 caracteres, válido como cpf", e jamais o número.
+
+O worker da transcrição é a única exceção: não tem `window`, então
+escreve a marca à mão.
 
 ## Rodando localmente
 
@@ -49,8 +83,8 @@ usa. As páginas ficam na raiz porque são as URLs do site — mexer nelas
 quebraria links já salvos.
 
 ```
-index.html  conversor.html  transcricao.html  conversas.html
-orientacoes.html  conferidor.html  tipificacao.html
+index.html (a inicial)  gerador.html  conversor.html  transcricao.html
+conversas.html  orientacoes.html  conferidor.html  tipificacao.html
 
 css/
   style.css          tokens e componentes de todas as páginas
@@ -58,9 +92,10 @@ css/
   ferramentas.css    das cinco ferramentas menores
 
 js/
-  comum/             theme.js, nav.js, rodape.js, versao.js
+  comum/             log.js (o console da suíte), theme.js, nav.js, rodape.js, versao.js
                      identificadores.js (gerador + conferidor)
                      formatos.js (tamanho e tempo), copiar.js (copiar com feedback)
+  inicio/            inicio.js (os cartões da página inicial)
   gerador/           main.js, engine.js, generator.js, schema.js, registry.js
     core/            estado, visibilidade, validadores, texto-helpers, linter…
     renderers/       um arquivo por tipo de campo
@@ -181,7 +216,7 @@ significam. Tipo sem esse campo simplesmente não mostra o link.
    `tipo_ocorrencia`, isso já é implícito. Mas podem usar `exibirSe`
    entre si, para ramificações internas do próprio tipo (ex.: subtipo de
    estelionato → golpe do Pix → lista de transferências).
-3. Inclua o arquivo em `index.html`, antes de `js/gerador/schema.js`:
+3. Inclua o arquivo em `gerador.html`, antes de `js/gerador/schema.js`:
 
    ```html
    <script src="js/gerador/tipos/nome_do_tipo.js"></script>

@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Acta — Gerador de Ocorrências</title>
+<title>Acta — Ferramentas</title>
 <link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/inicio.css" />
+<script src="js/comum/log.js"></script>
 <script src="js/comum/theme.js"></script>
 <script src="js/comum/nav.js"></script>
-<script src="js/comum/copiar.js"></script>
 </head>
 <body>
 
@@ -22,75 +23,31 @@
 
 <main>
   <section class="intro">
-    <h1 class="page-title"><b>Gerador</b> de Ocorrências</h1>
-    <p class="page-lead">Responda o questionário abaixo. As perguntas seguintes se ajustam
-    conforme suas respostas. Ao final, o texto da narrativa é montado automaticamente
-    a partir dos dados informados — revise antes de usar.</p>
-    <p class="aviso-privacidade">
-      <span aria-hidden="true">🔒</span>
-      Esta ferramenta roda inteiramente no seu navegador. Nenhuma resposta preenchida
-      aqui é enviada, registrada ou compartilhada com qualquer servidor e o
-      texto final só existe localmente, até você copiá-lo. O acesso a esta página é
-      restrito via Cloudflare Access.
-    </p>
+    <h1 class="page-title"><b>Ferramentas</b> da delegacia</h1>
+    <p class="page-lead">Cada uma resolve um pedaço do atendimento: o texto da ocorrência,
+    o arquivo que não cabe no sistema, o papel que o comunicante leva embora, o áudio que
+    precisa virar texto. Todas rodam inteiramente no navegador — nada do que você digita,
+    cola ou abre aqui é enviado a servidor algum.</p>
   </section>
 
-  <p class="progresso">Preenchimento</p>
+  <!-- Um cartão por ferramenta, montados por js/inicio/inicio.js a partir
+       da mesma lista que alimenta o menu (js/comum/nav.js). -->
+  <div class="cartoes" id="cartoes"></div>
 
-  <div id="aviso-rascunho" class="aviso-rascunho escondido"></div>
-
-  <form id="perguntas" onsubmit="return false;"></form>
-
-  <div id="pendencias" class="pendencias escondido"></div>
-
-  <div class="acoes">
-    <button type="button" class="btn-primary" id="btn-gerar" disabled>Gerar texto</button>
-    <button type="button" class="btn-secondary" id="btn-reiniciar">Reiniciar</button>
-  </div>
-
-  <div id="saida-wrapper" class="escondido">
-    <h2>Texto gerado</h2>
-    <h2 class="alert">Aviso: SEMPRE revise os textos gerados antes de concluir a ocorrência.</h2>
-    <textarea id="saida-texto" spellcheck="false"></textarea>
-    <div class="saida-acoes">
-      <button type="button" class="btn-secondary" id="btn-copiar">Copiar texto</button>
-      <a class="btn-secondary escondido" id="link-orientacoes" href="orientacoes.html" target="_blank" rel="noopener">
-        Orientações para entregar
-      </a>
-    </div>
-  </div>
+  <section class="nota-rodape">
+    <h2>Sobre a suíte</h2>
+    <ul>
+      <li>O acesso é restrito e de uso interno. As ferramentas não conversam entre si nem
+      guardam nada em servidor: o que se fecha, se perde.</li>
+      <li>O carimbo de versão no rodapé diz qual código está no ar — é ele que responde
+      "o que estava na tela quando isso aconteceu?".</li>
+    </ul>
+  </section>
 </main>
 
 <footer></footer>
 
-<!-- núcleo: estado, visibilidade, texto, validadores, renderers -->
-<script src="js/gerador/core/estado.js"></script>
-<script src="js/gerador/core/visibilidade.js"></script>
-<script src="js/gerador/core/texto-helpers.js"></script>
-<script src="js/comum/identificadores.js"></script>
-<script src="js/gerador/core/validadores.js"></script>
-<script src="js/gerador/core/renderers-registry.js"></script>
-
-<!-- um arquivo por tipo de pergunta -->
-<script src="js/gerador/renderers/multipla.js"></script>
-<script src="js/gerador/renderers/selecao.js"></script>
-<script src="js/gerador/renderers/texto.js"></script>
-<script src="js/gerador/renderers/numero.js"></script>
-<script src="js/gerador/renderers/dinheiro.js"></script>
-<script src="js/gerador/renderers/multiplo-input.js"></script>
-
-<!-- registro dos tipos de ocorrência -->
-<script src="js/gerador/registry.js"></script>
-<script src="js/gerador/tipos/estelionato.js"></script>
-<script src="js/gerador/tipos/perda.js"></script>
-
-<script src="js/gerador/schema.js"></script>
-<script src="js/gerador/core/linter.js"></script>
-<script src="js/gerador/engine.js"></script>
-<script src="js/gerador/generator.js"></script>
-<script src="js/gerador/main.js"></script>
-
-<!-- carimbo de versão no rodapé (versao.js é gerado no deploy) -->
+<script src="js/inicio/inicio.js"></script>
 <script src="js/comum/versao.js"></script>
 <script src="js/comum/rodape.js"></script>
 </body>

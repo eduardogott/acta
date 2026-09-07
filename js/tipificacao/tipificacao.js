@@ -18,6 +18,8 @@
 (function () {
   "use strict";
 
+  const log = window.Log.criar("tipificacao");
+
   const el = {
     busca: document.getElementById("busca"),
     jecrim: document.getElementById("filtro-jecrim"),
@@ -44,9 +46,9 @@
 
   window.TIPIFICACAO.forEach((e) => {
     if (e.orientacoes && !FOLHAS[e.orientacoes]) {
-      console.warn(
-        "tipificacao: " + e.fato + ' aponta para a folha "' + e.orientacoes +
-          '", que não existe em window.ORIENTACOES.'
+      log.aviso(
+        e.fato + ' aponta para a folha "' + e.orientacoes +
+          '", que não existe em js/orientacoes/dados.js — a linha fica sem link.'
       );
     }
   });
@@ -224,12 +226,20 @@
     el.corpo.innerHTML = "";
     encontrados.forEach((e) => el.corpo.appendChild(criarLinha(e)));
 
+    // O termo buscado é nome de crime, não dado de vítima — pode ir junto.
+    log.debug('Busca "' + el.busca.value + '":', encontrados.length, "de", window.TIPIFICACAO.length);
+
     el.semResultados.classList.toggle("escondido", encontrados.length > 0);
     el.contagem.textContent =
       encontrados.length === window.TIPIFICACAO.length
         ? window.TIPIFICACAO.length + " fatos na tabela"
         : encontrados.length + " de " + window.TIPIFICACAO.length;
   }
+
+  log.info(
+    "Tabela carregada:", window.TIPIFICACAO.length, "fatos,",
+    window.TIPIFICACAO.filter((e) => e.orientacoes).length, "com folha de orientações."
+  );
 
   el.busca.addEventListener("input", filtrar);
   el.jecrim.addEventListener("change", filtrar);

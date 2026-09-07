@@ -10,6 +10,8 @@
  */
 
 const Engine = (() => {
+  const log = window.Log.criar("gerador");
+
   // Toda pergunta é obrigatória quando visível (não existe "opcional" —
   // ver nota em schema.js). Uma pergunta está "satisfeita" quando o
   // usuário já interagiu com ela (tocada), o renderer considera o valor
@@ -76,6 +78,10 @@ const Engine = (() => {
     const wrapper = criarWrapper(pergunta);
 
     if (!renderer) {
+      log.erro(
+        `A pergunta "${pergunta.id}" usa o tipo "${pergunta.tipo}", que não tem renderer ` +
+          "registrado — ela aparece na tela como aviso e nunca pode ser respondida."
+      );
       const aviso = document.createElement("p");
       aviso.className = "pergunta-erro visivel";
       aviso.textContent = `Tipo de pergunta "${pergunta.tipo}" não tem renderer registrado.`;
@@ -127,6 +133,12 @@ const Engine = (() => {
     });
 
     atualizarChecklistEBotao();
+    // debug: sai a cada clique em rádio e a cada pergunta que abre ou
+    // fecha — dezenas de linhas num preenchimento normal.
+    log.debug(
+      "Tela refeita:", perguntasAtivas.length, "perguntas ativas,",
+      container.children.length, "visíveis,", calcularPendencias().length, "pendentes."
+    );
   }
 
   function calcularPendencias() {
@@ -181,6 +193,7 @@ const Engine = (() => {
   }
 
   function reset() {
+    log.info("Formulário reiniciado — respostas e rascunho apagados.");
     Estado.reset();
     renderTudo();
     document.getElementById("saida-wrapper")?.classList.add("escondido");
