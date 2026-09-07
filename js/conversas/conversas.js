@@ -1,8 +1,8 @@
 /**
  * CONVERSAS.JS
  * ---------------------------------------------------------------------------
- * Transforma a exportação bruta de uma conversa num termo de transcrição
- * numerado, pronto para anexar.
+ * Transforma a exportação bruta de uma conversa numa transcrição
+ * numerada, pronta para anexar.
  *
  * O problema que resolve: a vítima chega com o "Exportar conversa" do
  * WhatsApp — centenas de linhas com data, hora, telefone e o texto tudo
@@ -243,7 +243,7 @@
     const primeira = comMensagem[0];
     const ultima = comMensagem[comMensagem.length - 1];
     const cabecalho = [
-      "TERMO DE TRANSCRIÇÃO DE CONVERSA",
+      "TRANSCRIÇÃO DE CONVERSA",
       "",
       "Mensagens: " + comMensagem.length,
       "Período: " +
@@ -271,7 +271,7 @@
     const temParticipantes = el.autores.children.length > 0;
     el.rotuloFormato.textContent = (temParticipantes ? "3." : "2.") + " Formato";
     el.rotuloSaida.textContent =
-      (temParticipantes ? "4." : "3.") + " Termo — confira antes de usar";
+      (temParticipantes ? "4." : "3.") + " Transcrição — confira antes de usar";
   }
 
   function renderSaida() {

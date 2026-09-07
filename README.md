@@ -12,7 +12,7 @@ são bibliotecas e modelos, nunca o conteúdo do usuário.
 | `index.html` | Gerador de texto de ocorrência: questionário dinâmico → um parágrafo de narrativa em 3ª pessoa ("Comunica que…", "Informa que…"). |
 | `conversor.html` | Converte e comprime áudio, vídeo e imagem com ffmpeg.wasm; extrai áudio e quadros de vídeo. |
 | `transcricao.html` | Transcreve áudio em português com o Whisper, dentro do navegador. |
-| `conversas.html` | Formata a exportação do WhatsApp num termo de transcrição numerado. |
+| `conversas.html` | Formata a exportação do WhatsApp numa transcrição numerada. |
 | `orientacoes.html` | Monta a folha de "o que fazer agora" para imprimir e entregar ao comunicante. |
 | `conferidor.html` | Confere dígito verificador de CPF, CNPJ, IMEI, chassi, placa, título de eleitor e PIS. |
 | `tipificacao.html` | Consulta rápida de tipificação penal, pesquisável por fato ou artigo. |
@@ -571,7 +571,7 @@ antes de serem sobrescritas, prazo de representação.
 
 ## Transcrição de conversas (`conversas.html`)
 
-Cola-se a exportação do WhatsApp e sai um termo numerado, com os
+Cola-se a exportação do WhatsApp e sai uma transcrição numerada, com os
 participantes renomeados, cabeçalho com período e contagem, separador por
 dia e anexos assinalados. Substitui a transcrição feita à mão.
 

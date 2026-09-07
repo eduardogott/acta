@@ -21,7 +21,7 @@ igual("painel de saída apareceu", vis("painel-saida"), true);
 igual("passos renumeram com participantes", txt("rotulo-formato"), "3. Formato");
 
 var saida = document.getElementById("saida").value;
-igual("cabeçalho do termo saiu", saida.indexOf("TERMO DE TRANSCRIÇÃO DE CONVERSA") === 0, true);
+igual("cabeçalho saiu", saida.indexOf("TRANSCRIÇÃO DE CONVERSA") === 0, true);
 igual("período no cabeçalho", saida.indexOf("06/09/2026 14:33 a 07/09/2026 09:02") > 0, true);
 igual("separador de dia", saida.indexOf("— 07/09/2026 —") > 0, true);
 igual("anexo assinalado", saida.indexOf("[ANEXO") > 0, true);
@@ -43,7 +43,7 @@ marcar("#op-numerar", false);
 igual("sem numeração", document.getElementById("saida").value.indexOf("1. [") < 0, true);
 marcar("#op-numerar", true);
 marcar("#op-cabecalho", false);
-igual("sem cabeçalho", document.getElementById("saida").value.indexOf("TERMO DE") < 0, true);
+igual("sem cabeçalho", document.getElementById("saida").value.indexOf("TRANSCRIÇÃO DE CONVERSA") < 0, true);
 marcar("#op-cabecalho", true);
 marcar("#op-sistema", true);
 igual("avisos do aplicativo ocultos", document.getElementById("saida").value.indexOf("(sistema)") < 0, true);

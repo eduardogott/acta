@@ -47,14 +47,15 @@ const MODALIDADE_ABERTURA = {
 registrarTipoOcorrencia("estelionato", {
   label: "Estelionato",
 
-  // Qual folha de orientacoes.html entregar. "falso advogado" e "falsa
-  // central" são a mesma conversa do ponto de vista de quem foi vítima:
-  // alguém ligou dizendo ser de uma instituição.
+  // Qual folha de orientacoes.html entregar. Hoje as duas chaves batem,
+  // mas o mapa continua sendo o lugar certo: as folhas de orientação
+  // cobrem mais modalidades do que o questionário pergunta, e as duas
+  // listas envelhecem em ritmos diferentes.
   orientacoes: {
     tipo: "estelionato",
     subtipo: (r) =>
       ({
-        falso_advogado: "falso_atendente",
+        falso_advogado: "falso_advogado",
         falso_parente: "falso_parente",
       }[r.tipo_estelionato] || null),
   },

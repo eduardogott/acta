@@ -11,9 +11,9 @@ igual("imprimir habilita", document.getElementById("btn-imprimir").disabled, fal
 var base = document.querySelectorAll("#saida-grupos .orientacoes-grupo").length;
 igual("tipo sozinho rende dois grupos (tipo + comuns)", base, 2);
 
-clicar('#opcoes-subtipo input[value="pix"]');
+clicar('#opcoes-subtipo input[value="falso_advogado"]');
 igual("subtipo acrescenta um grupo", document.querySelectorAll("#saida-grupos .orientacoes-grupo").length, base + 1);
-igual("subtítulo mostra o subtipo", txt("saida-subtitulo"), "Pix ou transferência bancária");
+igual("subtítulo mostra o subtipo", txt("saida-subtitulo"), "Falso advogado");
 
 clicar('#opcoes-extras input[value="clonagem_whatsapp"]');
 clicar('#opcoes-extras input[value="coleta_dados"]');
@@ -23,7 +23,7 @@ igual("etiquetas de prazo aparecem", document.querySelectorAll(".orientacoes-pra
 igual(
   "URL reflete a escolha",
   location.search,
-  "?tipo=estelionato&sub=pix&extras=clonagem_whatsapp,coleta_dados"
+  "?tipo=estelionato&sub=falso_advogado&extras=clonagem_whatsapp,coleta_dados"
 );
 
 clicar('#opcoes-tipo input[value="violencia_domestica"]');
@@ -34,6 +34,29 @@ igual("trocar de tipo limpa o subtipo da URL", location.search, "?tipo=violencia
 clicar('#opcoes-tipo input[value="perda"]');
 clicar('#opcoes-subtipo input[value="celular"]');
 igual("perda/celular tem itens", document.querySelectorAll("#saida-grupos li").length > 5, true);
+
+// dados.js e alimentado a mao. Em vez de confiar no caminho que este
+// caso percorre, passa por todo tipo e todo subtipo: chave repetida,
+// rótulo repetido ou grupo que não renderiza aparecem aqui.
+var problemas = [];
+window.ORIENTACOES.tipos.forEach(function (tipo) {
+  var vistas = {};
+  (tipo.subtipos || []).concat(tipo.extras || []).forEach(function (s) {
+    if (vistas[s.chave]) problemas.push(tipo.chave + "/" + s.chave + ": chave repetida");
+    vistas[s.chave] = true;
+  });
+  clicar('#opcoes-tipo input[value="' + tipo.chave + '"]');
+  (tipo.subtipos || []).forEach(function (sub) {
+    clicar('#opcoes-subtipo input[value="' + sub.chave + '"]');
+    if (txt("saida-subtitulo") !== sub.label) {
+      problemas.push(tipo.chave + "/" + sub.chave + ": subtítulo não bateu");
+    }
+    if (document.querySelectorAll("#saida-grupos .orientacoes-grupo").length < 2) {
+      problemas.push(tipo.chave + "/" + sub.chave + ": não rendeu grupos");
+    }
+  });
+});
+igual("todo tipo e subtipo renderiza", problemas, []);
 
 clicar("#btn-limpar");
 igual("limpar desabilita imprimir", document.getElementById("btn-imprimir").disabled, true);

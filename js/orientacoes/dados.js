@@ -35,10 +35,10 @@ window.ORIENTACOES = {
     titulo: "Em qualquer registro",
     itens: [
       "Guarde o número deste boletim. É por ele que a ocorrência é localizada em qualquer consulta posterior.",
-      "Registrar não é investigar. Se aparecerem provas novas — imagens, testemunhas, mensagens, notas fiscais —, leve-as à delegacia para serem juntadas.",
+      "Se aparecerem provas novas — imagens, testemunhas, mensagens, notas fiscais —, leve-as à delegacia para serem juntadas.",
       "Nunca pague nada a quem ligar oferecendo recuperar seu dinheiro, adiantar o processo ou liberar valores. Nenhum órgão público cobra por isso.",
       {
-        texto: "Se o crime for de ação penal condicionada ou privada, o prazo para representar ou dar queixa é de seis meses, contados do dia em que você soube quem foi o autor. Passado o prazo, o direito se perde.",
+        texto: "Se o crime for de ação penal condicionada ou privada, o prazo para representar ou dar queixa é de seis meses, contados do dia em que você soube quem foi o autor. Passado o prazo, o direito se perde. A exceção é para crimes de violência doméstica e familiar, onde o prazo é de um ano.",
         prazo: "6 meses",
       },
     ],
@@ -50,41 +50,42 @@ window.ORIENTACOES = {
       chave: "estelionato",
       label: "Estelionato / golpe",
       itens: [
-        "Avise a instituição financeira imediatamente e peça o bloqueio dos valores. Anote o número de protocolo de cada contato — é ele que prova a data em que você comunicou.",
-        "Não apague nada. Conversas, e-mails, comprovantes, números de telefone e perfis usados pelo golpista são a prova do caso. Exporte as conversas inteiras, não só capturas de tela.",
+        {
+          texto: "Caso tenha efetuado alguma transferência, contate o banco imediatamente e solicite o estorno dos valores, por meio do Mecanismo Especial de Devolução do Pix. O mecanismo tem prazo contado.",
+          prazo: "imediatamente",
+        },
+        {
+          texto: "Se você compartilhou tela ou os golpistas obtiveram acesso à sua conta bancária, contate o banco e solicite o bloqueio imediato da conta e acessos.",
+          prazo: "imediatamente",
+        },
         "Denuncie também na plataforma onde o golpe aconteceu (WhatsApp, Instagram, Marketplace, banco). Isso ajuda a tirar o perfil do ar, mas não substitui este registro.",
         "Desconfie do golpe seguinte: é comum o mesmo grupo ligar depois se passando por banco, polícia ou advogado, prometendo recuperar o dinheiro mediante um pagamento.",
         "Consulte o Registrato, do Banco Central (registrato.bcb.gov.br), para ver se abriram contas, chaves Pix ou empréstimos no seu nome.",
+        "Se os golpistas obtiveram acesso ao seu celular ou baixaram qualquer aplicativo, restaure o aparelho para as configurações de fábrica.",
       ],
       subtipos: [
-        {
-          chave: "pix",
-          label: "Pix ou transferência bancária",
-          itens: [
-            {
-              texto: "Peça ao seu banco a abertura do MED, o Mecanismo Especial de Devolução do Pix. O pedido tem prazo contado da data da transação, então faça hoje mesmo — quanto antes, maior a chance de o dinheiro ainda estar na conta de destino.",
-              prazo: "o quanto antes",
-            },
-            "Leve ao banco e à delegacia os comprovantes com data, hora, valor, chave usada, nome e CPF/CNPJ de quem recebeu.",
-            "Se houve mais de uma transferência, liste todas. Cada conta que recebeu é uma linha de investigação diferente.",
-          ],
-        },
         {
           chave: "falso_parente",
           label: "Falso parente ou conhecido (golpe do WhatsApp)",
           itens: [
             "Avise a família e os contatos por outro meio de que o número é falso, para ninguém mais pagar.",
-            "Salve o número usado pelo golpista e a foto do perfil antes de bloquear — depois de bloqueado, some.",
-            "Se a foto usada era sua ou de um parente, ela veio de algum lugar: revise a privacidade das suas redes e do seu WhatsApp.",
+            "Sempre contate seu advogado diretamente; nunca retorne pelo número que ligou para você.",
+            "Não há mecanismo para pagar menos impostos ou \"agilizar\" processos; são pretextos de golpes.",
+          ],
+        },
+        {
+          chave: "falso_advogado",
+          label: "Falso advogado",
+          itens: [
+            "Contate seu advogado e informe que estão utilizando suas informações para aplicar golpes.",
           ],
         },
         {
           chave: "falso_atendente",
-          label: "Falsa central, falso funcionário de banco ou falso advogado",
+          label: "Falsa central ou falso funcionário de banco",
           itens: [
-            "Nunca retorne pelo número que ligou para você. Ligue para o número oficial impresso no verso do cartão ou no site da instituição.",
-            "Banco, cartório e polícia não pedem senha, código de aplicativo, foto de documento nem transferência para \"conta segura\". Não existe conta segura.",
-            "Se você chegou a instalar algum aplicativo a pedido do golpista, marque também a situação \"instalou aplicativo de acesso remoto\" abaixo.",
+            "Nunca retorne pelo número que ligou para você. Sempre retorne para o número oficial impresso no verso do cartão ou no site da instituição.",
+            "Banco, cartório e polícia não pedem senha, código de aplicativo, foto de documento nem transferência via telefone.",
           ],
         },
         {
