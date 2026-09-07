@@ -613,6 +613,50 @@ antes de serem sobrescritas, prazo de representação.
 - A impressão sai só com a folha — menu, botões e avisos ficam de fora
   pelo `@media print` de `css/ferramentas.css`.
 
+### A folha impressa
+
+Uma seleção cheia de estelionato passa de três páginas, e aí três coisas
+precisam valer:
+
+- **O nome repete no alto de cada página**, sem número nem data — quem
+  recebe folhas soltas precisa saber de onde cada uma veio. Número e data
+  ficam só na primeira: repeti-los sugeriria três boletins.
+- **Nada de item cortado.** Um item que começa no pé de uma página e
+  termina na seguinte faz a pessoa ler o começo, virar a folha e perder o
+  prazo que estava no fim. `break-inside: avoid` no `li`.
+- **Título não se separa do primeiro item**, via `break-after: avoid`:
+  "Em qualquer registro" sozinho no pé da folha não é título de nada. O
+  grupo em si pode quebrar — impedir isso empurraria dez itens inteiros
+  para a folha seguinte e deixaria meia página em branco.
+
+**Por que a folha é uma `<table>`.** O cabeçalho que repete mora num
+`<thead>`, e `display: table-header-group` é a única forma garantida por
+especificação de repetir algo no alto de cada página impressa. Na tela a
+tabela vira blocos por CSS, então o layout é o de sempre.
+
+Duas coisas foram testadas imprimindo em PDF, e as duas falharam antes de
+funcionar: `position: fixed` (que o Chromium também repete) foi parar no
+rodapé e atropelou o texto; e a tabela com **uma única linha** não repetiu
+cabeçalho nenhum, porque o Chromium não fragmenta uma linha mais alta que
+a página. Daí haver um `<tr>` por grupo. Para conferir depois de mexer:
+
+```powershell
+msedge --headless=new --no-pdf-header-footer --print-to-pdf=folha.pdf `
+  "http://localhost:8731/orientacoes.html?tipo=estelionato&extras=coleta_dados,clonagem_whatsapp,acesso_remoto,uso_do_nome"
+```
+
+### Número da ocorrência
+
+Um campo na página recebe só o sequencial; o resto do formato é sempre o
+mesmo e sai montado: `48271/2026/100930`. O ano é o corrente e
+`CODIGO_UNIDADE`, em `js/orientacoes/orientacoes.js`, é o da delegacia —
+mudou de unidade, muda ali. Vazio, imprime a linha para preencher à
+caneta, como antes.
+
+A data é sempre a de **hoje**, e não a do fato nem a do registro: o que
+ela data é a folha entregue agora. Recalculada também no `beforeprint`,
+que pega o Ctrl+P e a página que virou a noite aberta.
+
 ## Transcrição de conversas (`conversas.html`)
 
 Cola-se a exportação do WhatsApp e sai uma transcrição numerada, com os

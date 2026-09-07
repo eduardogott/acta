@@ -44,16 +44,47 @@
     <div class="opcoes" id="opcoes-extras"></div>
   </div>
 
-  <section class="orientacoes-saida" id="saida">
-    <div class="impressao-cabecalho">
-      <b>Acta — Orientações ao comunicante</b><br />
-      Boletim de ocorrência nº ______________________ · Data ____ / ____ / __________
-    </div>
-    <h2 class="orientacoes-titulo" id="saida-titulo"></h2>
-    <p class="orientacoes-subtitulo" id="saida-subtitulo"></p>
-    <div id="saida-grupos"></div>
-    <p class="orientacoes-vazio" id="saida-vazio">Escolha um fato acima para montar a folha.</p>
-  </section>
+  <div class="bloco-escolha bloco-numero">
+    <label for="numero-ocorrencia">Número da ocorrência (opcional, sai impresso no alto da folha)</label>
+    <input type="text" id="numero-ocorrencia" inputmode="numeric" autocomplete="off"
+           spellcheck="false" placeholder="12345" />
+    <span class="numero-previa" id="numero-previa"></span>
+  </div>
+
+  <!-- A folha é uma TABELA por um motivo só: o navegador repete um
+       <thead> no alto de cada página impressa, e essa é a única forma
+       garantida de ter cabeçalho corrido. (`position: fixed` também
+       repete no Chromium, mas foi testado aqui e caiu no rodapé,
+       atropelando o texto.) Na tela a tabela vira blocos, via CSS — o
+       layout é o mesmo de antes.
+
+       O nome vai no <thead>, e por isso repete. Número e data ficam no
+       corpo: só fazem sentido na primeira folha. -->
+  <table class="folha-impressa">
+  <thead>
+    <tr><td><div class="impressao-corrida">Acta — Orientações ao comunicante</div></td></tr>
+  </thead>
+
+  <tbody class="folha-abertura">
+    <tr><td>
+      <section class="orientacoes-saida" id="saida">
+        <div class="impressao-cabecalho">
+          Boletim de ocorrência nº <span id="cabecalho-numero"></span>
+          · Data <span id="cabecalho-data"></span>
+        </div>
+        <h2 class="orientacoes-titulo" id="saida-titulo"></h2>
+        <p class="orientacoes-subtitulo" id="saida-subtitulo"></p>
+        <p class="orientacoes-vazio" id="saida-vazio">Escolha um fato acima para montar a folha.</p>
+      </section>
+    </td></tr>
+  </tbody>
+
+  <!-- Um <tr> por grupo, preenchido por js/orientacoes/orientacoes.js.
+       São linhas separadas, e não uma só, porque o Chromium não repete o
+       <thead> quando a tabela tem uma única linha mais alta que a página:
+       ele não fragmenta a linha, só a transborda. Testado. -->
+  <tbody id="saida-grupos"></tbody>
+  </table>
 
   <div class="acoes">
     <button type="button" class="btn-primary" id="btn-imprimir" disabled>Imprimir folha</button>

@@ -25,6 +25,10 @@
     titulo: document.getElementById("saida-titulo"),
     subtitulo: document.getElementById("saida-subtitulo"),
     grupos: document.getElementById("saida-grupos"),
+    numero: document.getElementById("numero-ocorrencia"),
+    numeroPrevia: document.getElementById("numero-previa"),
+    cabecalhoNumero: document.getElementById("cabecalho-numero"),
+    cabecalhoData: document.getElementById("cabecalho-data"),
     vazio: document.getElementById("saida-vazio"),
     btnImprimir: document.getElementById("btn-imprimir"),
     btnCopiar: document.getElementById("btn-copiar"),
@@ -183,6 +187,12 @@
     el.subtitulo.textContent = subtipo ? subtipo.label : "";
 
     grupos.forEach((g) => {
+      // Cada grupo é uma linha da tabela da folha — ver o comentário em
+      // orientacoes.html. Na tela isto se comporta como uma pilha de
+      // blocos; só no papel vira tabela.
+      const linha = document.createElement("tr");
+      const celula = document.createElement("td");
+
       const bloco = document.createElement("div");
       bloco.className = "orientacoes-grupo";
 
@@ -204,13 +214,58 @@
         ol.appendChild(li);
       });
       bloco.appendChild(ol);
-      el.grupos.appendChild(bloco);
+      celula.appendChild(bloco);
+      linha.appendChild(celula);
+      el.grupos.appendChild(linha);
     });
+  }
+
+
+  // -------------------------------------------------------------------
+  // Número da ocorrência e data, no alto da primeira folha
+  //
+  // O primeiro item de toda folha manda guardar o número do boletim, e
+  // até aqui a linha vinha em branco para o agente preencher à caneta —
+  // o que quase sempre significava não preencher.
+  //
+  // O número digitado é só o sequencial: o resto do formato é sempre o
+  // mesmo, e pedir que alguém redigite "/2026/100930" oitenta vezes por
+  // semana é pedir erro de digitação.
+  // -------------------------------------------------------------------
+
+  // Código da unidade. Trocou de delegacia, troca aqui.
+  const CODIGO_UNIDADE = "100930";
+
+  const LINHA_EM_BRANCO = "______________________";
+
+  /** "12345" -> "12345/2026/100930". Vazio devolve a linha para preencher. */
+  function numeroFormatado() {
+    const digitado = (el.numero.value || "").trim();
+    if (!digitado) return null;
+    return digitado + "/" + new Date().getFullYear() + "/" + CODIGO_UNIDADE;
+  }
+
+  /**
+   * A data é sempre a de hoje, e não a do fato nem a do registro: o que
+   * ela data é ESTA folha, entregue agora. Recalculada a cada render (e
+   * antes de imprimir) para a página aberta desde ontem não imprimir
+   * ontem.
+   */
+  function dataDeHoje() {
+    return new Date().toLocaleDateString("pt-BR");
+  }
+
+  function renderCabecalho() {
+    const numero = numeroFormatado();
+    el.cabecalhoNumero.textContent = numero || LINHA_EM_BRANCO;
+    el.cabecalhoData.textContent = dataDeHoje();
+    el.numeroPrevia.textContent = numero ? "Sai impresso: " + numero : "";
   }
 
   function renderTudo() {
     renderEscolhas();
     renderFolha();
+    renderCabecalho();
     escreverNaURL();
   }
 
@@ -230,7 +285,16 @@
     return linhas.join("\n");
   }
 
-  el.btnImprimir.addEventListener("click", () => window.print());
+  el.numero.addEventListener("input", renderCabecalho);
+
+  // Também no beforeprint: pega o Ctrl+P do navegador, que não passa
+  // pelo botão, e a página que virou a noite aberta.
+  window.addEventListener("beforeprint", renderCabecalho);
+
+  el.btnImprimir.addEventListener("click", () => {
+    renderCabecalho();
+    window.print();
+  });
 
   el.btnCopiar.addEventListener("click", () => {
     window.Copiar.copiarComFeedback(el.btnCopiar, folhaComoTexto());

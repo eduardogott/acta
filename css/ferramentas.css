@@ -264,7 +264,39 @@
   font-size: 14px;
   padding: 20px 0;
 }
-.impressao-cabecalho { display: none; }
+/* Só existem no papel. */
+.impressao-cabecalho,
+.impressao-corrida { display: none; }
+
+/* Na tela a tabela da folha se comporta como uma pilha de blocos: ela só
+   é tabela no papel, para o <thead> repetir em cada página. */
+.folha-impressa,
+.folha-impressa thead,
+.folha-impressa tbody,
+.folha-impressa tr,
+.folha-impressa td {
+  display: block;
+  width: auto;
+  padding: 0;
+  border: 0;
+}
+
+.bloco-numero label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.bloco-numero input {
+  width: 12ch;
+  font-family: var(--mono);
+}
+.numero-previa {
+  margin-left: 10px;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+}
 
 /* ---------------------------------------------------------
    Transcrição
@@ -411,13 +443,69 @@
   }
   main { padding: 0; max-width: none; }
   .orientacoes-saida { border-top: none; padding-top: 0; }
+  body { background: #fff; color: #000; }
+
+  @page {
+    margin: 14mm 16mm;
+  }
+
+  /* Aqui a folha volta a ser tabela de verdade: `table-header-group` é o
+     que faz o navegador repetir o cabeçalho no alto de cada página. É a
+     única técnica garantida por especificação — e, ao contrário do
+     `position: fixed`, ela reserva o espaço, então nada fica por baixo. */
+  .folha-impressa { display: table; width: 100%; border-collapse: collapse; }
+  .folha-impressa thead { display: table-header-group; }
+  .folha-impressa tbody { display: table-row-group; }
+  .folha-impressa tr { display: table-row; }
+  .folha-impressa td { display: table-cell; }
+  /* Um grupo não começa no pé da folha para virar a página no item 1. */
+  .folha-impressa tbody tr { break-inside: auto; page-break-inside: auto; }
+
+  .impressao-corrida {
+    display: block;
+    padding-bottom: 5px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #000;
+    font-size: 10pt;
+    font-weight: 600;
+  }
+
+  /* Este não repete: número e data só fazem sentido na primeira folha. */
   .impressao-cabecalho {
     display: block;
-    border-bottom: 1px solid #000;
-    padding-bottom: 8px;
     margin-bottom: 18px;
     font-size: 12px;
   }
+
   .orientacoes-grupo ol { font-size: 12pt; line-height: 1.6; }
-  body { background: #fff; color: #000; }
+
+  /* ------------------------------------------------------------------
+     Nada de linha cortada.
+
+     Um item que começa no pé de uma página e termina na seguinte é
+     ruim em qualquer texto; numa folha de orientação é pior, porque a
+     pessoa lê o começo, vira a página e perde o prazo que estava no
+     fim. Item inteiro pula junto.
+
+     E o título do grupo não se separa do primeiro item: "Em qualquer
+     registro" sozinho no pé da folha não é título de nada.
+     ------------------------------------------------------------------ */
+  .orientacoes-grupo li,
+  .orientacoes-prazo {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .orientacoes-grupo h3,
+  .orientacoes-titulo,
+  .orientacoes-subtitulo,
+  .impressao-cabecalho {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  /* O grupo em si pode quebrar — impedir isso empurraria um bloco de dez
+     itens inteiro para a folha seguinte, deixando meia página em branco. */
+  .orientacoes-grupo {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
 }

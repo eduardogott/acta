@@ -27,6 +27,9 @@
  *
  * Escreva os itens no imperativo e endereçados à pessoa que vai levar o
  * papel ("Peça ao banco…"), não ao policial que atende. É ela quem lê.
+ * A exceção são os itens que ajustam expectativa ("este registro não
+ * devolve o dinheiro"): não há o que mandar fazer, e fingir imperativo
+ * só esconderia o recado.
  *
  * E lembre que é PAPEL. A folha é impressa pelo agente e entregue em
  * mãos: quem lê não clica em nada. Endereço de site tem de ser curto o
@@ -48,12 +51,12 @@ window.ORIENTACOES = {
   comuns: {
     titulo: "Em qualquer registro",
     itens: [
-      "O número do seu boletim está no alto desta folha. Guarde-a: é por esse número que a ocorrência é localizada em qualquer consulta posterior.",
+      "O número da ocorrência está no topo do boletim. Guarde-o: é por esse número que a ocorrência é localizada em qualquer consulta posterior.",
       "Se aparecerem provas novas — imagens, testemunhas, mensagens, notas fiscais —, leve-as à delegacia para serem juntadas.",
       "Nunca pague nada a quem ligar oferecendo recuperar seu dinheiro, adiantar o processo ou liberar valores. Nenhum órgão público cobra por isso.",
       {
         texto: "Se o crime for de ação penal condicionada ou privada, o prazo para representar ou dar queixa é de seis meses, contados do dia em que você soube quem foi o autor. Passado o prazo, o direito se perde. A exceção é para crimes de violência doméstica e familiar, onde o prazo é de um ano.",
-        prazo: "6 meses",
+        prazo: "6 meses (ou 1 ano)",
       },
     ],
   },
@@ -76,6 +79,8 @@ window.ORIENTACOES = {
         "Desconfie do golpe seguinte: é comum o mesmo grupo ligar depois se passando por banco, polícia ou advogado, prometendo recuperar o dinheiro mediante um pagamento.",
         "Consulte o Registrato, do Banco Central (registrato.bcb.gov.br), para ver se abriram contas, chaves Pix ou empréstimos no seu nome. É preciso entrar com a conta gov.br.",
         "Se os golpistas obtiveram acesso ao seu celular, restaure o aparelho para as configurações de fábrica.",
+        "Este registro apura o crime; ele não devolve o dinheiro. O ressarcimento se busca à parte, na esfera cível, e não depende do resultado da apuração criminal.",
+        "Contra o golpista cabe ação de ressarcimento. Contra o banco, depende de como o dinheiro saiu: havendo operação que você não fez — acesso remoto, empréstimo, conta ou cartão abertos em seu nome —, a responsabilidade da instituição costuma ser reconhecida. No juizado especial cível dá para entrar sem advogado em causas de até 20 salários mínimos. Sem condições de contratar advogado, procure a Defensoria Pública.",
       ],
       subtipos: [
         {
@@ -152,6 +157,7 @@ window.ORIENTACOES = {
             "Conteste formalmente e por escrito junto à instituição, guardando o protocolo. A contestação verbal não deixa rastro.",
             "Peça a exclusão de eventuais negativações, anexando cópia deste boletim.",
             "Se abriram empresa em seu nome, procure também a Junta Comercial e a Receita Federal.",
+            "Caso o banco recusar-se a cancelar a conta ou você tiver prejuízos, busque a Defensoria Pública para informações de como prosseguir."
           ],
         },
       ],
@@ -163,7 +169,6 @@ window.ORIENTACOES = {
       label: "Perda ou extravio",
       itens: [
         "Este registro serve para preservar seus direitos e comprovar a data em que o extravio foi comunicado. A segunda via depende do órgão que emitiu o documento.",
-        "Se o objeto ou documento aparecer, comunique — evita que ele continue como extraviado nos sistemas.",
       ],
       subtipos: [
         {
@@ -171,7 +176,7 @@ window.ORIENTACOES = {
           label: "Celular",
           itens: [
             {
-              texto: "Ligue para a operadora e peça o bloqueio do IMEI, não só do chip. O bloqueio do chip protege a linha; o do IMEI é o que impede o aparelho de funcionar em qualquer operadora.",
+              texto: "Ligue para a operadora e peça o bloqueio do IMEI, não só do chip. O bloqueio do chip protege a linha; o do IMEI é o que impede o aparelho de funcionar em qualquer operadora. O número IMEI pode ser obtido pela caixa do aparelho.",
               prazo: "hoje",
             },
             "Acesse \"Encontre meu dispositivo\" (Android) ou \"Buscar\" (iPhone) de outro aparelho e apague os dados remotamente.",
@@ -184,17 +189,17 @@ window.ORIENTACOES = {
           chave: "documento_pessoal",
           label: "Documento pessoal (RG, CPF, CNH, passaporte)",
           itens: [
-            "Peça a segunda via ao órgão emissor: identidade no instituto de identificação do seu estado, CNH no Detran, passaporte na Polícia Federal.",
-            "Leve este boletim: quase todos os órgãos pedem o registro para emitir a segunda via.",
-            "Se desconfiar que o documento foi usado por terceiros, cadastre alerta de CPF nos birôs de crédito e consulte o Registrato do Banco Central (registrato.bcb.gov.br, com a conta gov.br).",
+            "Peça a segunda via ao órgão emissor; identidade no IGP, CNH no Detran, passaporte na Polícia Federal.",
+            "Leve o boletim de ocorrência: quase todos os órgãos pedem o registro para emitir a segunda via.",
+            "Se desconfiar que o documento foi usado por terceiros, cadastre alerta de CPF nos birôs de crédito (Serasa, SPC) e consulte o Registrato do Banco Central (registrato.bcb.gov.br, com a conta gov.br).",
           ],
         },
         {
           chave: "documento_veicular",
           label: "Documento do veículo (CRLV ou CRV/DUT)",
           itens: [
-            "O CRLV (licenciamento) tem versão digital gratuita no aplicativo Carteira Digital de Trânsito — resolve a circulação enquanto a segunda via não sai.",
-            "O CRV (o antigo DUT) exige procedimento próprio no Detran, com vistoria, e é o documento da transferência de propriedade.",
+            "O CRLV (licenciamento) tem versão digital gratuita no aplicativo CNH do Brasil — resolve a circulação enquanto a segunda via não sai.",
+            "O CRV (antigo DUT) exige procedimento próprio no Detran e é o documento da transferência de propriedade.",
             "Nunca assine um CRV em branco, mesmo para venda. Perdido assinado, ele transfere o veículo para qualquer um.",
           ],
         },
@@ -210,7 +215,10 @@ window.ORIENTACOES = {
           chave: "cartao",
           label: "Cartão bancário",
           itens: [
-            "Bloqueie o cartão pelo aplicativo ou pela central do banco, se ainda não fez, e anote o protocolo.",
+            {
+              texto: "Bloqueie o cartão pelo aplicativo ou pela central do banco, se ainda não fez, e anote o protocolo.",
+              prazo: "imediatamente"
+            },
             "Confira a fatura e o extrato dos últimos dias e conteste por escrito tudo o que não reconhecer.",
           ],
         },
@@ -228,7 +236,7 @@ window.ORIENTACOES = {
           prazo: "poucos dias",
         },
         "Procure em casa as notas fiscais, as fotos dos bens e as embalagens com número de série, e leve à delegacia. É o que identifica o objeto na investigação e o que o seguro pede.",
-        "Se você localizar o bem à venda em algum site ou rede social, não vá ao encontro do anunciante: leve o anúncio à delegacia.",
+        "Se você localizar o bem à venda em algum site ou rede social, não vá ao encontro do anunciante; leve o anúncio à delegacia.",
       ],
       subtipos: [
         {
@@ -257,7 +265,6 @@ window.ORIENTACOES = {
           chave: "residencia",
           label: "Residência ou estabelecimento",
           itens: [
-            "Enquanto a perícia não for feita, não limpe nem reorganize o local: marca de arrombamento e objeto revirado são vestígio, e um pano passado apaga os dois.",
             "Fotografe os danos e o local antes de qualquer reparo.",
             "Confira se documentos, cartões e talões também sumiram — costumam ser levados junto e usados depois.",
           ],
@@ -266,9 +273,12 @@ window.ORIENTACOES = {
           chave: "documentos",
           label: "Documentos e cartões",
           itens: [
-            "Bloqueie os cartões e avise o banco, se ainda não fez. É a providência que não pode esperar o resto.",
-            "Peça as segundas vias nos órgãos emissores, apresentando este boletim.",
-            "Cadastre alerta de CPF nos birôs de crédito: documento levado costuma reaparecer em tentativa de crédito.",
+            {
+              texto:"Bloqueie os cartões e avise o banco, se ainda não fez. É a providência que não pode esperar o resto.",
+              prazo:"imediatamente"
+            },
+            "Peça as segundas vias nos órgãos emissores, apresentando o boletim de ocorrência.",
+            "Cadastre alerta de CPF nos birôs de crédito (Serara e SPC); documento levado pode reaparecer em tentativa de crédito.",
           ],
         },
       ],
