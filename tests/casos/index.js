@@ -56,3 +56,39 @@ igual("rascunho guarda as tocadas", salvo.tocadas.indexOf("perda_o_que") >= 0, t
 
 Estado.reset();
 igual("reset apaga o rascunho", sessionStorage.getItem("acta-rascunho"), null);
+
+// --- o linter confere o VALOR do exibirSe, não só o id ------------------
+// Comparar com um valor que não é opção da pergunta-alvo esconde a
+// pergunta para sempre, em silêncio. Como a checagem existe justamente
+// para um erro que não dá sintoma nenhum, ela precisa de um schema
+// quebrado de propósito para provar que morde — registrado aqui e
+// removido logo em seguida.
+window.TIPOS_OCORRENCIA.__teste = {
+  label: "Tipo de teste",
+  perguntas: [
+    {
+      id: "teste_ramo",
+      tipo: "multipla",
+      texto: "Ramo?",
+      opcoes: [
+        { valor: "a", texto: "A" },
+        { valor: "b", texto: "B" },
+      ],
+      template: function () { return ""; },
+    },
+    {
+      id: "teste_filha",
+      tipo: "texto",
+      texto: "Detalhe",
+      exibirSe: { pergunta: "teste_ramo", igual: "c" },
+      template: function () { return ""; },
+    },
+  ],
+};
+var acusados = Linter.checarSchema().erros.filter(function (e) {
+  return e.indexOf("teste_filha") >= 0;
+});
+igual("linter pega valor de exibirSe que não existe", acusados.length, 1);
+ok("o erro nomeia o valor errado", acusados[0].indexOf('"c"') >= 0);
+delete window.TIPOS_OCORRENCIA.__teste;
+igual("e o schema de verdade segue limpo", Linter.checarSchema().erros.length, 0);

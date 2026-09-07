@@ -124,6 +124,13 @@ O fluxo é: **schema → engine → generator**.
   apontando para um id inexistente, etc. Não bloqueia o uso da
   ferramenta — é um aviso para quem edita o questionário, não para quem
   o preenche.
+
+  Ele também confere o **valor** comparado em `exibirSe`, e não só o id:
+  `igual: "celulares"` onde a opção é `"celular"` faz a pergunta nunca
+  aparecer, sem erro nenhum no console — o tipo de defeito que só se
+  descobre preenchendo o formulário inteiro e reparando na falta. A
+  checagem vale quando a pergunta-alvo tem lista de opções; contra
+  campo de texto livre não há conjunto fechado para comparar.
 - **`js/gerador/main.js`** — liga os botões da página, restaura o rascunho
   e monta o link para as orientações (ver as duas seções abaixo). Copiar
   fica em `js/comum/copiar.js`, compartilhado com as outras ferramentas:

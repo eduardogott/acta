@@ -6,7 +6,8 @@
  * Não bloqueia o uso da ferramenta — só avisa alto (console + um aviso
  * discreto na tela) quando alguém edita um arquivo de tipo e comete um
  * erro estrutural (id duplicado, tipo de pergunta inexistente, exibirSe
- * apontando pra um id que não existe, etc). O objetivo é pegar esse tipo
+ * apontando pra um id que não existe ou comparando com um valor que não
+ * é opção da pergunta-alvo, etc). O objetivo é pegar esse tipo
  * de erro no momento em que o schema é editado, não quando um policial
  * estiver preenchendo o formulário.
  * ---------------------------------------------------------------------------
@@ -27,7 +28,12 @@ const Linter = (() => {
     const erros = [];
     const avisos = [];
     const todas = todasPerguntasComOrigem();
-    const idsConhecidos = new Set(todas.map((t) => t.pergunta.id));
+    // id -> pergunta, pra conferir "exibirSe" contra a pergunta-alvo.
+    // Havendo id duplicado (erro reportado mais abaixo), vale o primeiro.
+    const porId = new Map();
+    todas.forEach(({ pergunta }) => {
+      if (pergunta.id && !porId.has(pergunta.id)) porId.set(pergunta.id, pergunta);
+    });
     const idsVistos = new Map(); // id -> [origens]
 
     todas.forEach(({ pergunta: p, origem }) => {
@@ -84,10 +90,40 @@ const Linter = (() => {
         erros.push(`${contexto}: validador "${p.validador}" não está registrado.`);
       }
 
-      Visibilidade.idsReferenciados(p.exibirSe).forEach((idRef) => {
-        if (!idsConhecidos.has(idRef)) {
-          erros.push(`${contexto}: "exibirSe" referencia a pergunta "${idRef}", que não existe em lugar nenhum do schema.`);
+      // Em "exibirSe", o id precisa existir E — quando a pergunta-alvo tem
+      // lista de opções — o valor comparado precisa ser uma delas. Um
+      // valor que não existe não quebra nada de forma visível: a condição
+      // nunca é verdadeira, a pergunta nunca aparece, e o console fica
+      // limpo. Sem esta checagem, o único sintoma é uma pergunta ausente
+      // — que só se nota preenchendo o formulário inteiro e reparando na
+      // falta.
+      Visibilidade.condicoesDe(p.exibirSe).forEach((cond) => {
+        if (!cond.pergunta) {
+          erros.push(`${contexto}: condição de "exibirSe" sem "pergunta".`);
+          return;
         }
+        const alvo = porId.get(cond.pergunta);
+        if (!alvo) {
+          erros.push(`${contexto}: "exibirSe" referencia a pergunta "${cond.pergunta}", que não existe em lugar nenhum do schema.`);
+          return;
+        }
+        // Alvo sem lista de opções (texto, dinheiro, número,
+        // multiplo-input): não há conjunto fechado pra conferir contra.
+        if (!Array.isArray(alvo.opcoes)) return;
+
+        const validos = alvo.opcoes.map((o) => o.valor);
+        const comparados = ["igual", "diferente", "incluiValor"]
+          .filter((chave) => chave in cond)
+          .map((chave) => cond[chave])
+          .concat(Array.isArray(cond.umDe) ? cond.umDe : []);
+
+        comparados.forEach((valor) => {
+          if (!validos.includes(valor)) {
+            erros.push(
+              `${contexto}: "exibirSe" compara "${cond.pergunta}" com "${valor}", que não é opção dessa pergunta. Opções: ${validos.join(", ")}.`
+            );
+          }
+        });
       });
 
       if (!p.template) {

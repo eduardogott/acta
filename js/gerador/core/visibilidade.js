@@ -28,23 +28,20 @@ const Visibilidade = (() => {
     return true;
   }
 
+  // Um exibirSe pode vir sozinho ou dentro de um array; quem consome não
+  // deveria precisar saber disso, então sai sempre em forma de lista.
+  // Condições em forma de FUNÇÃO não são inspecionáveis estaticamente:
+  // devolvem lista vazia, e o linter simplesmente não checa esse caso.
+  function condicoesDe(exibirSe) {
+    if (!exibirSe || typeof exibirSe === "function") return [];
+    return Array.isArray(exibirSe) ? exibirSe : [exibirSe];
+  }
+
   function perguntaVisivel(pergunta, respostas) {
     if (!pergunta.exibirSe) return true;
     if (typeof pergunta.exibirSe === "function") return pergunta.exibirSe(respostas);
-    const condicoes = Array.isArray(pergunta.exibirSe)
-      ? pergunta.exibirSe
-      : [pergunta.exibirSe];
-    return condicoes.every((c) => condicaoUnicaOk(c, respostas));
+    return condicoesDe(pergunta.exibirSe).every((c) => condicaoUnicaOk(c, respostas));
   }
 
-  // Extrai os ids de pergunta referenciados num exibirSe (usado pelo linter).
-  // Condições em forma de função não são inspecionáveis estaticamente —
-  // o linter simplesmente não checa esse caso.
-  function idsReferenciados(exibirSe) {
-    if (!exibirSe || typeof exibirSe === "function") return [];
-    const condicoes = Array.isArray(exibirSe) ? exibirSe : [exibirSe];
-    return condicoes.map((c) => c.pergunta).filter(Boolean);
-  }
-
-  return { perguntaVisivel, idsReferenciados };
+  return { perguntaVisivel, condicoesDe };
 })();
