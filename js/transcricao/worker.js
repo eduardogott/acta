@@ -33,28 +33,36 @@
  * ---------------------------------------------------------------------------
  */
 
-import {
-  pipeline,
-  env,
-} from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5/dist/transformers.min.js";
+// Este worker é um módulo e não enxerga o <script> da página, então
+// importa as configurações por conta própria. O arquivo só escreve em
+// globalThis — por isso serve aos dois mundos.
+import "../configuracoes.js";
 
-const VERSAO_BIBLIOTECA = "3.7.5";
-const BASE_CDN = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@" + VERSAO_BIBLIOTECA + "/dist/";
+// O único valor da suíte que precisa estar escrito em dois lugares: o
+// especificador de um `import` estático tem de ser literal, então a
+// versão da biblioteca aparece aqui, e não só em configuracoes.js.
+//
+// Com `await import(BASE_CDN + …)`, que aceitaria a variável, este worker
+// simplesmente morre: a promessa nunca resolve, o módulo para antes de
+// registrar o onmessage, e a transcrição fica esperando para sempre —
+// sem erro e sem mensagem. Medido, e por isso o import continua estático.
+import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.5/dist/transformers.min.js";
 
-// Os dois arquivos do runtime que precisam virar blob para as threads
-// poderem nascer. O `.mjs` é o glue de 44 KB; o `.wasm` tem ~11 MB.
-const ARQUIVOS_RUNTIME = {
-  mjs: BASE_CDN + "ort-wasm-simd-threaded.jsep.mjs",
-  wasm: BASE_CDN + "ort-wasm-simd-threaded.jsep.wasm",
-};
+const { BASE_CDN, ARQUIVOS_RUNTIME, TETO_THREADS, CACHE_RUNTIME } =
+  globalThis.Config.TRANSCRICAO.MOTOR;
 
-// Acima de quatro o ganho no Whisper é pequeno e a memória cresce rápido;
-// abaixo de dois não vale o trabalho de preparar os blobs.
-const TETO_THREADS = 4;
-
-// Cache do navegador para os dois arquivos do runtime, no mesmo espírito
-// do cache do núcleo do ffmpeg. Trocar VERSAO_BIBLIOTECA invalida.
-const CACHE_RUNTIME = "acta-ort-v1";
+// Duas verdades separadas envelhecem. Se as versões divergirem, o runtime
+// onnx viria de uma versão e a biblioteca de outra — uma incompatibilidade
+// que aparece lá na frente, no meio da inferência. Aqui vira erro na
+// partida, que o caso de teste da transcrição pega.
+const VERSAO_NO_IMPORT = "3.7.5";
+if (!BASE_CDN.includes("@" + VERSAO_NO_IMPORT + "/")) {
+  throw new Error(
+    "[acta.transcricao] o import estático deste worker usa a versão " +
+      VERSAO_NO_IMPORT + ", mas configuracoes.js pede " + BASE_CDN +
+      " — atualize os dois."
+  );
+}
 
 // Este site não serve modelos: tudo vem do Hugging Face, que responde
 // devolvendo a nossa origem no Access-Control-Allow-Origin.

@@ -17,35 +17,9 @@
 
   const log = window.Log.criar("transcricao");
 
-  // Whisper trabalha nessa taxa; qualquer outra teria de ser reamostrada
-  // do outro lado de qualquer jeito.
-  const TAXA_ALVO = 16000;
-
-  // Os tamanhos são a soma do codificador e do decodificador quantizados
-  // em 8 bits, conferidos no Hugging Face. Se trocar de modelo, confira de
-  // novo — é esse número que a pessoa usa para decidir se espera ou não.
-  const MODELOS = [
-    {
-      id: "onnx-community/whisper-tiny",
-      nome: "Rápido",
-      detalhe: "~41 MB · o mais leve, erra bastante em português — bom para saber do que se trata",
-    },
-    {
-      id: "onnx-community/whisper-base",
-      nome: "Equilibrado",
-      detalhe: "~77 MB · o padrão: texto aproveitável com revisão",
-      padrao: true,
-    },
-    {
-      id: "onnx-community/whisper-small",
-      nome: "Preciso",
-      detalhe: "~249 MB · o melhor dos três em português, e o mais demorado",
-    },
-  ];
-
-  // Acima disso a decodificação inteira na memória fica arriscada, e a
-  // espera deixa de ser razoável numa thread só.
-  const AVISO_DURACAO_S = 20 * 60;
+  // Taxa de amostragem do Whisper, lista de modelos e limite de duração:
+  // js/configuracoes.js, seção 9.
+  const { TAXA_ALVO, MODELOS, AVISO_DURACAO_S } = window.Config.TRANSCRICAO;
 
   const el = {
     painelArquivo: document.getElementById("painel-arquivo"),

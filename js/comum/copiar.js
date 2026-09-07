@@ -21,8 +21,7 @@
 window.Copiar = (() => {
   const log = window.Log.criar("comum");
 
-  const MS_SUCESSO = 1600;
-  const MS_FALHA = 6000;
+  const { MS_SUCESSO, MS_FALHA } = window.Config.INTERFACE;
 
   // Um cronômetro por botão: dois cliques seguidos não podem deixar o
   // rótulo antigo voltar por cima do novo.

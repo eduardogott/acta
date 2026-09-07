@@ -22,6 +22,35 @@ function hrefs(seletor) {
 }
 
 igual("a lista de ferramentas é pública", typeof window.Ferramentas, "object");
+
+// --- configurações centralizadas ------------------------------------
+// Uma chave que some de js/configuracoes.js não dá erro em lugar nenhum:
+// vira `undefined`, e a ferramenta que a lia passa a somar NaN ou a
+// imprimir "undefined" no meio de um número de boletim. Daí varrer o
+// arquivo inteiro em vez de conferir chave por chave.
+var SECOES = ["UNIDADE", "RODAPE", "LOG", "ARMAZENAMENTO", "INTERFACE",
+              "GERADOR", "ORIENTACOES", "CONVERSOR", "TRANSCRICAO", "CONVERSAS"];
+igual("todas as seções de configuração existem",
+      SECOES.filter(function (s) { return !window.Config[s]; }), []);
+
+var indefinidas = [];
+Object.keys(window.Config).forEach(function (secao) {
+  Object.keys(window.Config[secao]).forEach(function (chave) {
+    if (window.Config[secao][chave] === undefined) indefinidas.push(secao + "." + chave);
+  });
+});
+igual("nenhuma configuração vazia", indefinidas, []);
+
+// As URLs do núcleo do ffmpeg são montadas dentro do próprio arquivo, a
+// partir da base — se a montagem sumir, o motor pede "undefined".
+igual("as URLs do núcleo saem da base",
+      Object.keys(window.Config.CONVERSOR.ARQUIVOS_CORE).every(function (k) {
+        var a = window.Config.CONVERSOR.ARQUIVOS_CORE[k];
+        return a.url === window.Config.CONVERSOR.CDN_CORE + a.arquivo;
+      }), true);
+igual("e as do runtime da transcrição também",
+      window.Config.TRANSCRICAO.MOTOR.ARQUIVOS_RUNTIME.wasm.indexOf(
+        window.Config.TRANSCRICAO.MOTOR.BASE_CDN), 0);
 igual("um cartão por ferramenta",
       document.querySelectorAll("#cartoes .cartao").length,
       window.Ferramentas.PAGINAS.length);

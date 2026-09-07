@@ -8,7 +8,7 @@
 (function () {
   const log = window.Log.criar("comum");
 
-  const CHAVE = "ocorrencias-tema";
+  const CHAVE = window.Config.ARMAZENAMENTO.TEMA;
   const raiz = document.documentElement;
 
   function temaSalvo() {

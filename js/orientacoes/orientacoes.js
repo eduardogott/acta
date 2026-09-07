@@ -292,7 +292,7 @@
   // ninguém confere antes de entregar.
   // -------------------------------------------------------------------
 
-  const TITULO_OUTRAS = "Outras orientações";
+  const { TITULO_OUTRAS } = window.Config.ORIENTACOES;
 
   /** As não vazias, aparadas: caixa em branco não vira item impresso. */
   function outrasEscritas() {
@@ -368,10 +368,7 @@
   // semana é pedir erro de digitação.
   // -------------------------------------------------------------------
 
-  // Código da unidade. Trocou de delegacia, troca aqui.
-  const CODIGO_UNIDADE = "100930";
-
-  const LINHA_EM_BRANCO = "______________________";
+  const { CODIGO_UNIDADE, LINHA_EM_BRANCO } = window.Config.ORIENTACOES;
 
   /** "12345" -> "12345/2026/100930". Vazio devolve a linha para preencher. */
   function numeroFormatado() {

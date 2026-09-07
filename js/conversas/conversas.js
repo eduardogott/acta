@@ -47,15 +47,13 @@
     },
   ];
 
-  // Linhas que o WhatsApp insere sozinho e que não são mensagem de
-  // ninguém. Não somem: viram nota, porque "a criptografia mudou" pode
-  // significar troca de aparelho, e isso às vezes importa.
-  const RE_SISTEMA = /(criptografia de ponta a ponta|Mensagens e ligações são protegidas|adicionou|saiu do grupo|criou o grupo|mudou o nome|alterou o código de segurança|Você foi adicionado)/i;
-
-  // Marcadores de anexo. Viram uma nota explícita, porque um "arquivo de
-  // mídia oculto" no meio da conversa é justamente o que a autoridade
-  // precisa saber que existe.
-  const RE_ANEXO = /(<M[ií]dia oculta>|<anexado:|arquivo de m[ií]dia oculto|imagem ocultada|áudio ocultado|v[ií]deo omitido|figurinha omitida|GIF omitido|documento omitido)/i;
+  // As duas listas moram em js/configuracoes.js, seção 10 — são o que se
+  // estende quando o WhatsApp inventa uma frase nova. Viram uma alternativa
+  // só, sem âncora: o que importa é a frase aparecer em qualquer lugar da
+  // linha.
+  const { FRASES_DE_SISTEMA, MARCADORES_DE_ANEXO } = window.Config.CONVERSAS;
+  const RE_SISTEMA = new RegExp("(" + FRASES_DE_SISTEMA.join("|") + ")", "i");
+  const RE_ANEXO = new RegExp("(" + MARCADORES_DE_ANEXO.join("|") + ")", "i");
 
   const el = {
     entrada: document.getElementById("entrada"),

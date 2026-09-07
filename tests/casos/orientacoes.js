@@ -67,10 +67,15 @@ igual("sem número, fica a linha para preencher à mão",
       txt("cabecalho-numero"), "______________________");
 
 digitar("numero-ocorrencia", "48271");
+// Contra window.Config, e não contra "100930" escrito à mão: é assim que
+// este caso prova que a página lê mesmo o arquivo de configurações, em vez
+// de ter uma segunda cópia do código da unidade escondida nela.
 igual("número sai no formato da unidade",
-      txt("cabecalho-numero"), "48271/" + new Date().getFullYear() + "/100930");
+      txt("cabecalho-numero"),
+      "48271/" + new Date().getFullYear() + "/" + window.Config.UNIDADE.CODIGO);
 igual("a prévia mostra o mesmo",
-      txt("numero-previa"), "Sai impresso: 48271/" + new Date().getFullYear() + "/100930");
+      txt("numero-previa"),
+      "Sai impresso: 48271/" + new Date().getFullYear() + "/" + window.Config.UNIDADE.CODIGO);
 
 igual("a data é sempre a de hoje",
       txt("cabecalho-data"), new Date().toLocaleDateString("pt-BR"));

@@ -23,11 +23,7 @@
 (function () {
   const log = window.Log.criar("comum");
 
-  const CARACTERES_DO_HASH = 7;
-
-  const ETIMOLOGIA_HTML =
-    'Acta — do latim <em>Acta Diurna</em>, os registros públicos diários de Roma.';
-  const AUTOR = { nome: "Eduardo Gottert", url: "https://gttr.com.br", ano: "2026" };
+  const { CARACTERES_DO_HASH, ETIMOLOGIA_HTML, AUTOR } = window.Config.RODAPE;
 
   function criarLinha(classe) {
     const p = document.createElement("p");

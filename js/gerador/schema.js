@@ -18,7 +18,7 @@
  */
 
 // Texto fixo sempre anexado ao final, se algo foi gerado.
-const TEXTO_FECHO = "Nada mais.";
+const TEXTO_FECHO = window.Config.GERADOR.TEXTO_FECHO;
 
 // Opções da pergunta inicial vêm do registro de tipos (registry.js +
 // js/gerador/tipos/*.js) — nunca precisa editar isto ao adicionar um tipo novo.

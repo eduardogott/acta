@@ -26,159 +26,52 @@
   "use strict";
 
   // ---------------------------------------------------------------------
-  // Configuração (mesmas regras do script Python)
+  // Configuração
+  //
+  // Os números moram em js/configuracoes.js, seção 8: extensões, níveis de
+  // compressão, linha de base das conversões, alvos de tamanho, endereços
+  // do núcleo do ffmpeg. Aqui ficam só as contas que os consomem — e a
+  // reexportação abaixo, para motor.js e conversor.js continuarem pedindo
+  // tudo a um lugar só.
   // ---------------------------------------------------------------------
 
-  const AUDIO_EXTS = [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus", ".aiff", ".au"];
-  const VIDEO_EXTS = [".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".mpg", ".mpeg", ".m4v", ".3gp", ".ts"];
-  // .heic ficou de fora de propósito: o build padrão do ffmpeg.wasm não traz
-  // decodificador HEIC, então esses arquivos só produziriam um erro obscuro.
-  const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp"];
+  const {
+    ALVO_AUDIO_KBPS,
+    ALVO_BPP_MINIMO,
+    ALVO_MARGEM,
+    ALVO_MP3_KBPS,
+    ALVO_MP3_KBPS_MINIMO,
+    ALVO_VIDEO_KBPS_MINIMO,
+    ARQUIVOS_CORE,
+    AUDIO_EXTS,
+    BPP_CRF23,
+    CACHE_MOTOR,
+    CDN_CORE,
+    CONVERSAO_AUDIO,
+    CONVERSAO_VIDEO,
+    ESCADA_LARGURA,
+    EXTENSION_MAP,
+    FPS_PRESUMIDO,
+    IMAGE_EXTS,
+    LEVEL_AUDIO,
+    LEVEL_AUDIO_ONLY,
+    LEVEL_VIDEO,
+    LIMITE_AVISO_MEMORIA,
+    LOADER_LOCAL,
+    QSCALE_JPEG_90,
+    RESUMO_AUDIO,
+    RESUMO_VIDEO,
+    TIMEOUT_LOAD_MS,
+    VIDEO_EXTS,
+  } = window.Config.CONVERSOR;
 
-  const EXTENSION_MAP = {
-    ".jpeg": ".jpg",
-    ".mpeg": ".mpg",
-    ".tiff": ".tif",
-    ".mpg4": ".mp4",
-  };
-
-  // Compressão de vídeo (opção 9 quando o arquivo é um vídeo). "maxFps" é
-  // teto, não alvo: um vídeo que já esteja abaixo dele passa intacto.
-  const LEVEL_VIDEO = {
-    "1": { nome: "Baixa",   crf: 26, scale: null, maxFps: 30, preset: "medium" },
-    "2": { nome: "Média",   crf: 30, scale: null, maxFps: 24, preset: "medium" },
-    "3": { nome: "Alta",    crf: 32, scale: 0.75, maxFps: 24, preset: "medium" },
-    "4": { nome: "Extrema", crf: 34, scale: 0.5,  maxFps: 19, preset: "slow" },
-  };
-
-  // Faixa de áudio dentro do vídeo (AAC). Bitrate e sample rate são tetos:
-  // argsAudioAac(), abaixo, nunca sobe acima do que o arquivo já tem.
-  const LEVEL_AUDIO = {
-    "1": { bitrate: 128, samplerate: null,  mono: false },
-    "2": { bitrate: 96,  samplerate: 24000, mono: true },
-    "3": { bitrate: 64,  samplerate: 22050, mono: true },
-    "4": { bitrate: 32,  samplerate: 16000, mono: true },
-  };
-
-  // Compressão de arquivos de áudio (opção 9 quando o arquivo é um áudio).
-  // Saída sempre MP3; bitrate/sample rate nunca sobem acima do original.
-  //
-  // O libmp3lame não conhece -preset (isso é do x264): o equivalente é
-  // -compression_level, a escala de qualidade do LAME, em que 0 é o mais
-  // lento e caprichado e 9 o mais apressado. Daí 1 fazer as vezes de
-  // "slower" e 0 as de "veryslow".
-  //
-  // Os quatro pares bitrate/sample rate são combinações válidas de MP3:
-  // 128 kbps a 32 kHz cai em MPEG-1, e os demais em MPEG-2 (16–24 kHz),
-  // cuja faixa de bitrate vai de 8 a 160 kbps.
-  const LEVEL_AUDIO_ONLY = {
-    "1": { nome: "Baixa",   bitrate: 128, samplerate: 32000, mono: false, compressionLevel: 3 },
-    "2": { nome: "Média",   bitrate: 80,  samplerate: 24000, mono: true,  compressionLevel: 2 },
-    "3": { nome: "Alta",    bitrate: 48,  samplerate: 24000, mono: true,  compressionLevel: 1 },
-    "4": { nome: "Extrema", bitrate: 24,  samplerate: 16000, mono: true,  compressionLevel: 0 },
-  };
-
-  const RESUMO_VIDEO = {
-    "1": "CRF 26 · até 30 fps · resolução original · áudio AAC 128 kbps",
-    "2": "CRF 30 · até 24 fps · resolução original · áudio AAC 96 kbps mono 24 kHz",
-    "3": "CRF 32 · até 24 fps · 75% da resolução · áudio AAC 64 kbps mono 22,05 kHz",
-    "4": "CRF 34 · até 19 fps · 50% da resolução · áudio AAC 32 kbps mono 16 kHz · preset slow",
-    "5": "Você define cada parâmetro abaixo.",
-    "6": "O bitrate sai da conta do tamanho pedido — e a resolução cai se o bitrate não sustentar a original.",
-  };
-
-  const RESUMO_AUDIO = {
-    "1": "MP3 128 kbps · canais originais · até 32 kHz",
-    "2": "MP3 80 kbps · mono · até 24 kHz",
-    "3": "MP3 48 kbps · mono · até 24 kHz",
-    "4": "MP3 24 kbps · mono · até 16 kHz",
-    "5": "Você define cada parâmetro abaixo.",
-    "6": "O bitrate sai da conta do tamanho pedido; sample rate e canais acompanham.",
-  };
-
-  // -------------------------------------------------------------------
-  // Nível "Tamanho-alvo" (nível 6 da opção 9)
-  //
-  // Em vez de escolher a qualidade e descobrir o tamanho, o usuário diz o
-  // tamanho e o bitrate sai da divisão. É o caminho natural quando o
-  // limite é externo — anexo de e-mail, campo de upload de um sistema.
-  // -------------------------------------------------------------------
-
-  // Sobra para o overhead do contêiner e para o erro do controle de taxa
-  // do x264, que mira a média mas não a acerta na casa do byte.
-  const ALVO_MARGEM = 0.95;
-  // Abaixo disto o vídeo vira um borrão sem serventia: o encode passa a
-  // ignorar o alvo e o aviso vai para a estimativa.
-  const ALVO_VIDEO_KBPS_MINIMO = 64;
-  // Bits por pixel por quadro. Abaixo disto compensa mais encolher a
-  // imagem do que insistir na resolução original com bitrate insuficiente.
-  const ALVO_BPP_MINIMO = 0.04;
-  // Degraus de largura para essa redução (só desce, nunca sobe).
-  const ESCADA_LARGURA = [1920, 1280, 854, 640, 480, 320];
-  // Bitrates de áudio candidatos, do melhor para o pior.
-  const ALVO_AUDIO_KBPS = [128, 96, 64, 48, 32, 24, 16];
-  // Bitrates que o libmp3lame aceita, na compressão de áudio puro.
-  const ALVO_MP3_KBPS = [320, 256, 192, 160, 128, 112, 96, 80, 64, 56, 48, 40, 32, 24, 16, 8];
-  const ALVO_MP3_KBPS_MINIMO = 8;
-
-  // -------------------------------------------------------------------
-  // Linha de base das conversões (opções 1, 2 e 3)
-  //
-  // Converter e comprimir são a mesma operação aqui: o sistema de destino
-  // aceita no máximo 20 MB por arquivo, e entregar um MP4 remuxado de
-  // 300 MB seria devolver o problema ao usuário. Os números abaixo são o
-  // teto, nunca o alvo — nenhuma conversão sobe bitrate, sample rate ou
-  // resolução acima do que o arquivo já tem.
-  // -------------------------------------------------------------------
-  const CONVERSAO_VIDEO = { crf: 23, preset: "medium", audioKbps: 128, audioHz: 32000 };
-  const CONVERSAO_AUDIO = { kbps: 128, hz: 32000 };
-
-  // Qualidade das imagens convertidas para JPG.
-  //
-  // O mjpeg do ffmpeg não conhece a escala 0–100 do libjpeg: o que ele
-  // aceita é o qscale, de 2 (melhor) a 31 (pior). O degrau 3 é o
-  // equivalente prático de "qualidade 90"; o 2, usado antes, fica em
-  // ~93/95 e praticamente não comprime nada.
-  const QSCALE_JPEG_90 = "3";
-
-  // O núcleo do ffmpeg (32 MB) vem do jsDelivr, não deste site. Versões
-  // fixadas de propósito: a URL vira imutável e cacheável para sempre.
-  //
-  // O "bytes" de cada arquivo está declarado porque o jsDelivr responde em
-  // chunks, sem Content-Length, e sem ele a barra de progresso ficaria sem
-  // denominador. Ao trocar de versão, atualize os números — o código avisa
-  // no console se divergirem do que o servidor mandar.
-  const CDN_CORE = "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/umd";
-  const ARQUIVOS_CORE = {
-    core:   { url: CDN_CORE + "/ffmpeg-core.js",        tipo: "text/javascript",  bytes: 129115 },
-    wasm:   { url: CDN_CORE + "/ffmpeg-core.wasm",      tipo: "application/wasm", bytes: 32718323 },
-    worker: { url: CDN_CORE + "/ffmpeg-core.worker.js", tipo: "text/javascript",  bytes: 2213 },
-  };
-  // Os dois arquivos que continuam locais (7,6 KB somados) — ver README.
-  const LOADER_LOCAL = ["js/conversor/vendor/ffmpeg/ffmpeg.js", "js/conversor/vendor/ffmpeg/814.ffmpeg.js"];
-
-  // v2: as chaves do cache mudaram de caminhos locais para URLs do jsDelivr.
-  // Como este core não chama receiveProgress (o símbolo nem existe no
-  // .wasm), o andamento vem de `-progress pipe:1`: o ffmpeg escreve blocos
-  // de `chave=valor` no stdout, terminados em newline — que é o que o
+  // Este não é configuração, é protocolo, e por isso fica aqui: como este
+  // core não chama receiveProgress (o símbolo nem existe no .wasm), o
+  // andamento vem de `-progress pipe:1` — o ffmpeg escreve blocos de
+  // `chave=valor` no stdout, terminados em newline, que é o que o
   // Emscripten precisa para entregar a linha ao logger. As linhas de
   // estatística normais terminam em CR e ficam presas no buffer.
   const ARGS_PROGRESSO = ["-progress", "pipe:1"];
-
-  const CACHE_MOTOR = "acta-ffmpeg-v2";
-
-  // ffmpeg.load() nunca rejeita sozinho se o worker morrer: sem um teto de
-  // tempo a página fica "Inicializando…" para sempre.
-  const TIMEOUT_LOAD_MS = 90000;
-
-  // O ffmpeg.wasm carrega o arquivo inteiro no heap do WebAssembly; acima
-  // disso é comum a aba ficar sem memória com um erro pouco informativo.
-  const LIMITE_AVISO_MEMORIA = 500 * 1024 * 1024;
-
-  // Bits por pixel do x264 (preset medium) em CRF 23, usado só na estimativa
-  // de tamanho. Cada 6 pontos de CRF dobram ou reduzem o bitrate pela metade.
-  const BPP_CRF23 = 0.07;
-  const FPS_PRESUMIDO = 30;
 
   // ---------------------------------------------------------------------
   // Nome de arquivo e tipo

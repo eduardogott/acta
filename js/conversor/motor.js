@@ -239,7 +239,7 @@
   let ffmpegEmConstrucao = null;
   let logSink = null;
   // ultimas linhas do ffmpeg, para explicar uma falha
-  const CAUDA_MAX = 40;
+  const { CAUDA_MAX } = window.Config.CONVERSOR;
   let logCauda = [];
   // null = ainda nao sei se este core aceita -progress pipe:1
   let progressoSuportado = null;

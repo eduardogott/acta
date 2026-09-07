@@ -36,11 +36,12 @@
 window.Log = (function () {
   "use strict";
 
-  // ?debug=1 vale para a página inteira, e não por ferramenta: quem está
-  // depurando não sabe de antemão qual módulo vai falar.
-  const VERBOSE = new URLSearchParams(location.search).get("debug") === "1";
+  const { PREFIXO, ESTILO, PARAMETRO_DEBUG, VALOR_DEBUG } = globalThis.Config.LOG;
 
-  const ESTILO = "color:#2d4a63;font-weight:bold";
+  // O filtro vale para a página inteira, e não por ferramenta: quem está
+  // depurando não sabe de antemão qual módulo vai falar.
+  const VERBOSE =
+    new URLSearchParams(location.search).get(PARAMETRO_DEBUG) === VALOR_DEBUG;
   const t0 = performance.now();
 
   /** "+2841ms" desde o carregamento da página. */
@@ -57,7 +58,7 @@ window.Log = (function () {
   function criar(ferramenta) {
     if (criados[ferramenta]) return criados[ferramenta];
 
-    const marca = "%c[acta." + ferramenta + "]";
+    const marca = "%c[" + PREFIXO + ferramenta + "]";
 
     function emitir(metodo, args) {
       console[metodo].apply(console, [marca, ESTILO].concat(Array.prototype.slice.call(args)));

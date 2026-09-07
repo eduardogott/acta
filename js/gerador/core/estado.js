@@ -26,7 +26,7 @@
 const Estado = (() => {
   const log = window.Log.criar("gerador");
 
-  const CHAVE_RASCUNHO = "acta-rascunho";
+  const CHAVE_RASCUNHO = window.Config.GERADOR.CHAVE_RASCUNHO;
 
   const respostas = {};
   const tocadas = new Set();

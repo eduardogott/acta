@@ -31,6 +31,42 @@ copiado, ele divergiu — a linha da etimologia existia só no index, o que
 fazia "Acta" parecer o nome do gerador. Os testes conferem essas
 invariantes em toda página.
 
+## Configurações
+
+**`js/configuracoes.js`** reúne tudo que se ajusta sem precisar entender o
+código: o código da unidade, os bitrates e níveis do conversor, os modelos
+da transcrição, as chaves de cache, os endereços dos CDNs. É o primeiro
+`<script>` de toda página, e o worker da transcrição o importa por conta
+própria.
+
+Cada módulo pega o que é seu numa linha, no topo:
+
+```js
+const { CODIGO_UNIDADE, LINHA_EM_BRANCO } = window.Config.ORIENTACOES;
+```
+
+As chaves mantêm os nomes que as constantes tinham nos módulos, então
+procurar por `CODIGO_UNIDADE` ou `LEVEL_VIDEO` acha os dois lados. Onde um
+valor deriva de outro — as URLs do núcleo do ffmpeg a partir da base, os
+arquivos do runtime a partir da versão da biblioteca — a montagem é feita
+no próprio arquivo: declarar três URLs à mão é como uma fica para trás numa
+troca de versão.
+
+**O que continua fora, de propósito:** o conteúdo (`dados.js` das
+orientações e da tipificação, os tipos do gerador), o mapa do site
+(`PAGINAS`, em `js/comum/nav.js`) e os pesos de dígito verificador em
+`identificadores.js` — esses últimos não são preferência, são a definição
+do cálculo. O cabeçalho do arquivo lista isso, para servir também de
+índice de onde o resto mora.
+
+**Uma única duplicação sobrou**, e ela é barulhenta: a versão da biblioteca
+de transcrição precisa estar escrita no `import` estático de
+`js/transcricao/worker.js`, porque o especificador de um import estático
+tem de ser literal. Trocar para `await import()` — que aceitaria a
+variável — mata o worker em silêncio: a promessa nunca resolve e a
+transcrição espera para sempre. Foi medido. Em vez disso, o worker recusa
+a subir quando as duas versões divergem.
+
 ## O log no console
 
 Toda ferramenta escreve no console com a mesma marca:
@@ -92,6 +128,7 @@ css/
   ferramentas.css    das cinco ferramentas menores
 
 js/
+  configuracoes.js   TODOS os valores ajustáveis da suíte
   comum/             log.js (o console da suíte), theme.js, nav.js, rodape.js, versao.js
                      identificadores.js (gerador + conferidor)
                      formatos.js (tamanho e tempo), copiar.js (copiar com feedback)
