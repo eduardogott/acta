@@ -44,6 +44,14 @@
     <div class="opcoes" id="opcoes-extras"></div>
   </div>
 
+  <!-- O que os dados não preveem. Entra na folha como um grupo igual aos
+       demais — ver gruposDaFolha() em js/orientacoes/orientacoes.js. -->
+  <div class="bloco-escolha bloco-outras">
+    <p class="progresso">Outras orientações (opcional)</p>
+    <div id="outras-lista"></div>
+    <button type="button" class="btn-adicionar" id="btn-nova-outra">+ Nova orientação</button>
+  </div>
+
   <div class="bloco-escolha bloco-numero">
     <label for="numero-ocorrencia">Número da ocorrência (opcional, sai impresso no alto da folha)</label>
     <input type="text" id="numero-ocorrencia" inputmode="numeric" autocomplete="off"
@@ -101,6 +109,8 @@
       <li><b>Para editar o conteúdo:</b> tudo está em <code>js/orientacoes/dados.js</code>,
       com o formato explicado no cabeçalho do arquivo. Escreva no imperativo e endereçado a
       quem vai levar o papel.</li>
+      <li><b>"Outras orientações"</b> é para o caso isolado, e some ao recarregar a página.
+      Orientação que você escreveu duas vezes já é conteúdo: leve para o arquivo acima.</li>
     </ul>
   </section>
 </main>

@@ -91,6 +91,85 @@ igual("cada grupo é uma linha da tabela",
 igual("e há mais de um grupo",
       document.querySelectorAll("#saida-grupos > tr").length > 1, true);
 
+// --- outras orientações, escritas à mão --------------------------------
+// Entram como um grupo igual aos demais e no MEIO da folha, não como
+// rodapé: valem para este caso e mais nenhum, então vêm depois do que
+// saiu dos dados e antes do que vale para qualquer registro.
+function escreverOutra(i, texto) {
+  var caixa = document.querySelectorAll("#outras-lista textarea")[i];
+  caixa.value = texto;
+  caixa.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function titulosDaFolha() {
+  return [].map.call(document.querySelectorAll("#saida-grupos .orientacoes-grupo h3"),
+                     function (h) { return h.textContent; });
+}
+function itensDasOutras() {
+  var grupos = document.querySelectorAll("#saida-grupos .orientacoes-grupo");
+  for (var i = 0; i < grupos.length; i++) {
+    if (grupos[i].querySelector("h3").textContent === "Outras orientações") {
+      return [].map.call(grupos[i].querySelectorAll("li"),
+                         function (li) { return li.textContent; });
+    }
+  }
+  return null;
+}
+
+clicar("#btn-limpar");
+clicar('#opcoes-tipo input[value="perda"]');
+var semOutras = document.querySelectorAll("#saida-grupos .orientacoes-grupo").length;
+igual("a seção começa com uma caixa em branco",
+      document.querySelectorAll("#outras-lista textarea").length, 1);
+igual("caixa em branco não vira grupo",
+      document.querySelectorAll("#saida-grupos .orientacoes-grupo").length, semOutras);
+
+escreverOutra(0, "Procure a Defensoria Pública na Rua X, nº 100.");
+igual("o que se escreve vira um grupo",
+      document.querySelectorAll("#saida-grupos .orientacoes-grupo").length, semOutras + 1);
+igual("o grupo se chama Outras orientações",
+      titulosDaFolha().indexOf("Outras orientações") >= 0, true);
+igual("e fecha a folha logo antes do que vale para qualquer registro",
+      titulosDaFolha().indexOf("Outras orientações"), titulosDaFolha().length - 2);
+igual("cada grupo continua sendo uma linha da tabela",
+      document.querySelectorAll("#saida-grupos > tr").length,
+      document.querySelectorAll("#saida-grupos .orientacoes-grupo").length);
+
+clicar("#btn-nova-outra");
+igual("+ Nova orientação abre outra caixa",
+      document.querySelectorAll("#outras-lista textarea").length, 2);
+escreverOutra(1, "Leve o boletim ao IGP em até 30 dias.");
+igual("as duas saem na folha, na ordem em que foram escritas", itensDasOutras(),
+      ["Procure a Defensoria Pública na Rua X, nº 100.", "Leve o boletim ao IGP em até 30 dias."]);
+
+// A lista de caixas só é refeita ao adicionar/remover — mas trocar de
+// fato refaz a página inteira, e aí o texto tem que sobreviver.
+clicar('#opcoes-tipo input[value="estelionato"]');
+igual("trocar de fato não apaga o que foi escrito",
+      document.querySelectorAll("#outras-lista textarea")[1].value,
+      "Leve o boletim ao IGP em até 30 dias.");
+
+escreverOutra(0, "   ");
+igual("caixa apagada some da folha e a outra fica", itensDasOutras(),
+      ["Leve o boletim ao IGP em até 30 dias."]);
+
+clicar("#outras-lista .outra-linha:nth-child(1) .btn-remover");
+igual("remover tira a caixa", document.querySelectorAll("#outras-lista textarea").length, 1);
+igual("e não leva junto a que ficou", itensDasOutras(),
+      ["Leve o boletim ao IGP em até 30 dias."]);
+
+clicar("#btn-limpar");
+igual("limpar apaga o que foi escrito",
+      document.querySelectorAll("#outras-lista textarea")[0].value, "");
+
+// Sem fato escolhido a folha ainda existe, feita só do que foi escrito —
+// serve ao tipo de ocorrência que ainda não tem folha própria.
+escreverOutra(0, "Compareça à Delegacia na segunda-feira, às 14h.");
+igual("só com o que foi escrito, já dá para imprimir",
+      document.getElementById("btn-imprimir").disabled, false);
+igual("e o título sai sem complemento", txt("saida-titulo"), "O que fazer agora");
+igual("o que vale para qualquer registro vem junto", titulosDaFolha(),
+      ["Outras orientações", window.ORIENTACOES.comuns.titulo]);
+
 clicar("#btn-limpar");
 igual("limpar desabilita imprimir", document.getElementById("btn-imprimir").disabled, true);
 igual("limpar volta ao aviso de vazio", vis("saida-vazio"), true);

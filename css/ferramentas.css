@@ -298,6 +298,25 @@
   color: var(--text-muted);
 }
 
+/* Orientações escritas à mão. Mesma gramática do multiplo-input do
+   gerador — caixa com "remover" ao lado, "+" embaixo — e por isso as
+   mesmas classes: duas ferramentas da mesma suíte não deveriam ter dois
+   jeitos de listar a mesma coisa. */
+.outra-linha {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.outra-linha textarea {
+  flex: 1;
+  min-width: 0;
+}
+.outra-linha .btn-remover {
+  margin-top: 12px;
+  white-space: nowrap;
+}
+
 /* ---------------------------------------------------------
    Transcrição
    --------------------------------------------------------- */

@@ -652,6 +652,29 @@ msedge --headless=new --no-pdf-header-footer --print-to-pdf=folha.pdf `
   "http://localhost:8731/orientacoes.html?tipo=estelionato&extras=coleta_dados,clonagem_whatsapp,acesso_remoto,uso_do_nome"
 ```
 
+### Outras orientações
+
+Uma seção de caixas de texto que entram na folha como um grupo igual aos
+outros — mesmo título em versão, mesma numeração, mesmas regras de
+quebra de página. Ficam **depois** do que veio de `dados.js` e **antes**
+de "Em qualquer registro": são o mais específico que a folha tem, valem
+para aquele caso e mais nenhum. Quem recebe o papel não precisa saber o
+que saiu do sistema e o que o atendente escreveu.
+
+Enter abre a próxima orientação em vez de quebrar linha dentro da atual:
+a folha numera um item por caixa, e uma quebra de linha ali viraria um
+espaço no papel, sem aviso.
+
+Duas ausências de propósito: **não vai para a URL** (o endereço existe
+para ser guardado e reaberto no fato que se atende toda semana — texto de
+um caso só não tem o que fazer ali) e **não sobrevive a um F5** (guardar
+seria pior: orientação escrita para uma pessoa reaparecendo na folha da
+próxima é exatamente o erro que ninguém confere antes de entregar).
+
+Com o que está escrito e nenhum fato marcado, a folha já existe — serve
+ao tipo de ocorrência que ainda não tem folha própria. O que é escrito
+duas vezes, porém, já é conteúdo: o lugar dele é `js/orientacoes/dados.js`.
+
 ### Número da ocorrência
 
 Um campo na página recebe só o sequencial; o resto do formato é sempre o

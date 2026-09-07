@@ -22,6 +22,8 @@
     opcoesSubtipo: document.getElementById("opcoes-subtipo"),
     blocoExtras: document.getElementById("bloco-extras"),
     opcoesExtras: document.getElementById("opcoes-extras"),
+    outrasLista: document.getElementById("outras-lista"),
+    btnNovaOutra: document.getElementById("btn-nova-outra"),
     titulo: document.getElementById("saida-titulo"),
     subtitulo: document.getElementById("saida-subtitulo"),
     grupos: document.getElementById("saida-grupos"),
@@ -39,6 +41,7 @@
     tipo: null,
     subtipo: null,
     extras: new Set(),
+    outras: [],
   };
 
   /**
@@ -67,7 +70,12 @@
     });
   }
 
-  /** O inverso: mantém a barra de endereços refletindo a escolha atual. */
+  /**
+   * O inverso: mantém a barra de endereços refletindo a escolha atual.
+   *
+   * As orientações escritas à mão ficam de fora de propósito — ver a
+   * seção "Outras orientações", mais abaixo.
+   */
   function escreverNaURL() {
     const params = new URLSearchParams();
     if (estado.tipo) params.set("tipo", estado.tipo);
@@ -150,16 +158,28 @@
   /** Os grupos que entram na folha, na ordem em que devem ser lidos. */
   function gruposDaFolha() {
     const tipo = tipoAtual();
-    if (!tipo) return [];
+    const grupos = [];
 
-    const grupos = [{ titulo: tipo.label, itens: tipo.itens || [] }];
+    if (tipo) {
+      grupos.push({ titulo: tipo.label, itens: tipo.itens || [] });
 
-    const subtipo = (tipo.subtipos || []).find((s) => s.chave === estado.subtipo);
-    if (subtipo) grupos.push({ titulo: subtipo.label, itens: subtipo.itens });
+      const subtipo = (tipo.subtipos || []).find((s) => s.chave === estado.subtipo);
+      if (subtipo) grupos.push({ titulo: subtipo.label, itens: subtipo.itens });
 
-    (tipo.extras || []).forEach((x) => {
-      if (estado.extras.has(x.chave)) grupos.push({ titulo: x.label, itens: x.itens });
-    });
+      (tipo.extras || []).forEach((x) => {
+        if (estado.extras.has(x.chave)) grupos.push({ titulo: x.label, itens: x.itens });
+      });
+    }
+
+    // As escritas à mão são o mais específico que a folha tem: valem para
+    // este caso e mais nenhum. Daí virem depois do que saiu dos dados e
+    // antes do que vale para todos.
+    const escritas = outrasEscritas();
+    if (escritas.length > 0) grupos.push({ titulo: TITULO_OUTRAS, itens: escritas });
+
+    // Nem fato escolhido nem linha escrita: não há folha. O que vale para
+    // qualquer registro, sozinho, não é orientação de caso nenhum.
+    if (grupos.length === 0) return [];
 
     // O que vale para qualquer registro fecha a folha: é o menos
     // específico, e ler primeiro o que é do seu caso importa mais.
@@ -176,14 +196,18 @@
     el.btnImprimir.disabled = grupos.length === 0;
     el.btnCopiar.disabled = grupos.length === 0;
 
-    if (!tipo) {
+    if (grupos.length === 0) {
       el.titulo.textContent = "";
       el.subtitulo.textContent = "";
       return;
     }
 
-    const subtipo = (tipo.subtipos || []).find((s) => s.chave === estado.subtipo);
-    el.titulo.textContent = "O que fazer agora — " + tipo.label.toLowerCase();
+    // Sem fato escolhido a folha ainda pode existir, feita só das linhas
+    // escritas à mão — daí o título sem complemento.
+    const subtipo = ((tipo && tipo.subtipos) || []).find((s) => s.chave === estado.subtipo);
+    el.titulo.textContent = tipo
+      ? "O que fazer agora — " + tipo.label.toLowerCase()
+      : "O que fazer agora";
     el.subtitulo.textContent = subtipo ? subtipo.label : "";
 
     grupos.forEach((g) => {
@@ -217,6 +241,86 @@
       celula.appendChild(bloco);
       linha.appendChild(celula);
       el.grupos.appendChild(linha);
+    });
+  }
+
+
+  // -------------------------------------------------------------------
+  // Outras orientações
+  //
+  // O que os dados não preveem: o caso que pede uma linha só dele, ou o
+  // fato cuja folha ainda não existe. Entra como um grupo igual aos
+  // demais, e não como um rodapé à parte — quem recebe o papel não
+  // precisa saber o que veio do sistema e o que o atendente escreveu.
+  //
+  // Não vai para a URL, e não sobrevive a um F5. As duas coisas são de
+  // propósito: o endereço existe para ser guardado e reaberto no fato que
+  // se atende toda semana, e texto de um caso só não tem o que fazer ali.
+  // Guardar também seria pior que redigitar — orientação escrita para
+  // uma pessoa reaparecendo na folha da próxima é exatamente o erro que
+  // ninguém confere antes de entregar.
+  // -------------------------------------------------------------------
+
+  const TITULO_OUTRAS = "Outras orientações";
+
+  /** As não vazias, aparadas: caixa em branco não vira item impresso. */
+  function outrasEscritas() {
+    return estado.outras.map((t) => t.trim()).filter(Boolean);
+  }
+
+  function focarCaixa(i) {
+    const caixas = el.outrasLista.querySelectorAll("textarea");
+    if (caixas[i]) caixas[i].focus();
+  }
+
+  function renderOutras() {
+    // Sempre uma caixa disponível: uma seção sem onde escrever obrigaria
+    // a clicar em "+ Nova orientação" antes de começar a primeira.
+    if (estado.outras.length === 0) estado.outras.push("");
+
+    el.outrasLista.innerHTML = "";
+    estado.outras.forEach((texto, i) => {
+      const linha = document.createElement("div");
+      linha.className = "outra-linha";
+
+      const campo = document.createElement("textarea");
+      campo.className = "input-texto";
+      campo.rows = 2;
+      campo.value = texto;
+      campo.placeholder = "Procure a Defensoria Pública para…";
+
+      // Digitar mexe no estado e na folha, mas NÃO refaz esta lista:
+      // reconstruir as caixas a cada tecla tiraria o cursor de dentro
+      // daquela em que se está escrevendo.
+      campo.addEventListener("input", () => {
+        estado.outras[i] = campo.value;
+        renderFolha();
+      });
+
+      // Enter abre a próxima orientação em vez de quebrar linha dentro
+      // desta. A folha numera um item por caixa, e uma quebra de linha
+      // aqui viraria um espaço no papel, sem aviso nenhum.
+      campo.addEventListener("keydown", (evento) => {
+        if (evento.key !== "Enter" || evento.shiftKey) return;
+        evento.preventDefault();
+        estado.outras.splice(i + 1, 0, "");
+        renderOutras();
+        focarCaixa(i + 1);
+      });
+
+      const remover = document.createElement("button");
+      remover.type = "button";
+      remover.className = "btn-remover";
+      remover.textContent = "remover";
+      remover.addEventListener("click", () => {
+        estado.outras.splice(i, 1);
+        renderOutras();
+        renderFolha();
+      });
+
+      linha.appendChild(campo);
+      linha.appendChild(remover);
+      el.outrasLista.appendChild(linha);
     });
   }
 
@@ -264,6 +368,7 @@
 
   function renderTudo() {
     renderEscolhas();
+    renderOutras();
     renderFolha();
     renderCabecalho();
     escreverNaURL();
@@ -285,6 +390,12 @@
     return linhas.join("\n");
   }
 
+  el.btnNovaOutra.addEventListener("click", () => {
+    estado.outras.push("");
+    renderOutras();
+    focarCaixa(estado.outras.length - 1);
+  });
+
   el.numero.addEventListener("input", renderCabecalho);
 
   // Também no beforeprint: pega o Ctrl+P do navegador, que não passa
@@ -304,6 +415,8 @@
     estado.tipo = null;
     estado.subtipo = null;
     estado.extras.clear();
+    // Vazia, e não [""]: renderOutras devolve a caixa em branco.
+    estado.outras = [];
     renderTudo();
   });
 
