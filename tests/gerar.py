@@ -19,6 +19,8 @@ BUILD = os.path.join(AQUI, "build")
 # caso -> pagina do site que ele exercita
 PAGINAS = {
     "index": "index.html",
+    # mesma pagina, outro caso: este confere o paragrafo gerado, frase a frase
+    "texto": "index.html",
     "conversor": "conversor.html",
     # mesma pagina, outro caso: este roda o ffmpeg de verdade (lento)
     "conversao": "conversor.html",

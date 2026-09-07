@@ -25,6 +25,10 @@ Sobre as ferramentas novas:
   tela (`etapa`, `iniciar`, `acompanharEncode`, `argumentosDeCorte`,
   `duracaoDoTrabalho`) — mais acoplamento disfarçado, não menos. Fica
   para quando a interface encolher.
+* **Texto gerado** — `tests/casos/texto.js` cobre perda (todos os
+  subtipos) e estelionato (falso advogado e falso parente), mais as
+  perguntas de fechamento. **Tipo novo em `js/gerador/tipos/` = cenário
+  novo lá**, senão o parágrafo dele fica sem rede.
 * **Teste de conversão** — `tests/casos/conversao.js` cobre áudio
   (converter e comprimir). Vídeo e imagem não têm caso: exigiriam um MP4
   e um JPG de verdade, e sintetizá-los com `-f lavfi` amarraria o teste

@@ -1,4 +1,9 @@
 // Gerador de ocorrências: schema saudável, validadores e rascunho.
+//
+// Este caso prova que o FORMULÁRIO funciona — as perguntas aparecem, o
+// validador recusa o que deve, o botão destrava, o rascunho grava. O que
+// o texto gerado DIZ é conferido em casos/texto.js, frase a frase; aqui a
+// saída só precisa existir.
 
 igual("linter não acusou nada", document.querySelectorAll(".linter-banner, .aviso-linter").length, 0);
 ok("perguntas visíveis no início", document.querySelectorAll("#perguntas .pergunta").length);
@@ -35,7 +40,7 @@ clicar('input[name="outra_orientacao_houve"][value="nao"]');
 igual("questionário completo destrava o gerar", document.getElementById("btn-gerar").disabled, false);
 
 clicar("#btn-gerar");
-igual("texto foi gerado", document.getElementById("saida-texto").value.length > 40, true);
+igual("gerar produziu texto", document.getElementById("saida-texto").value.length > 40, true);
 igual("link aparece depois de gerar", vis("link-orientacoes"), true);
 igual(
   "link leva ao subtipo certo",

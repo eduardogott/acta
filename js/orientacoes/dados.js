@@ -75,7 +75,7 @@ window.ORIENTACOES = {
         "Denuncie também na plataforma onde o golpe aconteceu (WhatsApp, Instagram, Marketplace, banco). Isso ajuda a tirar o perfil do ar, mas não substitui este registro.",
         "Desconfie do golpe seguinte: é comum o mesmo grupo ligar depois se passando por banco, polícia ou advogado, prometendo recuperar o dinheiro mediante um pagamento.",
         "Consulte o Registrato, do Banco Central (registrato.bcb.gov.br), para ver se abriram contas, chaves Pix ou empréstimos no seu nome. É preciso entrar com a conta gov.br.",
-        "Se os golpistas obtiveram acesso ao seu celular ou baixaram qualquer aplicativo, restaure o aparelho para as configurações de fábrica.",
+        "Se os golpistas obtiveram acesso ao seu celular, restaure o aparelho para as configurações de fábrica.",
       ],
       subtipos: [
         {
@@ -106,18 +106,11 @@ window.ORIENTACOES = {
           chave: "venda_internet",
           label: "Compra ou venda pela internet não concluída",
           itens: [
-            "Salve o anúncio enquanto ele existir: endereço da página, data, valor, fotos e o perfil do vendedor. Anúncio de golpe some em poucas horas — o que você conseguir salvar, leve à delegacia.",
-            "Se pagou com cartão, peça o estorno (chargeback) ao banco emissor por escrito, dentro do prazo da bandeira.",
-            "Registre a reclamação também no consumidor.gov.br (precisa criar cadastro) e no Procon — é o caminho da devolução do valor, que este boletim não resolve sozinho.",
-          ],
-        },
-        {
-          chave: "boleto",
-          label: "Boleto adulterado",
-          itens: [
-            "Guarde o arquivo do boleto pago, não apenas a impressão. Os dados do beneficiário ficam registrados nele.",
-            "Avise o credor verdadeiro imediatamente: a dívida original continua em aberto, e ele precisa saber que houve fraude.",
-            "Leve o boleto e o comprovante de pagamento à delegacia. A divergência entre quem recebeu e quem deveria receber é o indício mais direto, e é por ela que a apuração começa.",
+            {
+              texto: "Se pagou com cartão, peça o estorno (chargeback) ao banco emissor por escrito, dentro do prazo da bandeira.",
+              prazo: "imediatamente"
+            },
+            "Se o golpe ocorreu por meio de site confiável — Mercado Livre, Shopee, etc. —, registre a reclamação também no consumidor.gov.br (precisa criar cadastro) e no Procon.",
           ],
         },
       ],
@@ -147,9 +140,9 @@ window.ORIENTACOES = {
           chave: "acesso_remoto",
           label: "Instalou aplicativo indicado pelo golpista (acesso remoto)",
           itens: [
-            "Desinstale o aplicativo e não faça nenhuma transação bancária nesse aparelho até que ele seja verificado ou restaurado de fábrica.",
-            "Troque as senhas de outro dispositivo, nunca do aparelho comprometido.",
-            "Avise o banco de que houve acesso remoto ao seu aparelho: as transações feitas assim têm tratamento diferente.",
+            "Desinstale o aplicativo e não faça nenhuma transação bancária nesse aparelho até que ele seja verificado por um técnico ou restaurado de fábrica.",
+            "Troque as senhas por outro dispositivo, nunca do aparelho comprometido.",
+            "Avise o banco de que houve acesso remoto ao seu aparelho; as transações feitas assim têm tratamento diferente.",
           ],
         },
         {

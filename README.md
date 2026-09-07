@@ -193,8 +193,7 @@ contrato completo (`valorPadrao`, `estaPreenchida`, `criar`,
 ## Testes
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tests
-odar.ps1
+powershell -ExecutionPolicy Bypass -File tests\rodar.ps1
 ```
 
 Sem framework e sem dependência: um servidor da biblioteca padrão do
@@ -207,12 +206,21 @@ transcreve, que é onde este projeto já tropeçou duas vezes na mesma pedra
 
 Detalhes de como escrever um caso novo: `tests/README.md`.
 
-Não há CI. As funções de `template(...)` concentram a lógica de
-concordância e pluralização do português e continuam merecendo atenção
-redobrada — os testes conferem que a página funciona, não que a frase
-saiu bem escrita. Uma mudança de fraseado num tipo já usado em produção
-pode alterar retroativamente o texto de casos que ainda não foram
-gerados.
+**O texto gerado é conferido palavra por palavra** em
+`tests/casos/texto.js`: cada cenário responde um questionário e compara o
+parágrafo inteiro com o esperado. É o caso mais importante da suíte, e a
+razão é a natureza da falha: um `template(...)` quebrado não dá erro
+nenhum — dá uma frase que parece certa e diz outra coisa, e vai colada
+dentro de um boletim. Uma mudança de fraseado num tipo já em produção
+altera retroativamente todo caso futuro, então nada muda sem alguém ver
+mudando: o teste falha, você lê o diff e atualiza a expectativa.
+
+Esse caso não passa pelo DOM — `Generator.gerar()` lê o Estado direto —,
+o que torna barato acrescentar um tipo novo: um bloco `cenario()` com as
+respostas de um lado e o parágrafo do outro. Quem prova que o formulário
+é respondível é `tests/casos/index.js`, clicando de verdade.
+
+Não há CI.
 
 ## Rodapé e carimbo de versão
 
