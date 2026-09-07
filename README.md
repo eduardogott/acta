@@ -566,6 +566,13 @@ antes de serem sobrescritas, prazo de representação.
 - **`js/orientacoes/orientacoes.js`** — só monta e imprime; não tem conteúdo próprio.
 - A regra de escrita: imperativo, endereçado a **quem leva o papel**
   ("Peça ao banco…"), não ao policial que atende.
+- **É papel.** A folha é impressa pelo agente e entregue em mãos — o
+  site inteiro é interno, e o comunicante nunca o acessa. Então nada de
+  "clique", endereço de site curto o bastante para se digitar à mão,
+  telefone junto sempre que houver, e login declarado onde existir
+  (Registrato e Celular Seguro pedem conta gov.br; consumidor.gov.br pede
+  cadastro). Esbarrar num login inesperado, sozinho, é onde a pessoa
+  desiste.
 - **E sempre pós-registro.** A folha só existe depois do BO, então
   orientação do momento do fato ("anote a placa do outro condutor",
   "fotografe antes de remover os veículos") nasce vencida: ou a pessoa

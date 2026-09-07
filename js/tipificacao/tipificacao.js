@@ -8,6 +8,11 @@
  * "Art. 155", e quem digita "furto qualificado" só vê as linhas que têm
  * as duas palavras. Cada termo precisa aparecer em algum lugar da
  * entrada, na ordem que for.
+ *
+ * A linha também leva à folha de orientações do fato, quando existe uma
+ * (campo `orientacoes` da entrada). Quem consulta a tipificação está
+ * atendendo alguém, e essa pessoa sai da delegacia com um papel na mão
+ * — as duas páginas são o mesmo atendimento.
  * ---------------------------------------------------------------------------
  */
 (function () {
@@ -21,6 +26,41 @@
     contagem: document.getElementById("contagem"),
     semResultados: document.getElementById("sem-resultados"),
   };
+
+  // -------------------------------------------------------------------
+  // Ponte para as orientações
+  //
+  // A página carrega js/orientacoes/dados.js só para isto: ter o rótulo
+  // da folha e poder conferir, na carga, que toda chave apontada existe.
+  // É a conferência que falta quando o mapa vive num arquivo e o alvo
+  // noutro — sem ela, um tipo renomeado vira link quebrado que ninguém
+  // percebe até o balcão.
+  // -------------------------------------------------------------------
+
+  const FOLHAS = {};
+  (window.ORIENTACOES ? window.ORIENTACOES.tipos : []).forEach((t) => {
+    FOLHAS[t.chave] = t.label;
+  });
+
+  window.TIPIFICACAO.forEach((e) => {
+    if (e.orientacoes && !FOLHAS[e.orientacoes]) {
+      console.warn(
+        "tipificacao: " + e.fato + ' aponta para a folha "' + e.orientacoes +
+          '", que não existe em window.ORIENTACOES.'
+      );
+    }
+  });
+
+  /** Link para a folha do fato, ou null quando não há folha. */
+  function linkDaFolha(e) {
+    if (!e.orientacoes || !FOLHAS[e.orientacoes]) return null;
+    const a = document.createElement("a");
+    a.className = "tipificacao-folha";
+    a.href = "orientacoes.html?tipo=" + encodeURIComponent(e.orientacoes);
+    a.textContent = "Orientações: " + FOLHAS[e.orientacoes];
+    a.title = "Abre a folha para imprimir e entregar ao comunicante";
+    return a;
+  }
 
   // -------------------------------------------------------------------
   // Prescrição da pretensão punitiva, pelo art. 109 do CP
@@ -137,6 +177,8 @@
       obs.textContent = e.obs;
       tdFato.appendChild(obs);
     }
+    const folha = linkDaFolha(e);
+    if (folha) tdFato.appendChild(folha);
 
     const tdArtigo = document.createElement("td");
     tdArtigo.className = "tipificacao-artigo";

@@ -17,6 +17,7 @@
  *     busca:   "subtrair levar sumiu",        // sinônimos extras, opcional
  *     obs:     "…",                           // ressalva curta, opcional
  *     prescricao: "imprescritível",           // só quando o art. 109 não vale
+ *     orientacoes: "furto_roubo",             // folha do comunicante, opcional
  *   }
  *
  * `acao` aceita: "incondicionada", "condicionada", "privada" e "outra"
@@ -31,6 +32,13 @@
  * partir da pena máxima, pelo art. 109 do CP. Só se preenche quando a
  * fórmula não vale — crime imprescritível, prazo fixado em lei própria
  * (art. 30 da Lei de Drogas), ou pena que remete a outro tipo.
+ *
+ * `orientacoes` é a chave de um tipo de window.ORIENTACOES
+ * (js/orientacoes/dados.js). Quando existe, a linha ganha um link para a
+ * folha que se imprime e entrega ao comunicante. É opcional de
+ * propósito: há crime sem folha (receptação, desacato) e folha sem
+ * crime (perda de documento), e forçar a correspondência inventaria uma
+ * das duas. A página confere na carga que a chave existe.
  *
  * `busca` existe porque o nome jurídico raramente é a palavra que a
  * pessoa usa: quem chega dizendo "mexeram no meu carro" procura por
@@ -76,16 +84,19 @@ window.TIPIFICACAO = [
     pena: "detenção, de 3 meses a 1 ano", acao: "condicionada", jecrim: true,
     busca: "agressão machucado bateu socou",
     obs: "Representação exigida pelo art. 88 da Lei 9.099/1995.",
+    orientacoes: "lesao",
   },
   {
     fato: "Lesão corporal grave", artigo: "Art. 129, § 1º", diploma: "CP",
     pena: "reclusão, de 1 a 5 anos", acao: "incondicionada", jecrim: false,
     obs: "Incapacidade por mais de 30 dias, perigo de vida, debilidade permanente, aceleração de parto.",
+    orientacoes: "lesao",
   },
   {
     fato: "Lesão corporal gravíssima", artigo: "Art. 129, § 2º", diploma: "CP",
     pena: "reclusão, de 2 a 8 anos", acao: "incondicionada", jecrim: false,
     obs: "Incapacidade permanente, enfermidade incurável, perda de membro/sentido/função, deformidade permanente, aborto.",
+    orientacoes: "lesao",
   },
   {
     fato: "Lesão corporal seguida de morte", artigo: "Art. 129, § 3º", diploma: "CP",
@@ -95,12 +106,14 @@ window.TIPIFICACAO = [
     fato: "Lesão corporal culposa", artigo: "Art. 129, § 6º", diploma: "CP",
     pena: "detenção, de 2 meses a 1 ano", acao: "condicionada", jecrim: true,
     obs: "Na direção de veículo, é o art. 303 do CTB.",
+    orientacoes: "lesao",
   },
   {
     fato: "Lesão corporal — violência doméstica", artigo: "Art. 129, § 9º", diploma: "CP",
     pena: "detenção, de 3 meses a 3 anos", acao: "incondicionada", jecrim: false,
     busca: "maria da penha companheiro marido esposa doméstica",
     obs: "Incondicionada por decisão do STF (ADI 4.424). A Lei 9.099/1995 não se aplica (art. 41 da Lei 11.340/2006).",
+    orientacoes: "violencia_domestica",
   },
   {
     fato: "Abandono de incapaz", artigo: "Art. 133", diploma: "CP",
@@ -128,18 +141,21 @@ window.TIPIFICACAO = [
     pena: "detenção, de 6 meses a 2 anos, e multa", acao: "privada", jecrim: true,
     busca: "acusou de crime mentira caluniou",
     obs: "Imputar falsamente FATO definido como crime.",
+    orientacoes: "honra",
   },
   {
     fato: "Difamação", artigo: "Art. 139", diploma: "CP",
     pena: "detenção, de 3 meses a 1 ano, e multa", acao: "privada", jecrim: true,
     busca: "fofoca reputação falou mal",
     obs: "Imputar fato ofensivo à reputação, ainda que verdadeiro.",
+    orientacoes: "honra",
   },
   {
     fato: "Injúria", artigo: "Art. 140", diploma: "CP",
     pena: "detenção, de 1 a 6 meses, ou multa", acao: "privada", jecrim: true,
     busca: "xingou ofendeu palavrão insultou",
     obs: "Ofender a dignidade ou o decoro, sem imputar fato.",
+    orientacoes: "honra",
   },
   {
     fato: "Injúria racial", artigo: "Art. 2º-A", diploma: "Lei 7.716/1989",
@@ -147,6 +163,7 @@ window.TIPIFICACAO = [
     prescricao: "imprescritível",
     busca: "racismo xingamento racial cor raça etnia religião",
     obs: "Deixou de ser o art. 140, § 3º, do CP com a Lei 14.532/2023. Imprescritível e inafiançável.",
+    orientacoes: "honra",
   },
   {
     fato: "Racismo", artigo: "Art. 20", diploma: "Lei 7.716/1989",
@@ -165,18 +182,21 @@ window.TIPIFICACAO = [
     fato: "Ameaça", artigo: "Art. 147", diploma: "CP",
     pena: "detenção, de 1 a 6 meses, ou multa", acao: "condicionada", jecrim: true,
     busca: "ameaçou matar bater mensagem intimidou",
+    orientacoes: "ameaca",
   },
   {
     fato: "Perseguição (stalking)", artigo: "Art. 147-A", diploma: "CP",
     pena: "reclusão, de 6 meses a 2 anos, e multa", acao: "condicionada", jecrim: true,
     busca: "stalking perseguindo vigiando importunando reiteradamente",
     obs: "Conduta reiterada que ameace a integridade, restrinja a liberdade ou invada a privacidade.",
+    orientacoes: "ameaca",
   },
   {
     fato: "Violência psicológica contra a mulher", artigo: "Art. 147-B", diploma: "CP",
     pena: "reclusão, de 6 meses a 2 anos, e multa", acao: "incondicionada", jecrim: false,
     busca: "humilhação chantagem manipulação isolamento maria da penha",
     obs: "Lei 14.188/2021. Sendo violência doméstica, a Lei 9.099/1995 não se aplica.",
+    orientacoes: "violencia_domestica",
   },
   {
     fato: "Sequestro e cárcere privado", artigo: "Art. 148", diploma: "CP",
@@ -198,6 +218,7 @@ window.TIPIFICACAO = [
     pena: "reclusão, de 1 a 4 anos, e multa", acao: "condicionada", jecrim: false,
     busca: "hackearam celular invadiram conta e-mail whatsapp clonado computador",
     obs: "Incondicionada quando a vítima é a administração pública (art. 154-B).",
+    orientacoes: "estelionato",
   },
 
   // ------------------------------------------------------------ PATRIMÔNIO ---
@@ -206,28 +227,33 @@ window.TIPIFICACAO = [
     pena: "reclusão, de 1 a 4 anos, e multa", acao: "incondicionada", jecrim: false,
     busca: "subtração levaram sumiu roubaram sem violência batedor",
     obs: "Repouso noturno (§ 1º): aumento de 1/3. Coisa de pequeno valor e réu primário (§ 2º): furto privilegiado.",
+    orientacoes: "furto_roubo",
   },
   {
     fato: "Furto qualificado", artigo: "Art. 155, § 4º", diploma: "CP",
     pena: "reclusão, de 2 a 8 anos, e multa", acao: "incondicionada", jecrim: false,
     busca: "arrombamento chave falsa escalada concurso destruição rompimento obstáculo",
+    orientacoes: "furto_roubo",
   },
   {
     fato: "Furto mediante fraude eletrônica", artigo: "Art. 155, § 4º-B", diploma: "CP",
     pena: "reclusão, de 4 a 8 anos, e multa", acao: "incondicionada", jecrim: false,
     busca: "pix transferência internet banking conta invadida celular furtado aplicativo",
     obs: "Lei 14.155/2021. Aqui a vítima NÃO é induzida a erro — o autor age direto no dispositivo ou na conta.",
+    orientacoes: "estelionato",
   },
   {
     fato: "Furto de energia elétrica ou de água", artigo: "Art. 155, § 3º", diploma: "CP",
     pena: "reclusão, de 1 a 4 anos, e multa", acao: "incondicionada", jecrim: false,
     busca: "gato luz energia ligação clandestina",
+    orientacoes: "furto_roubo",
   },
   {
     fato: "Roubo", artigo: "Art. 157", diploma: "CP",
     pena: "reclusão, de 4 a 10 anos, e multa", acao: "incondicionada", jecrim: false,
     busca: "assalto arma grave ameaça violência levaram",
     obs: "Arma de fogo (§ 2º-A, I): aumento de 2/3. Arma de fogo de uso restrito (§ 2º-B): pena em dobro.",
+    orientacoes: "furto_roubo",
   },
   {
     fato: "Latrocínio (roubo seguido de morte)", artigo: "Art. 157, § 3º, II", diploma: "CP",
@@ -239,6 +265,7 @@ window.TIPIFICACAO = [
     pena: "reclusão, de 4 a 10 anos, e multa", acao: "incondicionada", jecrim: false,
     busca: "chantagem exigiu dinheiro para não divulgar sextorsão",
     obs: "Mediante restrição da liberdade (§ 3º, sequestro relâmpago): reclusão, de 6 a 12 anos.",
+    orientacoes: "ameaca",
   },
   {
     fato: "Extorsão mediante sequestro", artigo: "Art. 159", diploma: "CP",
@@ -249,11 +276,13 @@ window.TIPIFICACAO = [
     pena: "detenção, de 1 a 6 meses, ou multa", acao: "privada", jecrim: true,
     busca: "quebrou destruiu estragou riscou carro pichou vidro",
     obs: "Queixa-crime, por força do art. 167.",
+    orientacoes: "dano",
   },
   {
     fato: "Dano qualificado", artigo: "Art. 163, parágrafo único", diploma: "CP",
     pena: "detenção, de 6 meses a 3 anos, e multa", acao: "incondicionada", jecrim: false,
     obs: "Com violência, substância inflamável, contra patrimônio público. No inciso IV (motivo egoístico ou prejuízo considerável) a ação é privada.",
+    orientacoes: "dano",
   },
   {
     fato: "Apropriação indébita", artigo: "Art. 168", diploma: "CP",
@@ -271,12 +300,14 @@ window.TIPIFICACAO = [
     pena: "reclusão, de 1 a 5 anos, e multa", acao: "condicionada", jecrim: false,
     busca: "golpe fraude enganou induziu erro falso advogado parente",
     obs: "Condicionada pelo § 5º, salvo se a vítima for a administração pública, criança/adolescente, pessoa com deficiência mental ou maior de 70 anos.",
+    orientacoes: "estelionato",
   },
   {
     fato: "Estelionato por fraude eletrônica", artigo: "Art. 171, § 2º-A", diploma: "CP",
     pena: "reclusão, de 4 a 8 anos, e multa", acao: "condicionada", jecrim: false,
     busca: "golpe pix whatsapp clonado internet rede social falso perfil site falso",
     obs: "Lei 14.155/2021. Aumento de 1/3 a 2/3 se contra idoso ou vulnerável (§ 2º-B).",
+    orientacoes: "estelionato",
   },
   {
     fato: "Receptação", artigo: "Art. 180", diploma: "CP",
@@ -395,6 +426,7 @@ window.TIPIFICACAO = [
     pena: "detenção, de 3 meses a 2 anos", acao: "incondicionada", jecrim: false,
     busca: "mpu medida protetiva descumpriu aproximou contato",
     obs: "A Lei 9.099/1995 não se aplica (art. 41 da Lei 11.340/2006). Cabe prisão em flagrante.",
+    orientacoes: "violencia_domestica",
   },
 
   // ------------------------------------------------ CRIANÇA E ADOLESCENTE ---
@@ -474,6 +506,7 @@ window.TIPIFICACAO = [
     pena: "detenção, de 2 a 4 anos, e suspensão da habilitação",
     acao: "incondicionada", jecrim: false,
     obs: "Sob influência de álcool (§ 3º): reclusão, de 5 a 8 anos.",
+    orientacoes: "transito",
   },
   {
     fato: "Lesão corporal culposa na direção de veículo", artigo: "Art. 303",
@@ -482,6 +515,7 @@ window.TIPIFICACAO = [
     acao: "condicionada", jecrim: true,
     busca: "acidente atropelamento colisão com ferido",
     obs: "A representação cai (e a Lei 9.099 deixa de se aplicar) se houver álcool, racha ou velocidade 50 km/h acima da via — art. 291, § 1º.",
+    orientacoes: "transito",
   },
   {
     fato: "Embriaguez ao volante", artigo: "Art. 306", diploma: "CTB (Lei 9.503/1997)",
@@ -489,16 +523,19 @@ window.TIPIFICACAO = [
     acao: "incondicionada", jecrim: false,
     busca: "bafômetro alcoolizado dirigindo bêbado teste recusa",
     obs: "Configura-se com 6 dg/L de álcool no sangue, 0,3 mg/L no ar alveolar ou sinais de alteração da capacidade psicomotora.",
+    orientacoes: "transito",
   },
   {
     fato: "Fuga do local do acidente", artigo: "Art. 305", diploma: "CTB (Lei 9.503/1997)",
     pena: "detenção, de 6 meses a 1 ano, ou multa", acao: "incondicionada", jecrim: true,
     busca: "evadiu-se atropelou e fugiu",
+    orientacoes: "transito",
   },
   {
     fato: "Racha (disputa de corrida)", artigo: "Art. 308", diploma: "CTB (Lei 9.503/1997)",
     pena: "detenção, de 6 meses a 3 anos, multa e suspensão", acao: "incondicionada", jecrim: false,
     busca: "pega racha corrida na via",
+    orientacoes: "transito",
   },
   {
     fato: "Dirigir sem habilitação gerando perigo de dano", artigo: "Art. 309",
@@ -518,6 +555,7 @@ window.TIPIFICACAO = [
     pena: "prisão simples, de 15 dias a 3 meses, ou multa", acao: "incondicionada", jecrim: true,
     busca: "empurrão tapa agressão sem lesão puxão de cabelo",
     obs: "Agressão que não deixa lesão constatada. Havendo lesão, é o art. 129 do CP.",
+    orientacoes: "lesao",
   },
   {
     fato: "Perturbação do trabalho ou do sossego alheios", artigo: "Art. 42",
@@ -530,6 +568,7 @@ window.TIPIFICACAO = [
     diploma: "LCP (Dec.-Lei 3.688/1941)",
     pena: "prisão simples, de 15 dias a 2 meses, ou multa", acao: "incondicionada", jecrim: true,
     busca: "molestar importunar ligações insistentes acintosamente",
+    orientacoes: "ameaca",
   },
   {
     fato: "Omissão de cautela na guarda de animais", artigo: "Art. 31",

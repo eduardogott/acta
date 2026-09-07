@@ -28,6 +28,12 @@
  * Escreva os itens no imperativo e endereçados à pessoa que vai levar o
  * papel ("Peça ao banco…"), não ao policial que atende. É ela quem lê.
  *
+ * E lembre que é PAPEL. A folha é impressa pelo agente e entregue em
+ * mãos: quem lê não clica em nada. Endereço de site tem de ser curto o
+ * bastante para se digitar à mão, e onde houver telefone, o telefone vem
+ * junto. Onde o serviço exigir conta gov.br ou cadastro, diga — quem
+ * esbarra num login inesperado, sozinho e com um papel na mão, desiste.
+ *
  * E escreva do ponto de vista de DEPOIS do registro, que é quando o papel
  * chega às mãos dela. Orientação do momento do fato ("anote a placa do
  * outro condutor", "fotografe antes de remover os veículos") já nasce
@@ -42,7 +48,7 @@ window.ORIENTACOES = {
   comuns: {
     titulo: "Em qualquer registro",
     itens: [
-      "Guarde o número deste boletim. É por ele que a ocorrência é localizada em qualquer consulta posterior.",
+      "O número do seu boletim está no alto desta folha. Guarde-a: é por esse número que a ocorrência é localizada em qualquer consulta posterior.",
       "Se aparecerem provas novas — imagens, testemunhas, mensagens, notas fiscais —, leve-as à delegacia para serem juntadas.",
       "Nunca pague nada a quem ligar oferecendo recuperar seu dinheiro, adiantar o processo ou liberar valores. Nenhum órgão público cobra por isso.",
       {
@@ -68,7 +74,7 @@ window.ORIENTACOES = {
         },
         "Denuncie também na plataforma onde o golpe aconteceu (WhatsApp, Instagram, Marketplace, banco). Isso ajuda a tirar o perfil do ar, mas não substitui este registro.",
         "Desconfie do golpe seguinte: é comum o mesmo grupo ligar depois se passando por banco, polícia ou advogado, prometendo recuperar o dinheiro mediante um pagamento.",
-        "Consulte o Registrato, do Banco Central (registrato.bcb.gov.br), para ver se abriram contas, chaves Pix ou empréstimos no seu nome.",
+        "Consulte o Registrato, do Banco Central (registrato.bcb.gov.br), para ver se abriram contas, chaves Pix ou empréstimos no seu nome. É preciso entrar com a conta gov.br.",
         "Se os golpistas obtiveram acesso ao seu celular ou baixaram qualquer aplicativo, restaure o aparelho para as configurações de fábrica.",
       ],
       subtipos: [
@@ -102,7 +108,7 @@ window.ORIENTACOES = {
           itens: [
             "Salve o anúncio enquanto ele existir: endereço da página, data, valor, fotos e o perfil do vendedor. Anúncio de golpe some em poucas horas — o que você conseguir salvar, leve à delegacia.",
             "Se pagou com cartão, peça o estorno (chargeback) ao banco emissor por escrito, dentro do prazo da bandeira.",
-            "Registre a reclamação também no consumidor.gov.br e no Procon — é o caminho da devolução do valor, que este boletim não resolve sozinho.",
+            "Registre a reclamação também no consumidor.gov.br (precisa criar cadastro) e no Procon — é o caminho da devolução do valor, que este boletim não resolve sozinho.",
           ],
         },
         {
@@ -124,7 +130,7 @@ window.ORIENTACOES = {
             "Ative a verificação em duas etapas em todas as contas que permitirem.",
             "Avise o banco de que seus dados foram expostos e peça que a conta fique em observação.",
             "Cadastre alerta de CPF nos birôs de crédito (Serasa e SPC) para ser avisado se abrirem crédito no seu nome.",
-            "Consulte periodicamente o Registrato do Banco Central pelos próximos meses.",
+            "Consulte o Registrato do Banco Central (registrato.bcb.gov.br, com a conta gov.br) de tempos em tempos nos próximos meses.",
           ],
         },
         {
@@ -178,7 +184,7 @@ window.ORIENTACOES = {
             "Acesse \"Encontre meu dispositivo\" (Android) ou \"Buscar\" (iPhone) de outro aparelho e apague os dados remotamente.",
             "Troque as senhas das contas que estavam logadas no aparelho: e-mail primeiro, depois banco e redes sociais.",
             "Avise o banco para bloquear o aplicativo instalado naquele celular.",
-            "Registre o aparelho no Celular Seguro (gov.br/celularseguro), que bloqueia contas e aplicativos de uma vez só.",
+            "Registre o aparelho no Celular Seguro (gov.br/celularseguro, com a conta gov.br), que bloqueia contas e aplicativos de uma vez só.",
           ],
         },
         {
@@ -187,7 +193,7 @@ window.ORIENTACOES = {
           itens: [
             "Peça a segunda via ao órgão emissor: identidade no instituto de identificação do seu estado, CNH no Detran, passaporte na Polícia Federal.",
             "Leve este boletim: quase todos os órgãos pedem o registro para emitir a segunda via.",
-            "Se desconfiar que o documento foi usado por terceiros, cadastre alerta de CPF nos birôs de crédito e consulte o Registrato do Banco Central.",
+            "Se desconfiar que o documento foi usado por terceiros, cadastre alerta de CPF nos birôs de crédito e consulte o Registrato do Banco Central (registrato.bcb.gov.br, com a conta gov.br).",
           ],
         },
         {
@@ -241,7 +247,7 @@ window.ORIENTACOES = {
               prazo: "hoje",
             },
             "Apague os dados remotamente por \"Encontre meu dispositivo\" ou \"Buscar\", e troque as senhas a partir de outro aparelho.",
-            "Registre no Celular Seguro (gov.br/celularseguro) e avise o banco.",
+            "Registre no Celular Seguro (gov.br/celularseguro, com a conta gov.br) e avise o banco.",
             "Se o aparelho foi levado desbloqueado, trate como se as contas tivessem sido abertas: confira extratos e limites de crédito nos próximos dias.",
           ],
         },

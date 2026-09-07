@@ -165,6 +165,22 @@
   color: var(--text-muted);
   margin-top: 3px;
 }
+/* Link para a folha de orientações do fato. Discreto de propósito: a
+   tabela existe para tipificar, e a folha é o passo seguinte, não o
+   principal. */
+.tipificacao-folha {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.tipificacao-folha:hover,
+.tipificacao-folha:focus-visible {
+  border-bottom-color: currentColor;
+}
+
 .etiqueta {
   display: inline-block;
   font-family: var(--mono);

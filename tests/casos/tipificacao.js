@@ -42,3 +42,30 @@ document.querySelectorAll("#corpo-tabela tr").forEach(function (tr) {
   if (tr.children[3].textContent.trim() === "—") semPrescricao++;
 });
 igual("nenhum fato ficou sem prescrição", semPrescricao, 0);
+
+// --- ponte para as orientações ----------------------------------------
+// O mapa vive em js/tipificacao/dados.js e o alvo em
+// js/orientacoes/dados.js. Um tipo renomeado lá só apareceria no balcão.
+buscar("");
+var chaves = {};
+window.ORIENTACOES.tipos.forEach(function (t) { chaves[t.chave] = t.label; });
+
+var quebrados = [];
+window.TIPIFICACAO.forEach(function (e) {
+  if (e.orientacoes && !chaves[e.orientacoes]) quebrados.push(e.fato + " -> " + e.orientacoes);
+});
+igual("toda folha apontada existe", quebrados, []);
+
+var comFolha = window.TIPIFICACAO.filter(function (e) { return e.orientacoes; }).length;
+igual("há fatos com folha", comFolha > 0, true);
+igual(
+  "cada um rende um link",
+  document.querySelectorAll("#corpo-tabela .tipificacao-folha").length,
+  comFolha
+);
+
+buscar("lesão corporal leve");
+var link = document.querySelector("#corpo-tabela .tipificacao-folha");
+igual("link aponta para a folha certa", link.getAttribute("href"), "orientacoes.html?tipo=lesao");
+igual("link diz qual folha é", link.textContent, "Orientações: Lesão corporal / agressão");
+buscar("");
