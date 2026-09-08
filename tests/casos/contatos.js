@@ -62,12 +62,14 @@ igual("mas continua na tela",
 // --- para que serve cada número ---------------------------------------
 // Um canal pode ser texto solto ou { valor, nota }. As duas formas
 // convivem no mesmo arquivo, e é isso que se confere aqui.
-buscar("brigada");
+// "viatura" e só da Brigada Militar; "brigada" agora traz também a
+// Patrulha Maria da Penha, e as contagens abaixo falam de um cartão só.
+buscar("viatura");
 igual("a nota do número é desenhada",
       document.querySelectorAll("#lista-contatos .contato-nota").length > 0, true);
-igual("e diz para que serve",
+igual("e diz qual linha é",
       document.querySelector("#lista-contatos .contato-nota").textContent,
-      "Padrão de emergências");
+      "Emergência");
 igual("um contato com três números rende três linhas",
       document.querySelectorAll("#lista-contatos .contato-linha").length, 3);
 igual("cada uma com seu copiar",
@@ -78,7 +80,7 @@ igual("o copiar mira só o número",
       document.querySelector("#lista-contatos .contato-copiar").title, "Copiar 190");
 igual("a busca alcança a nota", buscar("alternativo") > 0, true);
 
-buscar("anônima");
+buscar("samu");
 igual("texto solto continua valendo",
       document.querySelectorAll("#lista-contatos .contato-valor").length > 0, true);
 igual("e não inventa nota onde não há",
