@@ -39,6 +39,13 @@
         "Monta o texto da narrativa a partir de um questionário que se ajusta às respostas.",
     },
     {
+      arquivo: "roteiro.html",
+      rotulo: "Roteiro",
+      titulo: "Roteiro de Atendimento",
+      descricao:
+        "Mostra as perguntas suplementares que costumam fazer falta em cada fato.",
+    },
+    {
       arquivo: "conversor.html",
       rotulo: "Conversor",
       titulo: "Conversor de Mídia",
@@ -79,6 +86,13 @@
       titulo: "Consulta de Tipificação",
       descricao:
         "Procura o artigo pelo nome do fato, pelo número ou pelo jeito que a pessoa contou.",
+    },
+    {
+      arquivo: "contatos.html",
+      rotulo: "Contatos",
+      titulo: "Contatos Úteis",
+      descricao:
+        "Telefone, WhatsApp e endereço do que se precisa durante o plantão.",
     },
   ];
 

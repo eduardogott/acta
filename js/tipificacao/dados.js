@@ -18,6 +18,7 @@
  *     obs:     "…",                           // ressalva curta, opcional
  *     prescricao: "imprescritível",           // só quando o art. 109 não vale
  *     orientacoes: "furto_roubo",             // folha do comunicante, opcional
+ *     texto:   "Subtrair, para si…",           // o dispositivo em si, opcional
  *   }
  *
  * `acao` aceita: "incondicionada", "condicionada", "privada" e "outra"
@@ -43,6 +44,25 @@
  * `busca` existe porque o nome jurídico raramente é a palavra que a
  * pessoa usa: quem chega dizendo "mexeram no meu carro" procura por
  * "arrombamento", não por "furto qualificado".
+ *
+ * `texto` é o dispositivo legal em si, e a página o esconde atrás de um
+ * "ver o texto do artigo": a tabela existe para achar o artigo, e ler o
+ * texto é o passo seguinte. Três regras ao preencher:
+ *
+ *   1. COPIE LITERALMENTE, do Planalto. Não resuma, não atualize a
+ *      grafia, não corte o que parece supérfluo. A página inteira pede
+ *      para conferir no texto legal antes de tipificar — um resumo aqui
+ *      seria justamente a paráfrase que ela manda evitar.
+ *   2. Escreva o caput; quando a entrada for de um parágrafo (§ 4º,
+ *      § 9º), escreva o parágrafo. A linha da pena vai junto, porque ela
+ *      faz parte do dispositivo — a coluna "Pena" é resumo, não fonte.
+ *   3. Quebre linha com \n entre o caput e a pena, e entre um
+ *      parágrafo
+ *      e outro. A página respeita as quebras.
+ *
+ * É opcional: entrada sem `texto` não mostra o link, e continua servindo.
+ * A busca alcança o que estiver escrito aqui — quem lembra "coisa alheia
+ * móvel" e não lembra "furto" acha do mesmo jeito.
  *
  * ATENÇÃO A QUEM EDITA: esta tabela é digitada à mão e envelhece a cada
  * lei nova. Ela é um atalho para lembrar onde procurar, nunca a fonte —
@@ -85,6 +105,9 @@ window.TIPIFICACAO = [
     busca: "agressão machucado bateu socou",
     obs: "Representação exigida pelo art. 88 da Lei 9.099/1995.",
     orientacoes: "lesao",
+    texto:
+      "Ofender a integridade corporal ou a saúde de outrem:\n" +
+      "Pena - detenção, de três meses a um ano.",
   },
   {
     fato: "Lesão corporal grave", artigo: "Art. 129, § 1º", diploma: "CP",
@@ -114,6 +137,12 @@ window.TIPIFICACAO = [
     busca: "maria da penha companheiro marido esposa doméstica",
     obs: "Incondicionada por decisão do STF (ADI 4.424). A Lei 9.099/1995 não se aplica (art. 41 da Lei 11.340/2006).",
     orientacoes: "violencia_domestica",
+    texto:
+      "§ 9º Se a lesão for praticada contra ascendente, descendente, irmão, " +
+      "cônjuge ou companheiro, ou com quem conviva ou tenha convivido, ou, " +
+      "ainda, prevalecendo-se o agente das relações domésticas, de coabitação " +
+      "ou de hospitalidade:\n" +
+      "Pena - detenção, de 3 (três) meses a 3 (três) anos.",
   },
   {
     fato: "Abandono de incapaz", artigo: "Art. 133", diploma: "CP",
@@ -183,6 +212,11 @@ window.TIPIFICACAO = [
     pena: "detenção, de 1 a 6 meses, ou multa", acao: "condicionada", jecrim: true,
     busca: "ameaçou matar bater mensagem intimidou",
     orientacoes: "ameaca",
+    texto:
+      "Ameaçar alguém, por palavra, escrito ou gesto, ou qualquer outro meio " +
+      "simbólico, de causar-lhe mal injusto e grave:\n" +
+      "Pena - detenção, de um a seis meses, ou multa.\n" +
+      "Parágrafo único - Somente se procede mediante representação.",
   },
   {
     fato: "Perseguição (stalking)", artigo: "Art. 147-A", diploma: "CP",
@@ -228,6 +262,9 @@ window.TIPIFICACAO = [
     busca: "subtração levaram sumiu roubaram sem violência batedor",
     obs: "Repouso noturno (§ 1º): aumento de 1/3. Coisa de pequeno valor e réu primário (§ 2º): furto privilegiado.",
     orientacoes: "furto_roubo",
+    texto:
+      "Subtrair, para si ou para outrem, coisa alheia móvel:\n" +
+      "Pena - reclusão, de um a quatro anos, e multa.",
   },
   {
     fato: "Furto qualificado", artigo: "Art. 155, § 4º", diploma: "CP",
@@ -301,6 +338,15 @@ window.TIPIFICACAO = [
     busca: "golpe fraude enganou induziu erro falso advogado parente",
     obs: "Condicionada pelo § 5º, salvo se a vítima for a administração pública, criança/adolescente, pessoa com deficiência mental ou maior de 70 anos.",
     orientacoes: "estelionato",
+    texto:
+      "Obter, para si ou para outrem, vantagem ilícita, em prejuízo alheio, " +
+      "induzindo ou mantendo alguém em erro, mediante artifício, ardil, ou " +
+      "qualquer outro meio fraudulento:\n" +
+      "Pena - reclusão, de um a cinco anos, e multa.\n" +
+      "§ 5º Somente se procede mediante representação, salvo se a vítima for: " +
+      "I - a Administração Pública, direta ou indireta; II - criança ou " +
+      "adolescente; III - pessoa com deficiência mental; ou IV - maior de " +
+      "70 (setenta) anos de idade ou incapaz.",
   },
   {
     fato: "Estelionato por fraude eletrônica", artigo: "Art. 171, § 2º-A", diploma: "CP",

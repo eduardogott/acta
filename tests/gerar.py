@@ -30,6 +30,8 @@ PAGINAS = {
     "conferidor": "conferidor.html",
     "tipificacao": "tipificacao.html",
     "orientacoes": "orientacoes.html",
+    "roteiro": "roteiro.html",
+    "contatos": "contatos.html",
     "conversas": "conversas.html",
     "transcricao": "transcricao.html",
 }

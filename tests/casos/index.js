@@ -7,12 +7,14 @@
 
 var ORDEM = [
   "gerador.html",
+  "roteiro.html",
   "conversor.html",
   "orientacoes.html",
   "transcricao.html",
   "conversas.html",
   "conferidor.html",
   "tipificacao.html",
+  "contatos.html",
 ];
 
 function hrefs(seletor) {
@@ -29,7 +31,8 @@ igual("a lista de ferramentas é pública", typeof window.Ferramentas, "object")
 // imprimir "undefined" no meio de um número de boletim. Daí varrer o
 // arquivo inteiro em vez de conferir chave por chave.
 var SECOES = ["UNIDADE", "RODAPE", "LOG", "ARMAZENAMENTO", "INTERFACE",
-              "GERADOR", "ORIENTACOES", "CONVERSOR", "TRANSCRICAO", "CONVERSAS"];
+              "GERADOR", "ORIENTACOES", "CONVERSOR", "TRANSCRICAO", "CONVERSAS",
+              "CONTATOS"];
 igual("todas as seções de configuração existem",
       SECOES.filter(function (s) { return !window.Config[s]; }), []);
 

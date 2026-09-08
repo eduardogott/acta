@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acta — Contatos Úteis</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/ferramentas.css" />
+<script src="js/configuracoes.js"></script>
+<script src="js/comum/log.js"></script>
+<script src="js/comum/theme.js"></script>
+<script src="js/comum/nav.js"></script>
+<script src="js/comum/copiar.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <p class="site-title">
+    <span class="brand-mark">●</span>
+    Acta
+  </p>
+  <nav class="site-nav" aria-label="Navegação principal"></nav>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">☾</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1 class="page-title"><b>Contatos</b> Úteis</h1>
+    <p class="page-lead">Telefone, WhatsApp, e-mail e endereço do que se precisa durante
+    o plantão. Procure pelo nome do órgão ou pelo que você quer resolver — "legista",
+    "abrigo", "plantão criança". Cada número tem um botão de copiar ao lado.</p>
+  </section>
+
+  <div class="campo-busca">
+    <label for="busca">Órgão, serviço ou o que você precisa</label>
+    <input type="text" id="busca" autocomplete="off" spellcheck="false"
+           placeholder="legista · conselho tutelar · abrigo · guincho · defensoria" />
+  </div>
+
+  <p class="contagem-resultados" id="contagem"></p>
+
+  <div id="lista-contatos"></div>
+
+  <p class="sem-resultados escondido" id="sem-resultados">Nada encontrado com esse termo.</p>
+
+  <section class="nota-rodape">
+    <h2>Sobre esta agenda</h2>
+    <ul>
+      <li><b>Nada é consultado na internet.</b> A lista está dentro da própria página e
+      funciona com a rede fora do ar.</li>
+      <li><b>Os números com zeros — (00) 0000-0000 — são espaço reservado</b> e não
+      pertencem a ninguém. Onde aparecer "PREENCHER", o dado ainda não foi cadastrado.</li>
+      <li><b>Agenda desatualizada custa mais caro que agenda nenhuma</b>, porque quem
+      liga acredita nela. Achou um número que mudou, mudou de horário ou não atende
+      mais? Avise quem cuida da ferramenta no mesmo dia.</li>
+      <li><b>O WhatsApp abre de verdade</b>, quando o número tem DDD. Telefone comum não
+      disca daqui: o botão ao lado copia o número para você digitar no aparelho.</li>
+    </ul>
+  </section>
+</main>
+
+<footer></footer>
+
+<script src="js/contatos/dados.js"></script>
+<script src="js/contatos/contatos.js"></script>
+<script src="js/comum/versao.js"></script>
+<script src="js/comum/rodape.js"></script>
+</body>
+</html>

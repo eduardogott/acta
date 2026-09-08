@@ -11,12 +11,14 @@ são bibliotecas e modelos, nunca o conteúdo do usuário.
 | --- | --- |
 | `index.html` | A porta de entrada: um cartão por ferramenta, montado da mesma lista que alimenta o menu. |
 | `gerador.html` | Gerador de texto de ocorrência: questionário dinâmico → um parágrafo de narrativa em 3ª pessoa ("Comunica que…", "Informa que…"). |
+| `roteiro.html` | As perguntas suplementares de cada fato — o que costuma ser lembrado tarde demais. |
 | `conversor.html` | Converte e comprime áudio, vídeo e imagem com ffmpeg.wasm; extrai áudio e quadros de vídeo. |
 | `transcricao.html` | Transcreve áudio em português com o Whisper, dentro do navegador. |
 | `conversas.html` | Formata a exportação do WhatsApp numa transcrição numerada. |
 | `orientacoes.html` | Monta a folha de "o que fazer agora" para imprimir e entregar ao comunicante. |
 | `conferidor.html` | Confere dígito verificador de CPF, CNPJ, IMEI, chassi, placa, título de eleitor e PIS. |
 | `tipificacao.html` | Consulta rápida de tipificação penal, pesquisável por fato ou artigo. |
+| `contatos.html` | A agenda da unidade: telefone, WhatsApp, e-mail e endereço, com busca. |
 
 "Acta" é o nome da **suíte**, não de nenhuma das ferramentas: aparece no
 cabeçalho, no título da aba (`Acta — <ferramenta>`) e no rodapé de todas
@@ -52,8 +54,9 @@ arquivos do runtime a partir da versão da biblioteca — a montagem é feita
 no próprio arquivo: declarar três URLs à mão é como uma fica para trás numa
 troca de versão.
 
-**O que continua fora, de propósito:** o conteúdo (`dados.js` das
-orientações e da tipificação, os tipos do gerador), o mapa do site
+**O que continua fora, de propósito:** o conteúdo (os `dados.js` das
+orientações, da tipificação, do roteiro e dos contatos, e os tipos do
+gerador), o mapa do site
 (`PAGINAS`, em `js/comum/nav.js`) e os pesos de dígito verificador em
 `identificadores.js` — esses últimos não são preferência, são a definição
 do cálculo. O cabeçalho do arquivo lista isso, para servir também de
@@ -119,13 +122,14 @@ usa. As páginas ficam na raiz porque são as URLs do site — mexer nelas
 quebraria links já salvos.
 
 ```
-index.html (a inicial)  gerador.html  conversor.html  transcricao.html
-conversas.html  orientacoes.html  conferidor.html  tipificacao.html
+index.html (a inicial)  gerador.html  roteiro.html  conversor.html
+transcricao.html  conversas.html  orientacoes.html  conferidor.html
+tipificacao.html  contatos.html
 
 css/
   style.css          tokens e componentes de todas as páginas
   conversor.css      só do conversor
-  ferramentas.css    das cinco ferramentas menores
+  ferramentas.css    das ferramentas menores (menos o conversor)
 
 js/
   configuracoes.js   TODOS os valores ajustáveis da suíte
@@ -144,6 +148,8 @@ js/
   orientacoes/       orientacoes.js (página), dados.js (conteúdo)
   conferidor/        conferidor.js
   tipificacao/       tipificacao.js (página), dados.js (a tabela)
+  roteiro/           roteiro.js (página), dados.js (as perguntas)
+  contatos/          contatos.js (página), dados.js (a agenda)
 
 tests/                     servidor.py, gerar.py, rodar.ps1, casos/
 functions/_middleware.js   Basic Auth + COOP/COEP em toda rota
@@ -759,6 +765,41 @@ A data é sempre a de **hoje**, e não a do fato nem a do registro: o que
 ela data é a folha entregue agora. Recalculada também no `beforeprint`,
 que pega o Ctrl+P e a página que virou a noite aberta.
 
+## Roteiro de atendimento (`roteiro.html`)
+
+Escolhe-se o fato e saem as perguntas suplementares daquele fato, mais as
+que valem para qualquer atendimento. Conteúdo em
+**`js/roteiro/dados.js`**; a página só escolhe e desenha.
+
+**É o inverso das orientações.** A folha de orientações é o papel que o
+comunicante leva embora, escrita para ele. Isto fica na tela e é escrito
+para quem atende. Por isso as duas páginas se linkam: são o mesmo
+atendimento, vistos dos dois lados do balcão — e a ponte funciona como a da
+tipificação, com a chave `orientacoes` da entrada e uma conferência na
+carga de que a folha apontada existe.
+
+**O que entra na lista, e o que não entra.** Quem usa já sabe atender, e
+uma lista que começasse por "pergunte o nome da vítima" seria fechada no
+primeiro dia. Entra só a pergunta que muda alguma coisa: a tipificação
+("a arma foi vista ou só mencionada?"), a providência de hoje ("ele tem
+acesso a arma de fogo?") ou a diligência que amanhã já não dá para fazer
+("há câmera na via? quem guarda a imagem?"). Se a resposta não muda nada,
+a pergunta não pertence à lista — o valor dela está em ser curta o
+bastante para se ler inteira, de pé, com alguém esperando.
+
+Cada pergunta pode trazer uma `nota`, que é **o porquê**: o que aquela
+resposta muda. É a metade que faz a lista valer — sem ela, "houve
+estrangulamento?" é mais uma pergunta; com ela, é a pergunta que aponta
+risco de feminicídio. Na tela, a nota sai em cinza embaixo da pergunta.
+
+Os `grupos` existem porque a lista da violência doméstica tem quinze
+perguntas, e quinze itens corridos não se leem em pé. E o estado vai para a
+URL (`?fato=violencia_domestica`), para se salvar o atalho do fato que se
+atende toda semana.
+
+**É apoio de memória, não protocolo**, e a página diz isso: não substitui
+procedimento da unidade nem o que a autoridade determinar no caso concreto.
+
 ## Transcrição de conversas (`conversas.html`)
 
 Cola-se a exportação do WhatsApp e sai uma transcrição numerada, com os
@@ -815,6 +856,23 @@ pessoa usa: quem chega dizendo "mexeram no meu carro" procura por
 "arrombamento", não por "furto qualificado". A busca ignora acento e
 pontuação, e casa também com o termo colado (`art155` acha `Art. 155`).
 
+**O texto do artigo é opcional e fica escondido.** Quando a entrada traz
+o campo `texto`, a linha ganha um "ver o texto do artigo" que abre uma
+segunda `<tr>` com o dispositivo — o caput, ou o parágrafo, quando a
+entrada for de um. Escondido porque a tabela existe para *achar* o artigo:
+o dispositivo inteiro em toda linha empurraria as outras quatro colunas
+para fora da tela. O que estiver escrito ali também entra na busca, então
+quem lembra "coisa alheia móvel" e não lembra "furto" acha do mesmo jeito.
+Quais gavetas estão abertas é lembrado enquanto a página vive — sem isso,
+digitar mais uma letra na busca fecharia o artigo recém-aberto, já que a
+tabela é redesenhada inteira a cada tecla.
+
+O cabeçalho do `dados.js` traz a regra de ouro: **copiar literalmente do
+Planalto**, sem resumir. A página inteira pede para conferir no texto legal
+antes de tipificar, e uma paráfrase aqui seria exatamente o que ela manda
+evitar. O campo é opcional de propósito, e a tabela é preenchida aos
+poucos: entrada sem `texto` continua servindo, só não mostra o link.
+
 **A prescrição é calculada, não digitada.** A coluna sai da pena máxima em
 abstrato pelo art. 109 do CP: uma expressão lê a maior faixa citada no
 campo `pena` (`penaMaximaEmMeses`) e a tabela do artigo faz o resto. Assim
@@ -826,3 +884,45 @@ na página: causas de aumento e de diminuição, e o art. 115.
 
 **Esta tabela é digitada à mão e envelhece a cada lei nova.** É um atalho
 para lembrar onde procurar, nunca a fonte.
+
+## Contatos úteis (`contatos.html`)
+
+A agenda que substitui o papel colado na parede: telefone, WhatsApp,
+e-mail, endereço e horário, agrupados por categoria e pesquisáveis.
+Conteúdo em **`js/contatos/dados.js`**, e a busca é a mesma da tipificação
+— termos soltos, sem acento e sem pontuação —, de forma que "legista" acha
+o IML e "plantão criança" acha o Conselho Tutelar.
+
+**Copiar é a ação principal, não ligar.** Isto roda num computador de
+balcão, onde um link `tel:` não disca nada: o número existe para ser
+copiado e digitado no aparelho ao lado, ou colado num despacho. Daí um
+botão de copiar por linha, discreto. O WhatsApp é a exceção — ali o link
+abre de verdade, montado como `wa.me/<DDI><dígitos>`, com o DDI vindo de
+`window.Config.CONTATOS`. Número de três dígitos (190, 193, 180) não vira
+link: sem DDD não há como adivinhar a região, e nenhum deles é WhatsApp de
+ninguém.
+
+**Cada número pode dizer para que serve.** Órgão com um telefone só não
+precisa de explicação; órgão com três precisa, e muito — o 190 e o número
+do quartel atendem coisas diferentes, e ligar no errado às 3h da manhã
+custa um tempo que ninguém tem. Por isso todo campo de contato aceita
+tanto texto solto (`"(51) 3597-0396"`) quanto `{ valor, nota }`, e as duas
+formas convivem na mesma lista. A nota sai em cinza ao lado do número,
+entra na busca — quem digita "alternativo" acha — e **não** é copiada
+junto: o botão copia só o número, que é o que vai ser digitado no aparelho
+ao lado.
+
+Todo campo é opcional menos `nome` e `categoria` — melhor uma entrada só
+com o telefone do que uma entrada que ninguém cria por faltar o e-mail. Um
+cartão por contato, e não uma linha de tabela, porque cada um tem um
+número diferente de campos e uma tabela com metade das células vazias é
+pior de ler.
+
+**Os números com zeros — `(00) 0000-0000` — são espaço reservado**, e onde
+aparece "PREENCHER" o dado ainda não foi cadastrado. Os de três dígitos são
+nacionais e já estão certos. A página avisa no console quando um contato
+aponta para uma categoria que não existe: sem isso ele sumiria da tela sem
+erro nenhum, por não cair em grupo algum.
+
+**Agenda desatualizada custa mais caro que agenda nenhuma**, porque quem
+liga acredita nela. Está dito na própria página, endereçado a quem usa.

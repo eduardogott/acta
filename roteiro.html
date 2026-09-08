@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acta — Roteiro de Atendimento</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/ferramentas.css" />
+<script src="js/configuracoes.js"></script>
+<script src="js/comum/log.js"></script>
+<script src="js/comum/theme.js"></script>
+<script src="js/comum/nav.js"></script>
+<script src="js/comum/copiar.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <p class="site-title">
+    <span class="brand-mark">●</span>
+    Acta
+  </p>
+  <nav class="site-nav" aria-label="Navegação principal"></nav>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">☾</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1 class="page-title"><b>Roteiro</b> de Atendimento</h1>
+    <p class="page-lead">Escolha o fato e veja as perguntas que costumam fazer falta
+    depois. Não é roteiro de entrevista — é a lista curta do que passa batido: o que
+    muda a tipificação, o que precisa ser feito hoje e a diligência que amanhã já não
+    dá mais para fazer.</p>
+  </section>
+
+  <div class="bloco-escolha">
+    <p class="progresso">Qual é o fato?</p>
+    <div class="opcoes" id="opcoes-fato"></div>
+  </div>
+
+  <p class="roteiro-vazio" id="saida-vazio">Escolha um fato acima para ver as perguntas.</p>
+
+  <section class="roteiro-saida escondido" id="roteiro-saida">
+    <h2 class="roteiro-titulo" id="saida-titulo"></h2>
+    <p class="roteiro-nota escondido" id="saida-nota"></p>
+    <a class="roteiro-folha escondido" id="link-orientacoes" href="orientacoes.html"></a>
+    <div id="saida-grupos"></div>
+  </section>
+
+  <div class="acoes">
+    <button type="button" class="btn-secondary" id="btn-copiar" disabled>Copiar como texto</button>
+    <button type="button" class="btn-secondary" id="btn-limpar">Limpar</button>
+  </div>
+
+  <section class="nota-rodape">
+    <h2>Sobre esta lista</h2>
+    <ul>
+      <li><b>É apoio de memória, não protocolo.</b> Não substitui o procedimento da
+      unidade nem o que a autoridade determinar no caso concreto — e nem toda pergunta
+      cabe em todo atendimento.</li>
+      <li><b>Só entra aqui o que não é óbvio.</b> A lista pula o que se pergunta em
+      qualquer registro e guarda o que costuma ser lembrado tarde demais. Por isso é
+      curta: para ser lida inteira, de pé.</li>
+      <li><b>O texto em cinza é o porquê:</b> o que aquela resposta muda na tipificação,
+      na providência de hoje ou na diligência de amanhã.</li>
+      <li><b>Falta um fato ou uma pergunta?</b> Anote e leve a quem cuida da ferramenta.
+      Pergunta que fez falta uma vez faz falta de novo.</li>
+    </ul>
+  </section>
+</main>
+
+<footer></footer>
+
+<script src="js/orientacoes/dados.js"></script>
+<script src="js/roteiro/dados.js"></script>
+<script src="js/roteiro/roteiro.js"></script>
+<script src="js/comum/versao.js"></script>
+<script src="js/comum/rodape.js"></script>
+</body>
+</html>

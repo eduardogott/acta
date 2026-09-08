@@ -424,6 +424,16 @@ globalThis.Config = (function () {
     ],
   };
 
+  // =========================================================================
+  // 11. CONTATOS ÚTEIS
+  // =========================================================================
+  const CONTATOS = {
+    // Entra na frente do número para montar o link do WhatsApp
+    // (wa.me/55DDNUMERO). Só isso: o resto da agenda é conteúdo, e mora
+    // em js/contatos/dados.js.
+    DDI: "55",
+  };
+
   return {
     UNIDADE,
     RODAPE,
@@ -435,5 +445,6 @@ globalThis.Config = (function () {
     CONVERSOR,
     TRANSCRICAO,
     CONVERSAS,
+    CONTATOS,
   };
 })();

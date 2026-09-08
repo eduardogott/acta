@@ -1,10 +1,10 @@
 /* =========================================================
-   Estilos das quatro ferramentas menores: conferidor,
-   tipificação, orientações e transcrição.
+   Estilos das ferramentas menores: conferidor, tipificação,
+   orientações, transcrição, roteiro e contatos.
 
    Um arquivo só porque elas compartilham quase tudo — campo de
-   busca, cartão de resultado, lista de itens — e porque quatro
-   folhas de 60 linhas seriam quatro lugares para o mesmo ajuste.
+   busca, cartão de resultado, lista de itens — e porque seis
+   folhas de 60 linhas seriam seis lugares para o mesmo ajuste.
    O que é da página do conversor continua em conversor.css.
    ========================================================= */
 
@@ -181,6 +181,45 @@
   border-bottom-color: currentColor;
 }
 
+/* "ver o texto do artigo": um botão que se parece com o link acima, e
+   não com um botão — abrir uma gaveta na própria linha não é a ação
+   principal da tabela. */
+.tipificacao-ver-texto {
+  display: block;
+  margin-top: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: left;
+  cursor: pointer;
+}
+.tipificacao-ver-texto:hover,
+.tipificacao-ver-texto:focus-visible {
+  color: var(--accent);
+}
+
+/* A linha da gaveta. Fundo próprio para não se confundir com o fato
+   seguinte, que fica logo abaixo. */
+.tipificacao-texto-linha td {
+  background: var(--accent-soft);
+  padding-top: 12px;
+  padding-bottom: 14px;
+}
+.tipificacao-texto {
+  margin: 4px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-read);
+  /* As quebras vêm escritas no dados.js, entre o caput e a pena e entre
+     um parágrafo e outro. É o texto legal: quebrou lá, quebra aqui. */
+  white-space: pre-line;
+}
+
 .etiqueta {
   display: inline-block;
   font-family: var(--mono);
@@ -318,6 +357,91 @@
 }
 
 /* ---------------------------------------------------------
+   Roteiro de atendimento
+
+   Mesma anatomia da folha de orientações — título, grupos,
+   lista numerada —, mas isto fica na TELA e é lido de pé,
+   enquanto a folha vai para o papel. Daí a linha mais alta e
+   o "porquê" em cinza embaixo de cada pergunta.
+   --------------------------------------------------------- */
+.roteiro-vazio {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 20px 0;
+}
+.roteiro-saida {
+  margin: 4px 0 24px;
+}
+.roteiro-titulo {
+  font-family: var(--sans);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+/* O lembrete do fato: não é pergunta, e por isso não entra na lista
+   numerada. Fica no alto porque muda o que se faz antes de perguntar
+   qualquer coisa ("não existe prazo de 24 horas"). */
+.roteiro-nota {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
+  font-size: 13.5px;
+  color: var(--text-read);
+  max-width: 70ch;
+}
+.roteiro-folha {
+  display: inline-block;
+  margin-bottom: 18px;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.roteiro-folha:hover,
+.roteiro-folha:focus-visible {
+  border-bottom-color: currentColor;
+}
+.roteiro-grupo {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px 18px;
+  margin-bottom: 12px;
+}
+.roteiro-grupo h3 {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.roteiro-grupo ol {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--text-read);
+}
+.roteiro-grupo li {
+  margin-bottom: 14px;
+  max-width: 78ch;
+}
+.roteiro-grupo li:last-child { margin-bottom: 0; }
+/* O que a resposta muda. Em bloco e menor: quem já sabe a pergunta salta
+   esta linha, e quem não sabe por que está perguntando lê. */
+.roteiro-porque {
+  display: block;
+  margin-top: 3px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------
    Transcrição
    --------------------------------------------------------- */
 .painel-modelo,
@@ -445,6 +569,118 @@
   font-family: var(--mono);
   font-size: 12.5px;
   line-height: 1.65;
+}
+
+/* ---------------------------------------------------------
+   Contatos úteis
+
+   Cartão, e não linha de tabela: cada contato tem um número
+   de campos diferente, e uma tabela com metade das células
+   vazias é pior de ler que uma pilha de cartões curtos.
+   --------------------------------------------------------- */
+.contato-grupo {
+  margin-bottom: 26px;
+}
+.contato-grupo-titulo {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.contato-cartao {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 18px 16px;
+  margin-bottom: 10px;
+}
+.contato-cabecalho {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.contato-nome {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+.contato-descricao {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 70ch;
+}
+.contato-linha {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 4px 0;
+}
+.contato-rotulo {
+  flex: 0 0 8ch;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.contato-valor {
+  font-family: var(--mono);
+  font-size: 13.5px;
+  color: var(--text-read);
+  word-break: break-word;
+}
+.contato-valor a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.contato-valor a:hover,
+.contato-valor a:focus-visible {
+  border-bottom-color: currentColor;
+}
+/* Para que serve este número. Ao lado do valor, e não numa linha
+   própria: um contato com três telefones viraria seis linhas, e a agenda
+   se lê de relance. O ponto vem do CSS para não sujar o texto copiável. */
+.contato-nota {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.contato-nota::before {
+  content: "· ";
+}
+
+/* Discreto até se precisar dele: a agenda se lê muito mais do que se
+   copia, e um botão sólido por linha viraria uma parede de botões. */
+.contato-copiar {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.75;
+  cursor: pointer;
+}
+.contato-copiar:hover,
+.contato-copiar:focus-visible {
+  color: var(--accent);
+  opacity: 1;
+}
+.contato-obs {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  max-width: 70ch;
 }
 
 /* ---------------------------------------------------------

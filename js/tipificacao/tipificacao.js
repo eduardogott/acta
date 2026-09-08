@@ -13,6 +13,10 @@
  * (campo `orientacoes` da entrada). Quem consulta a tipificação está
  * atendendo alguém, e essa pessoa sai da delegacia com um papel na mão
  * — as duas páginas são o mesmo atendimento.
+ *
+ * E abre o texto do artigo, quando a entrada o traz (campo `texto`) — a
+ * página manda conferir no texto legal antes de tipificar, e é o mínimo
+ * que ela tenha o texto à mão.
  * ---------------------------------------------------------------------------
  */
 (function () {
@@ -143,8 +147,11 @@
   // Índice de busca montado uma vez: refazer a concatenação a cada tecla
   // digitada seria refazer o mesmo trabalho oitenta vezes por letra.
   const INDICE = window.TIPIFICACAO.map((entrada) => {
+    // O dispositivo entra na busca: quem lembra "coisa alheia móvel" e
+    // não lembra "furto" acha do mesmo jeito.
     const texto = normalizar(
-      [entrada.fato, entrada.artigo, entrada.diploma, entrada.pena, entrada.busca, entrada.obs]
+      [entrada.fato, entrada.artigo, entrada.diploma, entrada.pena,
+       entrada.busca, entrada.obs, entrada.texto]
         .filter(Boolean)
         .join(" ")
     );
@@ -154,6 +161,69 @@
     return { entrada, texto, colado: texto.replace(/ /g, "") };
   });
 
+  // -------------------------------------------------------------------
+  // O texto do artigo
+  //
+  // Escondido atrás de um botão porque a tabela existe para ACHAR o
+  // artigo: o dispositivo inteiro em toda linha empurraria as outras
+  // quatro colunas para fora da tela e transformaria uma consulta de dez
+  // segundos numa leitura.
+  //
+  // Quais linhas estão abertas é lembrado enquanto a página vive. Sem
+  // isso, digitar mais uma letra na busca fecharia o artigo que a pessoa
+  // acabou de abrir — a tabela é redesenhada inteira a cada tecla.
+  // -------------------------------------------------------------------
+
+  const abertos = new Set();
+
+  /** Quantas colunas a linha do texto precisa atravessar. */
+  function colunas() {
+    return document.querySelectorAll(".tabela-tipificacao thead th").length || 1;
+  }
+
+  /** A linha escondida com o dispositivo, na largura da tabela inteira. */
+  function criarLinhaDoTexto(e) {
+    const tr = document.createElement("tr");
+    tr.className = "tipificacao-texto-linha";
+
+    const td = document.createElement("td");
+    td.colSpan = colunas();
+
+    const fonte = document.createElement("span");
+    fonte.className = "tipificacao-obs";
+    fonte.textContent = e.artigo + " · " + e.diploma;
+
+    const bloco = document.createElement("blockquote");
+    bloco.className = "tipificacao-texto";
+    // As quebras escritas no dados.js viram quebras na tela pelo CSS
+    // (white-space: pre-line), sem montar um <p> por parágrafo aqui.
+    bloco.textContent = e.texto;
+
+    td.appendChild(fonte);
+    td.appendChild(bloco);
+    tr.appendChild(td);
+    return tr;
+  }
+
+  /** O botão que abre e fecha aquela linha, e mais nenhuma. */
+  function criarBotaoDoTexto(e, linhaTexto) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "tipificacao-ver-texto";
+
+    const definir = (aberto) => {
+      linhaTexto.classList.toggle("escondido", !aberto);
+      botao.setAttribute("aria-expanded", String(aberto));
+      botao.textContent = aberto ? "esconder o texto do artigo" : "ver o texto do artigo";
+      if (aberto) abertos.add(e);
+      else abertos.delete(e);
+    };
+
+    botao.addEventListener("click", () => definir(linhaTexto.classList.contains("escondido")));
+    definir(abertos.has(e));
+    return botao;
+  }
+
   function criarEtiqueta(texto, classe) {
     const span = document.createElement("span");
     span.className = "etiqueta " + classe;
@@ -161,7 +231,14 @@
     return span;
   }
 
-  function criarLinha(e) {
+  /**
+   * A linha do fato e, quando a entrada traz o dispositivo, a linha
+   * escondida com ele logo abaixo. Duas linhas de tabela, e não um bloco
+   * dentro da primeira: dentro da célula "Fato" o texto ficaria espremido
+   * na largura daquela coluna.
+   */
+  function criarLinhas(e) {
+    const fragmento = document.createDocumentFragment();
     const tr = document.createElement("tr");
 
     const tdFato = document.createElement("td");
@@ -179,6 +256,11 @@
       obs.textContent = e.obs;
       tdFato.appendChild(obs);
     }
+    // A linha do texto nasce antes do botão porque é o botão que a
+    // conhece — e mais ninguém.
+    const linhaTexto = e.texto ? criarLinhaDoTexto(e) : null;
+    if (linhaTexto) tdFato.appendChild(criarBotaoDoTexto(e, linhaTexto));
+
     const folha = linkDaFolha(e);
     if (folha) tdFato.appendChild(folha);
 
@@ -209,7 +291,10 @@
     tr.appendChild(tdPena);
     tr.appendChild(tdPrescricao);
     tr.appendChild(tdAcao);
-    return tr;
+
+    fragmento.appendChild(tr);
+    if (linhaTexto) fragmento.appendChild(linhaTexto);
+    return fragmento;
   }
 
   function filtrar() {
@@ -224,7 +309,7 @@
     }).map((i) => i.entrada);
 
     el.corpo.innerHTML = "";
-    encontrados.forEach((e) => el.corpo.appendChild(criarLinha(e)));
+    encontrados.forEach((e) => el.corpo.appendChild(criarLinhas(e)));
 
     // O termo buscado é nome de crime, não dado de vítima — pode ir junto.
     log.debug('Busca "' + el.busca.value + '":', encontrados.length, "de", window.TIPIFICACAO.length);
@@ -238,7 +323,8 @@
 
   log.info(
     "Tabela carregada:", window.TIPIFICACAO.length, "fatos,",
-    window.TIPIFICACAO.filter((e) => e.orientacoes).length, "com folha de orientações."
+    window.TIPIFICACAO.filter((e) => e.orientacoes).length, "com folha de orientações,",
+    window.TIPIFICACAO.filter((e) => e.texto).length, "com o texto do artigo."
   );
 
   el.busca.addEventListener("input", filtrar);
