@@ -52,8 +52,6 @@
     rodando: false,
     inicio: 0,
     relogio: null,
-    // Quantas threads o motor conseguiu usar (o worker informa).
-    threads: null,
   };
 
   let worker = null;
@@ -146,7 +144,7 @@
       log.aviso("O navegador não decodificou", arquivo.name + ":", err);
       el.infoArquivo.className = "status-linha erro";
       el.infoArquivo.textContent =
-        "O navegador não conseguiu abrir este arquivo (" + arquivo.name + "). " +
+        "Não foi possível abrir este arquivo (" + arquivo.name + "). " +
         "Formatos como .mkv, .avi e .wma não são reconhecidos aqui — use a opção " +
         "\"Extrair áudio\" do conversor e traga o MP3.";
     }
@@ -163,7 +161,7 @@
     worker.onmessage = (evento) => tratarMensagem(evento.data || {});
     worker.onerror = (evento) => {
       log.erro("Worker falhou:", evento.message || evento);
-      terminar("Falha ao iniciar o motor de transcrição: " + (evento.message || "erro desconhecido"), true);
+      terminar("Não foi possível iniciar a transcrição. Recarregue a página e tente de novo.", true);
     };
     return worker;
   }
@@ -175,17 +173,17 @@
     } else if (msg.tipo === "download") {
       const pct = msg.total ? Math.round((msg.recebido / msg.total) * 100) : 0;
       setStatus(
-        "Baixando o modelo — " + humanSize(msg.recebido) +
+        "Baixando o programa de transcrição — " + humanSize(msg.recebido) +
         (msg.total ? " de " + humanSize(msg.total) + " (" + pct + "%)" : "") +
-        ". Só na primeira vez."
+        ". Isso só acontece na primeira vez."
       );
       setBarra(msg.total ? msg.recebido / msg.total : null);
       log.debug("Baixando o modelo:", msg.recebido, "de", msg.total || "?");
     } else if (msg.tipo === "modo") {
+      // Só no console: quantas threads o motor conseguiu usar explica por
+      // que uma transcrição demorou o que demorou, mas não é assunto de
+      // quem está esperando o texto.
       log.info("Motor pronto em", msg.threads, msg.threads === 1 ? "thread." : "threads.");
-      // Guardado para entrar na mensagem final: dizer "em 4 threads" ou
-      // "em 1 thread" explica sozinho por que demorou o que demorou.
-      estado.threads = msg.threads;
     } else if (msg.tipo === "pronto") {
       mostrarResultado(msg.texto, msg.trechos);
     } else if (msg.tipo === "erro") {
@@ -217,11 +215,8 @@
     const decorrido = (performance.now() - estado.inicio) / 1000;
     el.texto.value = montarTexto(texto, trechos) || "(nada foi reconhecido neste áudio)";
     el.painelResultado.classList.remove("escondido");
-    const modo = estado.threads
-      ? " em " + estado.threads + (estado.threads > 1 ? " threads" : " thread")
-      : "";
     terminar(
-      "Concluído em " + formatarTempo(decorrido) + modo + ", para " +
+      "Concluído em " + formatarTempo(decorrido) + ", para " +
       formatarTempo(estado.duracao) + " de áudio. Revise antes de usar.",
       false
     );
@@ -358,7 +353,7 @@
     log.aviso("Interrompido pelo usuário — o worker vai ser morto e o modelo, recarregado.");
     worker.terminate();
     worker = null;
-    terminar("Interrompido. O modelo será carregado de novo na próxima vez (do cache).", false);
+    terminar("Interrompido. Na próxima vez a página leva alguns segundos para se preparar de novo.", false);
   });
 
   el.btnLimpar.addEventListener("click", () => {

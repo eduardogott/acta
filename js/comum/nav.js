@@ -57,7 +57,7 @@
       rotulo: "Transcrição",
       titulo: "Transcrição de Áudio",
       descricao:
-        "Transcreve áudio e vídeo em português com o Whisper, sem sair da máquina.",
+        "Transcreve áudio e vídeo em português, sem que nada saia do computador.",
     },
     {
       arquivo: "conversas.html",

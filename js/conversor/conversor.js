@@ -185,7 +185,7 @@
       ganchos.progresso = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
-    if (code) throw new Error("ffmpeg retornou erro ao converter áudio");
+    if (code) throw new Error("Não foi possível converter este áudio.");
     const data = await ffmpeg.readFile(outName);
     await ffmpeg.deleteFile(outName);
     return { blob: new Blob([data.buffer], { type: "audio/mpeg" }), outName };
@@ -274,7 +274,7 @@
       ganchos.progresso = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
-    if (code) throw new Error("ffmpeg retornou erro ao converter vídeo");
+    if (code) throw new Error("Não foi possível converter este vídeo.");
     const data = await ffmpeg.readFile(outName);
     await ffmpeg.deleteFile(outName);
     return { blob: new Blob([data.buffer], { type: "video/mp4" }), outName };
@@ -306,7 +306,7 @@
       ganchos.progresso = null;
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
-    if (code) throw new Error("ffmpeg retornou erro ao converter imagem");
+    if (code) throw new Error("Não foi possível converter esta imagem.");
     const data = await ffmpeg.readFile(outName);
     await ffmpeg.deleteFile(outName);
     return { blob: new Blob([data.buffer], { type: "image/jpeg" }), outName };
@@ -343,7 +343,7 @@
       // O caso comum de falha aqui é o vídeo simplesmente não ter som —
       // vale dizer isso em vez de repetir "o ffmpeg deu erro".
       const semSom = cauda().some((l) => /does not contain any stream|Output file .* empty/i.test(l));
-      throw new Error(semSom ? "Este vídeo não tem faixa de áudio." : "ffmpeg retornou erro ao extrair o áudio");
+      throw new Error(semSom ? "Este vídeo não tem som." : "Não foi possível extrair o som deste vídeo.");
     }
     const data = await ffmpeg.readFile(outName);
     await ffmpeg.deleteFile(outName);
@@ -379,9 +379,9 @@
     } catch (e) {}
     if (!data || data.length === 0) {
       try { await ffmpeg.deleteFile(outName); } catch (e) {}
-      if (code) throw new Error("ffmpeg retornou erro ao extrair o quadro");
+      if (code) throw new Error("Não foi possível extrair a imagem deste vídeo.");
       throw new Error(
-        "Nenhum quadro em " + formatarTempo(instante) + " — o vídeo é mais curto que isso."
+        "Não há imagem em " + formatarTempo(instante) + " — o vídeo é mais curto que isso."
       );
     }
     await ffmpeg.deleteFile(outName);
@@ -391,7 +391,7 @@
   function standardizeExtensionFile(file) {
     const ext = extOf(file.name);
     const newExt = EXTENSION_MAP[ext];
-    if (!newExt) return { skipped: true, reason: "sem mapeamento de extensão" };
+    if (!newExt) return { skipped: true, reason: "o final do nome já está certo" };
     const outName = baseName(file.name) + newExt;
     return { blob: file, outName };
   }
@@ -418,8 +418,8 @@
       const duracao = duracaoDoTrabalho(info, corte);
       if (!duracao) {
         throw new Error(
-          "Não consegui descobrir a duração deste áudio, e o Tamanho-alvo depende dela. " +
-          "Use um dos níveis fixos."
+          "Não consegui descobrir a duração deste áudio, e o Tamanho máximo depende " +
+          "dela. Escolha um dos níveis prontos."
         );
       }
       alvo = planejarAlvoAudio(info, duracao, custom.alvoBytes);
@@ -461,7 +461,7 @@
       pararAcompanhamento();
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
-    if (code) throw new Error("ffmpeg retornou erro ao comprimir o áudio");
+    if (code) throw new Error("Não foi possível comprimir este áudio.");
     const data = await etapa("Ler a saída", () => ffmpeg.readFile(outName));
     await ffmpeg.deleteFile(outName);
     return { blob: new Blob([data.buffer], { type: "audio/mpeg" }), outName };
@@ -494,8 +494,8 @@
       const duracao = duracaoDoTrabalho(info, corte);
       if (!duracao) {
         throw new Error(
-          "Não consegui descobrir a duração deste vídeo, e o Tamanho-alvo depende dela. " +
-          "Use um dos níveis fixos."
+          "Não consegui descobrir a duração deste vídeo, e o Tamanho máximo depende " +
+          "dela. Escolha um dos níveis prontos."
         );
       }
       const plano = planejarAlvo(info, duracao, custom.alvoBytes);
@@ -570,7 +570,7 @@
       pararAcompanhamento();
       try { await ffmpeg.deleteFile(inName); } catch (e) {}
     }
-    if (code) throw new Error("ffmpeg retornou erro ao comprimir o vídeo");
+    if (code) throw new Error("Não foi possível comprimir este vídeo.");
     const data = await etapa("Ler a saída", () => ffmpeg.readFile(outName));
     await ffmpeg.deleteFile(outName);
     return { blob: new Blob([data.buffer], { type: "video/mp4" }), outName };
@@ -690,19 +690,19 @@
 
   function onProgressoMotor(recebido, total, todasEmCache) {
     if (todasEmCache) {
-      setStatus("Recuperando o motor de conversão do cache do navegador…");
+      setStatus("Preparando o conversor…");
       setBarraMotor(total ? recebido / total : 1);
       return;
     }
     if (total) {
       const pct = Math.round((recebido / total) * 100);
       setStatus(
-        "Baixando o motor de conversão — " + humanSize(recebido) + " de " +
-        humanSize(total) + " (" + pct + "%). Só na primeira visita."
+        "Preparando o conversor — " + humanSize(recebido) + " de " +
+        humanSize(total) + " (" + pct + "%). Isso só acontece na primeira vez."
       );
       setBarraMotor(recebido / total);
     } else {
-      setStatus("Baixando o motor de conversão — " + humanSize(recebido) + " recebidos…");
+      setStatus("Preparando o conversor — " + humanSize(recebido) + " recebidos…");
       setBarraMotor(null);
     }
   }
@@ -755,9 +755,9 @@
     el.avisoMemoria.classList.remove("escondido");
     el.avisoMemoria.textContent =
       "⚠ O arquivo " + maior.name + " tem " + humanSize(maior.size) +
-      ". O ffmpeg carrega o arquivo inteiro na memória do navegador, e acima de " +
-      "~500 MB é comum a aba ficar sem memória no meio do processo. Se falhar, " +
-      "corte o arquivo em partes menores antes.";
+      ". Arquivos desse tamanho às vezes não cabem na memória do computador e a " +
+      "conversão para no meio. Se isso acontecer, corte o arquivo em partes " +
+      "menores antes.";
   }
 
   /** Percorre uma entrada arrastada (arquivo ou pasta) acumulando os arquivos. */
@@ -1035,8 +1035,8 @@
                 " (" + sinal + "). É um cálculo aproximado — o resultado real depende do " +
                 "conteúdo do arquivo.";
     if (estourouOAlvo) {
-      texto += " Atenção: nesta duração o alvo pedido fica abaixo do bitrate mínimo " +
-               "utilizável, então a saída vai passar do tamanho. Cortar um trecho resolve.";
+      texto += " Atenção: este arquivo é longo demais para caber no tamanho pedido, " +
+               "então ele vai sair maior que isso. Cortar um trecho resolve.";
     }
     el.estimativa.classList.remove("escondido");
     el.estimativa.textContent = texto;
@@ -1114,7 +1114,7 @@
     el.linhaFps.hidden = !ehVideo;
 
     if (sondou && !info.hasAudio) {
-      preencherLinha(el.origSamplerate, "sem faixa de áudio");
+      preencherLinha(el.origSamplerate, "este arquivo não tem som");
       preencherLinha(el.origBitrate, null);
     } else {
       const canais = nomeDosCanais(info.aChannels);
@@ -1155,7 +1155,7 @@
     } catch (err) {
       diagAviso("Não consegui analisar o arquivo:", err);
       if (token === estado.tokenInfo) {
-        setStatus("Não foi possível ler os dados do arquivo: " + err.message);
+        setStatus("Não foi possível ler as informações deste arquivo.");
       }
     } finally {
       if (token === estado.tokenInfo) {
@@ -1827,7 +1827,9 @@
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (err) {
-      setStatus("Não foi possível montar o zip: " + err.message);
+      // A tela fica com a frase curta; o motivo vai para o console.
+      diagAviso("Falha ao montar o zip:", err);
+      setStatus("Não foi possível juntar os arquivos num só.");
     } finally {
       el.btnBaixarTudo.textContent = textoOriginal;
       el.btnBaixarTudo.disabled = false;
@@ -1858,7 +1860,8 @@
         }
         setStatus(estado.saidas.length + " arquivo(s) gravados na pasta escolhida.");
       } catch (err) {
-        setStatus("Falha ao gravar na pasta: " + err.message);
+        diagAviso("Falha ao gravar na pasta escolhida:", err);
+        setStatus("Não foi possível gravar os arquivos nessa pasta.");
       } finally {
         el.btnSalvarPasta.textContent = textoOriginal;
         el.btnSalvarPasta.disabled = false;
@@ -1890,13 +1893,13 @@
     }
     if (opcao === "7") {
       if (VIDEO_EXTS.includes(ext)) {
-        tarefas.push(["quadro", () => extractFrameFile(ffmpeg, file, opcoes.instante)]);
+        tarefas.push(["imagem", () => extractFrameFile(ffmpeg, file, opcoes.instante)]);
       }
     }
 
     if (tarefas.length === 0) {
       linha.esconderBarra();
-      linha.setStatus("Tipo não reconhecido para esta operação — ignorado.", "erro");
+      linha.setStatus("Este arquivo não serve para esta operação — foi ignorado.", "erro");
       return;
     }
 
@@ -1943,10 +1946,7 @@
     if (!estado.rodando) return;
     cancelado = true;
     el.btnCancelar.disabled = true;
-    setStatus(
-      "Cancelando… O motor de conversão é encerrado; na próxima execução ele " +
-      "volta do cache do navegador."
-    );
+    setStatus("Cancelando…");
     setBarraMotor(null);
     derrubarMotor();
   });
@@ -1963,8 +1963,8 @@
     } catch (err) {
       setStatus(
         cancelado
-          ? "Cancelado antes de o motor terminar de carregar."
-          : "Erro ao carregar o motor de conversão: " + err.message
+          ? "Cancelado antes de o conversor ficar pronto."
+          : "Não foi possível preparar o conversor. " + err.message
       );
       setBarraMotor(null);
       sairModoExecucao();
@@ -2052,9 +2052,9 @@
     if (!window.crossOriginIsolated) {
       await diagnosticarArquivosDoMotor();
       setStatus(
-        "Aviso: esta página não está isolada (COOP/COEP) — o motor de conversão " +
-        "não vai carregar. Abra o console do navegador (F12) para ver o " +
-        "diagnóstico de qual cabeçalho faltou."
+        "Esta página não está sendo servida como deveria e o conversor não vai " +
+        "funcionar aqui. Avise quem cuida do sistema — o detalhe técnico está no " +
+        "console do navegador (tecla F12)."
       );
     } else {
       diag("Página isolada — SharedArrayBuffer disponível, motor pode carregar.", ambiente.url);

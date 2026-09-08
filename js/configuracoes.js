@@ -207,20 +207,20 @@ globalThis.Config = (function () {
     // 8.3 O que a tela diz sobre cada nível
     // ----------------------------------------------------------------- //
     RESUMO_VIDEO: {
-      "1": "CRF 26 · até 30 fps · resolução original · áudio AAC 128 kbps",
-      "2": "CRF 30 · até 24 fps · resolução original · áudio AAC 96 kbps mono 24 kHz",
-      "3": "CRF 32 · até 24 fps · 75% da resolução · áudio AAC 64 kbps mono 22,05 kHz",
-      "4": "CRF 34 · até 19 fps · 50% da resolução · áudio AAC 32 kbps mono 16 kHz · preset slow",
-      "5": "Você define cada parâmetro abaixo.",
-      "6": "O bitrate sai da conta do tamanho pedido — e a resolução cai se o bitrate não sustentar a original.",
+      "1": "Mexe pouco: a imagem continua como está e o arquivo diminui um pouco.",
+      "2": "A imagem quase não muda e o arquivo já fica bem menor. Serve para quase tudo.",
+      "3": "A imagem fica um pouco menor e menos nítida, e o arquivo encolhe bastante.",
+      "4": "A perda de qualidade aparece, mas o vídeo fica pequeno. Para quando precisa caber de qualquer jeito.",
+      "5": "Você ajusta cada item abaixo.",
+      "6": "Você diz o tamanho máximo e a qualidade se ajusta sozinha para caber nele.",
     },
     RESUMO_AUDIO: {
-      "1": "MP3 128 kbps · canais originais · até 32 kHz",
-      "2": "MP3 80 kbps · mono · até 24 kHz",
-      "3": "MP3 48 kbps · mono · até 24 kHz",
-      "4": "MP3 24 kbps · mono · até 16 kHz",
-      "5": "Você define cada parâmetro abaixo.",
-      "6": "O bitrate sai da conta do tamanho pedido; sample rate e canais acompanham.",
+      "1": "O som continua como está e o arquivo diminui um pouco.",
+      "2": "Numa gravação de voz a diferença mal se nota, e o arquivo já fica bem menor.",
+      "3": "A voz continua clara e o arquivo encolhe bastante.",
+      "4": "O som fica abafado, mas dá para entender a fala. Para quando precisa caber de qualquer jeito.",
+      "5": "Você ajusta cada item abaixo.",
+      "6": "Você diz o tamanho máximo e a qualidade se ajusta sozinha para caber nele.",
     },
 
     // ----------------------------------------------------------------- //

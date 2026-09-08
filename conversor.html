@@ -26,18 +26,17 @@
 <main>
   <section class="intro">
     <h1 class="page-title"><b>Conversor</b> de Mídia</h1>
-    <p class="page-lead">Converte áudios, vídeos e imagens — já comprimidos, porque o
-    destino tem limite de 20&nbsp;MB por arquivo —, padroniza extensões, extrai o áudio
-    ou um quadro de um vídeo e comprime até um tamanho escolhido. Tudo processado
-    localmente no seu navegador com ffmpeg, sem enviar nada a servidor algum.</p>
+    <p class="page-lead">Converte áudios, vídeos e imagens — já deixando o arquivo menor,
+    porque o sistema de destino só aceita até 20&nbsp;MB por arquivo —, acerta o final do
+    nome, tira o som ou uma imagem de um vídeo e diminui o arquivo até o tamanho que você
+    pedir. Tudo acontece no seu computador, sem mandar nada para lugar nenhum.</p>
     <p class="aviso-privacidade">
       <span aria-hidden="true">🔒</span>
-      Todo o processamento roda no seu navegador (WebAssembly). Os arquivos
-      originais e convertidos nunca saem do seu computador. Na primeira
-      conversão, o motor ffmpeg (~32&nbsp;MB) é baixado uma única vez do CDN
-      público jsDelivr e fica guardado no cache do navegador — nas próximas
-      visitas ele carrega na hora. Só o motor vem de lá; os seus arquivos
-      continuam sem sair do computador.
+      Nem os arquivos originais nem os convertidos saem do seu computador.
+      Na primeira conversão, a página baixa da internet o programa que faz o
+      trabalho (cerca de 32&nbsp;MB) e o guarda aqui — nas próximas vezes ele já
+      está pronto e abre na hora. Só esse programa vem de fora; os seus arquivos
+      continuam onde estão.
     </p>
   </section>
 
@@ -46,35 +45,35 @@
   <div class="opcoes-conversor" id="opcoes-conversor">
     <button type="button" class="opcao-conversor" data-op="1">
       <span class="opcao-titulo">Converter áudios</span>
-      <span class="opcao-desc">Qualquer áudio → MP3</span>
+      <span class="opcao-desc">Qualquer áudio vira MP3</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="2">
       <span class="opcao-titulo">Converter vídeos</span>
-      <span class="opcao-desc">Qualquer vídeo → MP4</span>
+      <span class="opcao-desc">Qualquer vídeo vira MP4</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="3">
       <span class="opcao-titulo">Converter imagens</span>
-      <span class="opcao-desc">Qualquer imagem → JPG</span>
+      <span class="opcao-desc">Qualquer imagem vira JPG</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="4">
       <span class="opcao-titulo">Converter tudo</span>
       <span class="opcao-desc">Áudios, vídeos e imagens de uma vez</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="5">
-      <span class="opcao-titulo">Padronizar extensões</span>
-      <span class="opcao-desc">jpeg→jpg, mpeg→mpg, tiff→tif…</span>
+      <span class="opcao-titulo">Acertar o final do nome</span>
+      <span class="opcao-desc">.jpeg vira .jpg, .mpeg vira .mpg, .tiff vira .tif…</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="8">
       <span class="opcao-titulo">Efetuar todos</span>
-      <span class="opcao-desc">Converter tudo + padronizar extensões</span>
+      <span class="opcao-desc">Converter tudo e acertar o final do nome</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="6">
       <span class="opcao-titulo">Extrair áudio</span>
-      <span class="opcao-desc">A faixa de áudio de um vídeo → MP3</span>
+      <span class="opcao-desc">Só o som do vídeo, salvo em MP3</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="7">
-      <span class="opcao-titulo">Extrair quadro</span>
-      <span class="opcao-desc">Um instante do vídeo → JPG</span>
+      <span class="opcao-titulo">Extrair imagem</span>
+      <span class="opcao-desc">Um instante do vídeo, salvo como foto JPG</span>
     </button>
     <button type="button" class="opcao-conversor" data-op="9">
       <span class="opcao-titulo">Comprimir vídeo ou áudio</span>
@@ -100,19 +99,20 @@
   </div>
 
   <div id="painel-quadro" class="painel-quadro escondido">
-    <p class="progresso">3. Instante do quadro</p>
+    <p class="progresso">3. Momento do vídeo</p>
     <div class="campo-inline">
-      <label for="quadro-instante">Momento do vídeo a capturar (vazio = primeiro quadro)</label>
+      <label for="quadro-instante">Momento a capturar (em branco = o começo do vídeo)</label>
       <input type="text" id="quadro-instante" placeholder="0:00" inputmode="numeric" />
     </div>
-    <p class="quadro-info">Aceita <code>90</code>, <code>1:30</code> ou <code>1:02:03</code>. Com
-    vários vídeos selecionados, o mesmo instante é capturado em todos.</p>
+    <p class="quadro-info">Escreva <code>90</code> para 90 segundos, <code>1:30</code> para um
+    minuto e meio, <code>1:02:03</code> para uma hora, dois minutos e três segundos. Com
+    vários vídeos selecionados, o mesmo momento é capturado em todos.</p>
     <p class="corte-erro escondido" id="quadro-erro"></p>
   </div>
 
   <div id="painel-compressao" class="painel-compressao escondido">
     <p class="progresso">
-      3. Nível de compressão
+      3. Quanto diminuir o arquivo
       <span class="tipo-detectado" id="tipo-detectado"></span>
     </p>
     <div class="opcoes" id="niveis-compressao">
@@ -121,7 +121,7 @@
       <label class="opcao-item"><input type="radio" name="nivel" value="3" /> Alta</label>
       <label class="opcao-item"><input type="radio" name="nivel" value="4" /> Extrema</label>
       <label class="opcao-item"><input type="radio" name="nivel" value="5" /> Personalizada</label>
-      <label class="opcao-item"><input type="radio" name="nivel" value="6" /> Tamanho-alvo</label>
+      <label class="opcao-item"><input type="radio" name="nivel" value="6" /> Tamanho alvo</label>
     </div>
     <p class="nivel-resumo" id="nivel-resumo"></p>
 
@@ -130,9 +130,9 @@
         <label for="alvo-mb">Tamanho máximo por arquivo (MB)</label>
         <input type="number" id="alvo-mb" value="25" min="0.1" step="1" />
       </div>
-      <p class="alvo-info">O bitrate é calculado para caber nesse tamanho. Cada arquivo da fila
-      recebe o mesmo teto — não é o total do lote. Se a duração não couber nem no bitrate mínimo
-      utilizável, o arquivo sai maior que o alvo e o aviso aparece na estimativa.</p>
+      <p class="alvo-info">A qualidade é ajustada sozinha para o arquivo caber nesse tamanho.
+      O limite vale para cada arquivo da fila, um por um — não é a soma de todos. Quando o
+      arquivo é longo demais para caber, o aviso aparece logo abaixo, junto da estimativa.</p>
     </div>
     <div class="corte" id="corte">
       <label class="opcao-item">
@@ -158,21 +158,21 @@
     <div id="painel-original" class="painel-original escondido">
       <p class="original-titulo"><span id="original-rotulo">Arquivo original</span> <span id="original-carregando" class="original-carregando escondido">analisando…</span></p>
       <dl class="original-grade">
-        <div id="linha-resolucao"><dt>Resolução</dt><dd id="orig-resolucao">—</dd></div>
-        <div id="linha-fps"><dt>FPS</dt><dd id="orig-fps">—</dd></div>
-        <div><dt>Sample rate</dt><dd id="orig-samplerate">—</dd></div>
-        <div><dt>Bitrate do áudio</dt><dd id="orig-bitrate">—</dd></div>
+        <div id="linha-resolucao"><dt>Tamanho da imagem</dt><dd id="orig-resolucao">—</dd></div>
+        <div id="linha-fps"><dt>Quadros por segundo</dt><dd id="orig-fps">—</dd></div>
+        <div><dt>Nitidez do som</dt><dd id="orig-samplerate">—</dd></div>
+        <div><dt>Qualidade do som</dt><dd id="orig-bitrate">—</dd></div>
       </dl>
     </div>
 
     <div id="personalizada-video" class="campos-personalizada escondido">
       <div class="campo-inline">
-        <label for="p-crf">CRF (qualidade; menor = melhor, 0–51)</label>
+        <label for="p-crf">Qualidade da imagem — 0 é a melhor, 51 a pior</label>
         <input type="number" id="p-crf" value="23" min="0" max="51" />
       </div>
 
       <div class="campo-inline">
-        <label for="p-largura">Largura em pixels (mantém a proporção; vazio = original)</label>
+        <label for="p-largura">Largura da imagem, em pixels (em branco = como está)</label>
         <input type="number" id="p-largura" placeholder="original" min="2" />
         <div class="atalhos" data-base="largura" data-alvo="p-largura">
           <button type="button" class="btn-fracao" data-fracao="0.666667">2/3</button>
@@ -183,7 +183,7 @@
       </div>
 
       <div class="campo-inline">
-        <label for="p-fps">FPS (vazio = original; nunca aumenta)</label>
+        <label for="p-fps">Quadros por segundo (em branco = como está)</label>
         <input type="number" id="p-fps" placeholder="original" min="1" />
         <div class="atalhos" data-base="fps" data-alvo="p-fps">
           <button type="button" class="btn-fracao" data-fracao="0.666667">2/3</button>
@@ -195,10 +195,10 @@
 
       <div id="personalizada-audio">
         <label class="opcao-item">
-          <input type="checkbox" id="p-remover-audio" /> Remover a faixa de áudio por completo
+          <input type="checkbox" id="p-remover-audio" /> Tirar o som do vídeo por completo
         </label>
         <div class="campo-inline">
-          <label for="p-audio-bitrate">Bitrate do áudio (kbps)</label>
+          <label for="p-audio-bitrate">Qualidade do som — quanto maior o número, melhor o som e maior o arquivo</label>
           <input type="number" id="p-audio-bitrate" value="96" min="8" />
           <div class="atalhos" data-base="abitrate" data-alvo="p-audio-bitrate">
             <button type="button" class="btn-fracao" data-fracao="0.666667">2/3</button>
@@ -208,23 +208,23 @@
           </div>
         </div>
         <div class="campo-inline">
-          <span class="campo-rotulo">Sample rate do áudio</span>
+          <span class="campo-rotulo">Nitidez do som</span>
           <div class="opcoes opcoes-sr">
-            <label class="opcao-item"><input type="radio" name="p-sr" value="" checked /> Original</label>
-            <label class="opcao-item"><input type="radio" name="p-sr" value="32000" /> 32 kHz</label>
-            <label class="opcao-item"><input type="radio" name="p-sr" value="24000" /> 24 kHz</label>
-            <label class="opcao-item"><input type="radio" name="p-sr" value="16000" /> 16 kHz</label>
+            <label class="opcao-item"><input type="radio" name="p-sr" value="" checked /> Como está</label>
+            <label class="opcao-item"><input type="radio" name="p-sr" value="32000" /> Alta</label>
+            <label class="opcao-item"><input type="radio" name="p-sr" value="24000" /> Média</label>
+            <label class="opcao-item"><input type="radio" name="p-sr" value="16000" /> Baixa</label>
           </div>
         </div>
         <label class="opcao-item">
-          <input type="checkbox" id="p-audio-mono" /> Áudio em mono
+          <input type="checkbox" id="p-audio-mono" /> Som num canal só (mono)
         </label>
       </div>
     </div>
 
     <div id="personalizada-audio-only" class="campos-personalizada escondido">
       <div class="campo-inline">
-        <label for="pa-bitrate">Bitrate (kbps; menor = arquivo menor)</label>
+        <label for="pa-bitrate">Qualidade do som — quanto maior o número, melhor o som e maior o arquivo</label>
         <input type="number" id="pa-bitrate" value="96" min="8" max="320" />
         <div class="atalhos" data-base="abitrate" data-alvo="pa-bitrate">
           <button type="button" class="btn-fracao" data-fracao="0.666667">2/3</button>
@@ -234,16 +234,16 @@
         </div>
       </div>
       <div class="campo-inline">
-        <span class="campo-rotulo">Sample rate</span>
+        <span class="campo-rotulo">Nitidez do som</span>
         <div class="opcoes opcoes-sr">
-          <label class="opcao-item"><input type="radio" name="pa-sr" value="" checked /> Original</label>
-          <label class="opcao-item"><input type="radio" name="pa-sr" value="32000" /> 32 kHz</label>
-          <label class="opcao-item"><input type="radio" name="pa-sr" value="24000" /> 24 kHz</label>
-          <label class="opcao-item"><input type="radio" name="pa-sr" value="16000" /> 16 kHz</label>
+          <label class="opcao-item"><input type="radio" name="pa-sr" value="" checked /> Como está</label>
+          <label class="opcao-item"><input type="radio" name="pa-sr" value="32000" /> Alta</label>
+          <label class="opcao-item"><input type="radio" name="pa-sr" value="24000" /> Média</label>
+          <label class="opcao-item"><input type="radio" name="pa-sr" value="16000" /> Baixa</label>
         </div>
       </div>
       <label class="opcao-item">
-        <input type="checkbox" id="pa-mono" /> Converter para mono
+        <input type="checkbox" id="pa-mono" /> Som num canal só (mono)
       </label>
     </div>
   </div>

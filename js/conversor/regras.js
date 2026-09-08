@@ -140,10 +140,9 @@
     const nome = CODECS_SEM_DECODER[info.vCodec];
     if (!nome) return null;
     return (
-      "Este vídeo está codificado em " + nome + ", e o motor ffmpeg deste site " +
-      "não traz decodificador de " + nome + " — não há como convertê-lo aqui. " +
-      "Baixe o arquivo em H.264 na origem (o YouTube, por exemplo, oferece as " +
-      "duas versões) ou converta antes num programa de desktop."
+      "Este vídeo está gravado num formato (" + nome + ") que esta página não " +
+      "consegue abrir. Se ele veio de um site, baixe outra versão do mesmo " +
+      "vídeo; senão, converta antes num programa instalado no computador."
     );
   }
 
@@ -159,23 +158,22 @@
       return problemaDeCodec({ vCodec: "av1" });
     }
     if (/Protocol not found/i.test(texto)) {
-      return "O ffmpeg recusou uma das URLs do comando (protocolo indisponível neste build).";
+      return "Esta página não conseguiu abrir o arquivo. Tente de novo com o " +
+             "arquivo salvo no computador.";
     }
     if (/Function not implemented/i.test(texto)) {
-      return "O ffmpeg encontrou um recurso que este build não implementa — " +
-             "normalmente um codec de entrada sem decodificador.";
+      return "Este arquivo está gravado num formato que esta página não consegue " +
+             "abrir. Converta antes num programa instalado no computador.";
     }
     if (/Cannot determine format of input stream/i.test(texto)) {
-      return "O ffmpeg não conseguiu decodificar o vídeo de entrada. " +
-             "O arquivo pode estar corrompido ou usar um codec sem suporte aqui.";
+      return "Não foi possível abrir este vídeo. Ele pode estar danificado ou " +
+             "gravado num formato que esta página não reconhece.";
     }
     if (/No space left|Cannot allocate memory|out of memory/i.test(texto)) {
-      return "Faltou memória. Arquivos grandes estouram o heap do WebAssembly — " +
-             "tente cortar um trecho menor.";
+      return "Faltou memória para este arquivo. Corte um trecho menor e tente de novo.";
     }
     if (/Invalid data found when processing input/i.test(texto)) {
-      return "O ffmpeg achou dados inválidos na entrada. O arquivo pode estar " +
-             "truncado ou incompleto.";
+      return "Este arquivo parece estar incompleto ou danificado.";
     }
     return null;
   }

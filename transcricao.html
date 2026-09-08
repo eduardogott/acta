@@ -27,15 +27,15 @@
 <main>
   <section class="intro">
     <h1 class="page-title"><b>Transcrição</b> de Áudio</h1>
-    <p class="page-lead">Transcreve áudio e vídeo em português usando o Whisper, rodando
-    dentro do navegador. É uma primeira versão do texto para revisar, nunca a transcrição
+    <p class="page-lead">Transcreve áudio e vídeo em português, sem que nada saia do seu
+    computador. É uma primeira versão do texto para revisar, nunca a transcrição
     final — nome próprio, número e sigla são justamente o que a máquina mais erra.</p>
     <p class="aviso-privacidade">
       <span aria-hidden="true">🔒</span>
-      O áudio não sai do seu computador. O que vem da internet é só o modelo, baixado uma
-      vez do Hugging Face e guardado no cache do navegador; a partir daí a página funciona
-      sem rede. Nenhum trecho de áudio, nenhuma transcrição e nenhum nome são enviados a
-      servidor algum.
+      O áudio não sai do seu computador. Da internet vem só o programa que faz a
+      transcrição, baixado uma vez e guardado aqui; a partir daí a página funciona
+      até sem internet. Nenhum trecho de áudio, nenhuma transcrição e nenhum nome
+      são enviados a lugar nenhum.
     </p>
   </section>
 
@@ -51,7 +51,7 @@
     <p class="status-linha" id="info-arquivo"></p>
   </div>
 
-  <p class="progresso">2. Modelo</p>
+  <p class="progresso">2. Qualidade da transcrição</p>
   <div class="painel-modelo">
     <div class="modelo-lista" id="modelo-lista"></div>
     <label class="opcao-item" style="margin-top:14px">
@@ -84,14 +84,14 @@
   <section class="nota-rodape">
     <h2>O que esperar</h2>
     <ul>
-      <li><b>Leva tempo.</b> O motor usa até quatro threads, conforme o processador;
-      quando o navegador não permite, cai para uma só e avisa no fim. Contar com algo entre
-      um quarto e o tempo inteiro do áudio é uma expectativa realista.</li>
-      <li><b>O modelo é baixado uma vez.</b> Depois disso ele fica no cache do navegador e a
+      <li><b>Leva tempo.</b> Quanto, depende da força do computador: conte com algo
+      entre um quarto e o tempo inteiro do áudio.</li>
+      <li><b>O programa é baixado uma vez.</b> Depois disso ele fica guardado aqui e a
       transcrição funciona mesmo sem internet.</li>
-      <li><b>Formato não reconhecido?</b> O navegador não sabe abrir <code>.mkv</code>,
-      <code>.avi</code> ou <code>.wma</code>. Use a opção "Extrair áudio" do
-      <a href="conversor.html">conversor</a> e traga o MP3 de volta para cá.</li>
+      <li><b>O arquivo não abre?</b> Alguns formatos, como <code>.mkv</code>,
+      <code>.avi</code> e <code>.wma</code>, não são reconhecidos aqui. Use a opção
+      "Extrair áudio" do <a href="conversor.html">conversor</a> e traga o MP3 de volta
+      para cá.</li>
       <li><b>Sempre revise.</b> A saída não distingue quem fala, erra nome próprio, número de
       documento e valor, e não marca hesitação. Para uso como prova, a transcrição precisa ser
       conferida ouvindo o áudio.</li>

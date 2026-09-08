@@ -331,7 +331,12 @@
         // credentials omitidas: o site fica atrás de Basic Auth, e mandar
         // credenciais para uma origem que responde ACAO:* quebra o CORS.
         const resp = await fetch(spec.url, { mode: "cors", credentials: "omit" });
-        if (!resp.ok) throw new Error("Falha ao baixar " + spec.url + " (" + resp.status + ")");
+        if (!resp.ok) {
+          // A mensagem na tela é genérica de propósito; o endereço e o
+          // código HTTP, que é o que serve para investigar, ficam no console.
+          diagErro("Falha ao baixar " + spec.url + " (" + resp.status + ")");
+          throw new Error("Não foi possível baixar um dos arquivos do conversor.");
+        }
         return { chave, spec, resp, veioDoCache: false };
       })
     );
@@ -400,18 +405,18 @@
           await diagnosticarIsolamento();
           await diagnosticarArquivosDoMotor();
           throw new Error(
-            "A página não está isolada (COOP/COEP). O motor de conversão multi-thread " +
-            "não pode ser carregado. Abra o console do navegador (F12) — há um " +
-            "diagnóstico detalhado lá dizendo qual cabeçalho faltou."
+            "Esta página não está sendo servida como deveria e o conversor não " +
+            "funciona aqui. Avise quem cuida do sistema — o detalhe técnico está " +
+            "no console do navegador (tecla F12)."
           );
         }
         diag("Iniciando o carregamento do motor.", desdeOInicio());
-        if (onStatus) onStatus("Carregando o motor de conversão (ffmpeg)…");
+        if (onStatus) onStatus("Carregando o conversor…");
         if (!window.FFmpegWASM || !window.FFmpegWASM.FFmpeg) {
           diagErro("window.FFmpegWASM não existe — js/conversor/vendor/ffmpeg/ffmpeg.js não carregou.");
           throw new Error(
-            "A biblioteca ffmpeg.js não carregou. Confira se js/conversor/vendor/ffmpeg/ffmpeg.js " +
-            "está sendo servido (aba Network do navegador)."
+            "Faltou um arquivo do conversor. Recarregue a página; se continuar " +
+            "assim, avise quem cuida do sistema."
           );
         }
         instrumentarWorkers();
@@ -420,7 +425,7 @@
         ffmpegEmConstrucao = ffmpeg;
         attachSinks(ffmpeg);
         const urlsDoCore = await baixarCoreComoBlobURLs(onProgresso);
-        if (onStatus) onStatus("Inicializando o motor de conversão…");
+        if (onStatus) onStatus("Preparando o conversor…");
         // Todas as URLs aqui são blob:, logo absolutas e da nossa origem.
         // Isso importa: elas são repassadas ao worker js/conversor/vendor/ffmpeg/
         // 814.ffmpeg.js, que faz importScripts(coreURL) — um caminho
@@ -431,9 +436,9 @@
         await comTeto(
           ffmpeg.load(urlsDoCore),
           TIMEOUT_LOAD_MS,
-          "O motor não respondeu em " + TIMEOUT_LOAD_MS / 1000 + "s. Isso costuma " +
-          "significar que o worker do ffmpeg morreu ao carregar o core — veja no " +
-          "console se houve erro de Worker ou um 404 em ffmpeg-core.js."
+          "O conversor não respondeu em " + TIMEOUT_LOAD_MS / 1000 + " segundos. " +
+          "Recarregue a página e tente de novo; o detalhe técnico está no console " +
+          "do navegador (tecla F12)."
         );
         ffmpegEmConstrucao = null;
         ffmpegInstance = ffmpeg;

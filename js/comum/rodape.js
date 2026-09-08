@@ -40,10 +40,13 @@
     if (hash === "dev") {
       return {
         texto: "versão local (dev)",
-        title: "Servido fora do Cloudflare Pages — sem hash de commit.",
+        title: "Servido fora do Cloudflare Pages — sem carimbo de versão.",
       };
     }
-    return { texto: "versão " + hash.slice(-CARACTERES_DO_HASH), title: "Commit " + hash };
+    return {
+      texto: "versão " + hash.slice(-CARACTERES_DO_HASH),
+      title: "Versão completa: " + hash,
+    };
   }
 
   function montar() {

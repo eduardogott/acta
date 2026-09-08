@@ -196,9 +196,9 @@ async function carregarModelo(modeloId) {
 
   if (threadsOk !== false) {
     try {
-      avisar({ tipo: "status", texto: "Preparando o motor…" });
+      avisar({ tipo: "status", texto: "Preparando…" });
       const threads = await prepararThreads();
-      avisar({ tipo: "status", texto: "Carregando o modelo…" });
+      avisar({ tipo: "status", texto: "Carregando o programa de transcrição…" });
       transcritor = await construirPipeline(modeloId);
       threadsOk = true;
       avisar({ tipo: "modo", threads });
@@ -217,7 +217,7 @@ async function carregarModelo(modeloId) {
 
   if (!transcritor) {
     voltarParaUmaThread();
-    avisar({ tipo: "status", texto: "Carregando o modelo…" });
+    avisar({ tipo: "status", texto: "Carregando o programa de transcrição…" });
     transcritor = await construirPipeline(modeloId);
     avisar({ tipo: "modo", threads: 1 });
   }
