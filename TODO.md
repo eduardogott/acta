@@ -10,6 +10,10 @@ Sobre as ferramentas novas:
 * **Tipificação** — a tabela cobre os fatos mais comuns de balcão. Faltam,
   entre outros: crimes ambientais além de maus-tratos, Estatuto do Idoso
   além do art. 102, crimes eleitorais, e os tipos da Lei 14.811/2024.
+  O campo `texto` (o teor do artigo, copiado do Planalto) está preenchido
+  em 5 das 86 entradas; onde falta, o botão "ver o texto do artigo"
+  simplesmente não nasce, então a linha fica igual ao que sempre foi.
+  Preencher é trabalho de copiar, não de decidir.
 * **Conferidor** — RENAVAM e CNH ficaram de fora por falta de algoritmo
   confiável. Se aparecer uma referência boa, entram em
   `js/comum/identificadores.js` e ganham linha em `TIPOS`.
@@ -25,6 +29,18 @@ Sobre as ferramentas novas:
   tela (`etapa`, `iniciar`, `acompanharEncode`, `argumentosDeCorte`,
   `duracaoDoTrabalho`) — mais acoplamento disfarçado, não menos. Fica
   para quando a interface encolher.
+* **Roteiro** — sete fatos, todos já apontando para uma folha de
+  orientações. Faltam, entre outros: perseguição (art. 147-A), crimes
+  cibernéticos (invasão de dispositivo, imagem íntima divulgada sem
+  consentimento), maus-tratos e crimes contra criança e adolescente,
+  receptação. Cada fato tem o campo `busca` preenchido, mas nada o lê —
+  não existe caixa de busca na página. Com sete fatos o seletor dá conta;
+  com vinte, não dá, e aí o campo já está esperando.
+* **Contatos** — a agenda ainda está com os placeholders: 10 ramais com
+  nota `tbd`, 23 campos `PREENCHER` e 25 números `(00) 0000-0000`.
+  Enquanto estiverem lá, o risco não é a página quebrar — é alguém
+  copiar um número que não existe e discar. O campo `site` é suportado
+  pela página e nenhum contato o usa: no balcão se disca, não se navega.
 * **Texto gerado** — `tests/casos/texto.js` cobre perda (todos os
   subtipos) e estelionato (falso advogado e falso parente), mais as
   perguntas de fechamento. **Tipo novo em `js/gerador/tipos/` = cenário
@@ -33,10 +49,12 @@ Sobre as ferramentas novas:
   (converter e comprimir). Vídeo e imagem não têm caso: exigiriam um MP4
   e um JPG de verdade, e sintetizá-los com `-f lavfi` amarraria o teste
   aos filtros do build do ffmpeg.
-* **Service worker** — gerador, orientações, conferidor, tipificação e
-  conversas são páginas estáticas e funcionariam offline; falta o service
-  worker que as guarde em cache. Cuidado com COOP/COEP e com a
-  invalidação ao trocar de versão.
+* **Service worker** — gerador, orientações, conferidor, tipificação,
+  conversas, roteiro e contatos são páginas estáticas e funcionariam
+  offline; falta o service worker que as guarde em cache. A agenda é a
+  que mais pede isso: o momento de precisar de um número de emergência
+  não é o momento de descobrir que a rede caiu. Cuidado com COOP/COEP e
+  com a invalidação ao trocar de versão.
 * **Ponte conversor → transcrição** — hoje, para transcrever o áudio de um
   vídeo, é extrair, baixar e subir de novo na outra página. Um botão na
   linha de resultado poderia guardar o blob no IndexedDB e abrir a
@@ -113,6 +131,11 @@ Outras features (não são tipos novos, são capacidades do gerador):
 
 ## IMPROVE
 
+- A normalização da busca — tira acento (NFD), tira pontuação, baixa a
+  caixa — existe igual em `js/tipificacao/tipificacao.js` e em
+  `js/contatos/contatos.js`. Duas cópias ainda se lê e ainda se corrige
+  junto; a terceira página com busca é a hora de extrair a função para
+  `js/comum/`, antes que as três divirjam sem ninguém notar.
 - `fa_pagamentos` (estelionato) e `fp_pagamentos` (estelionato) têm a
   função `clausula(item)` quase idêntica, só variando o texto de
   ligação ("para o recebedor" vs "tendo como recebedor") e o gênero do
