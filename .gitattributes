@@ -1,0 +1,10 @@
+# Os PDFs das anotações são BINÁRIOS, e é preciso dizer isso.
+#
+# Com core.autocrlf=true (o padrão no Windows, e o que está configurado
+# aqui), o git chuta se um arquivo é texto olhando os primeiros 8 KB: sem
+# bytes nulos, ele decide que é. Um PDF pequeno, feito de operadores
+# ASCII, passa nesse teste — e aí o checkout troca LF por CRLF dentro
+# dele, desloca todos os offsets da tabela xref e entrega um arquivo que
+# continua na pasta, com o tamanho errado, e não abre em visualizador
+# nenhum. O sintoma chega como "o PDF corrompeu no servidor".
+*.pdf binary

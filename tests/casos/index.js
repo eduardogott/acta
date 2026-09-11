@@ -15,6 +15,7 @@ var ORDEM = [
   "conferidor.html",
   "tipificacao.html",
   "contatos.html",
+  "anotacoes.html",
 ];
 
 function hrefs(seletor) {
@@ -32,7 +33,7 @@ igual("a lista de ferramentas é pública", typeof window.Ferramentas, "object")
 // arquivo inteiro em vez de conferir chave por chave.
 var SECOES = ["UNIDADE", "RODAPE", "LOG", "ARMAZENAMENTO", "INTERFACE",
               "GERADOR", "ORIENTACOES", "CONVERSOR", "TRANSCRICAO", "CONVERSAS",
-              "CONTATOS"];
+              "CONTATOS", "ANOTACOES"];
 igual("todas as seções de configuração existem",
       SECOES.filter(function (s) { return !window.Config[s]; }), []);
 

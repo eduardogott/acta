@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acta — Anotações</title>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/ferramentas.css" />
+<script src="js/configuracoes.js"></script>
+<script src="js/comum/log.js"></script>
+<script src="js/comum/theme.js"></script>
+<script src="js/comum/nav.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <p class="site-title">
+    <span class="brand-mark">●</span>
+    Acta
+  </p>
+  <nav class="site-nav" aria-label="Navegação principal"></nav>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Alternar tema claro/escuro">☾</button>
+</header>
+
+<main>
+  <section class="intro">
+    <h1 class="page-title"><b>Anotações</b> para imprimir</h1>
+    <p class="page-lead">A estante de papéis da unidade: o formulário que se preenche à
+    caneta, a folha que se entrega, a cola que fica na parede. Clique no título para abrir
+    o PDF numa aba nova — a impressão é a do próprio navegador (Ctrl+P). Cada cartão diz
+    quantas páginas o arquivo tem, para você decidir entre frente e frente e verso antes
+    de mandar imprimir.</p>
+  </section>
+
+  <div id="lista-anotacoes"></div>
+
+  <p class="anotacoes-vazio escondido" id="sem-anotacoes">Nenhuma anotação cadastrada
+  ainda. São duas coisas: o PDF em <code>js/anotacoes/pdfs/</code> e uma entrada em
+  <code>js/anotacoes/dados.js</code> dizendo o que ele é.</p>
+
+  <section class="nota-rodape">
+    <h2>Sobre esta estante</h2>
+    <ul>
+      <li><b>Acrescentar uma anotação são duas coisas</b>, e sempre as duas: salvar o PDF
+      em <code>js/anotacoes/pdfs/</code> e escrever uma entrada em
+      <code>js/anotacoes/dados.js</code> com o título e a descrição. Um site estático não
+      consegue listar uma pasta sozinho — arquivo largado lá sem entrada não aparece
+      aqui.</li>
+      <li><b>Nome de arquivo é para copiar e colar</b>, não para redigitar. Entrada
+      apontando para arquivo que não existe vira um cartão marcado "arquivo não
+      encontrado", com o aviso no console; o cartão continua na tela de propósito, para
+      que o erro seja visto e corrigido.</li>
+      <li><b>O número no cartão é de páginas, não de folhas.</b> Quantas folhas saem da
+      bandeja depende de você escolher frente ou frente e verso na hora de imprimir —
+      isso o arquivo não tem como saber.</li>
+      <li><b>Nada é enviado a lugar nenhum.</b> Os PDFs são servidos deste mesmo site:
+      abrir um deles não passa por servidor de terceiro.</li>
+    </ul>
+  </section>
+</main>
+
+<footer></footer>
+
+<script src="js/anotacoes/dados.js"></script>
+<script src="js/anotacoes/anotacoes.js"></script>
+<script src="js/comum/versao.js"></script>
+<script src="js/comum/rodape.js"></script>
+</body>
+</html>

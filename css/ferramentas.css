@@ -1,6 +1,6 @@
 /* =========================================================
    Estilos das ferramentas menores: conferidor, tipificação,
-   orientações, transcrição, roteiro e contatos.
+   orientações, transcrição, roteiro, contatos e anotações.
 
    Um arquivo só porque elas compartilham quase tudo — campo de
    busca, cartão de resultado, lista de itens — e porque seis
@@ -681,6 +681,97 @@
   line-height: 1.5;
   color: var(--text-muted);
   max-width: 70ch;
+}
+
+/* ---------------------------------------------------------
+   Anotações para imprimir
+
+   Grade, e não pilha: o cartão daqui tem título, uma linha de
+   descrição e mais nada, e uma coluna só de cartões baixos
+   viraria uma lista comprida de espaço em branco. A largura
+   mínima é 240px porque abaixo disso um título de formulário
+   quebra em três linhas.
+   --------------------------------------------------------- */
+.anotacao-grupo {
+  margin-bottom: 26px;
+}
+.anotacao-grupo-titulo {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.anotacao-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.anotacao-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.anotacao-cabecalho {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.anotacao-titulo {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+.anotacao-titulo a {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.anotacao-titulo a:hover,
+.anotacao-titulo a:focus-visible {
+  color: var(--accent);
+  border-bottom-color: currentColor;
+}
+.anotacao-descricao {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.anotacao-obs {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+/* O arquivo declarado em dados.js não está na pasta. O cartão FICA na
+   tela — some seria esconder o erro de quem pode corrigi-lo. */
+.anotacao-cartao.ausente {
+  border-color: var(--danger);
+}
+.anotacao-ausente {
+  margin: 0;
+  margin-top: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--danger);
+  word-break: break-word;
+}
+.anotacoes-vazio {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 20px 0;
+  max-width: 70ch;
+  line-height: 1.6;
 }
 
 /* ---------------------------------------------------------

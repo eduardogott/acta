@@ -1,0 +1,67 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 765 >>
+stream
+BT
+/F2 20 Tf
+1 0 0 1 72 720 Tm
+(Exemplo) Tj
+/F1 11 Tf
+1 0 0 1 72 690 Tm
+(Esta folha existe so para a pagina de Anotacoes nascer funcionando.) Tj
+/F1 11 Tf
+1 0 0 1 72 670 Tm
+(Apague este arquivo \(js/anotacoes/pdfs/exemplo.pdf\) e a entrada) Tj
+/F1 11 Tf
+1 0 0 1 72 650 Tm
+(correspondente em js/anotacoes/dados.js ao cadastrar a primeira) Tj
+/F1 11 Tf
+1 0 0 1 72 630 Tm
+(anotacao de verdade.) Tj
+/F2 11 Tf
+1 0 0 1 72 590 Tm
+(Como acrescentar uma anotacao) Tj
+/F1 11 Tf
+1 0 0 1 72 565 Tm
+(1. Salve o PDF em js/anotacoes/pdfs/) Tj
+/F1 11 Tf
+1 0 0 1 72 545 Tm
+(2. Escreva a entrada em js/anotacoes/dados.js, com o titulo e a) Tj
+/F1 11 Tf
+1 0 0 1 90 527 Tm
+(descricao que vao aparecer no cartao.) Tj
+/F1 10 Tf
+1 0 0 1 72 487 Tm
+(Acta - ferramentas de uso interno) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000001067 00000 n 
+0000001164 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+1266
+%%EOF

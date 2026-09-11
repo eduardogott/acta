@@ -20,6 +20,7 @@
  *
  *   js/orientacoes/dados.js   o texto das orientações
  *   js/tipificacao/dados.js   a tabela de tipificação penal
+ *   js/anotacoes/dados.js     a lista de PDFs para imprimir
  *   js/gerador/tipos/*.js     as perguntas de cada tipo de ocorrência
  *       Conteúdo, não configuração. São arquivos inteiros de texto, e o
  *       lugar deles é ao lado da ferramenta que os desenha.
@@ -434,6 +435,17 @@ globalThis.Config = (function () {
     DDI: "55",
   };
 
+  // =========================================================================
+  // 12. ANOTAÇÕES PARA IMPRIMIR
+  // =========================================================================
+  const ANOTACOES = {
+    // Onde estão os PDFs, a partir da raiz do site. Entra na frente do
+    // nome de cada arquivo declarado em js/anotacoes/dados.js — que é
+    // onde mora a lista em si, porque é conteúdo. A barra do fim faz
+    // parte: o endereço é a concatenação crua dos dois.
+    PASTA: "js/anotacoes/pdfs/",
+  };
+
   return {
     UNIDADE,
     RODAPE,
@@ -446,5 +458,6 @@ globalThis.Config = (function () {
     TRANSCRICAO,
     CONVERSAS,
     CONTATOS,
+    ANOTACOES,
   };
 })();

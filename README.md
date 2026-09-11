@@ -19,6 +19,7 @@ são bibliotecas e modelos, nunca o conteúdo do usuário.
 | `conferidor.html` | Confere dígito verificador de CPF, CNPJ, IMEI, chassi, placa, título de eleitor e PIS. |
 | `tipificacao.html` | Consulta rápida de tipificação penal, pesquisável por fato ou artigo. |
 | `contatos.html` | A agenda da unidade: telefone, WhatsApp, e-mail e endereço, com busca. |
+| `anotacoes.html` | A estante de PDFs para imprimir: formulários, folhas de entrega e colas de balcão. |
 
 "Acta" é o nome da **suíte**, não de nenhuma das ferramentas: aparece no
 cabeçalho, no título da aba (`Acta — <ferramenta>`) e no rodapé de todas
@@ -55,8 +56,8 @@ no próprio arquivo: declarar três URLs à mão é como uma fica para trás num
 troca de versão.
 
 **O que continua fora, de propósito:** o conteúdo (os `dados.js` das
-orientações, da tipificação, do roteiro e dos contatos, e os tipos do
-gerador), o mapa do site
+orientações, da tipificação, do roteiro, dos contatos e das anotações, e
+os tipos do gerador), o mapa do site
 (`PAGINAS`, em `js/comum/nav.js`) e os pesos de dígito verificador em
 `identificadores.js` — esses últimos não são preferência, são a definição
 do cálculo. O cabeçalho do arquivo lista isso, para servir também de
@@ -124,7 +125,7 @@ quebraria links já salvos.
 ```
 index.html (a inicial)  gerador.html  roteiro.html  conversor.html
 transcricao.html  conversas.html  orientacoes.html  conferidor.html
-tipificacao.html  contatos.html
+tipificacao.html  contatos.html  anotacoes.html
 
 css/
   style.css          tokens e componentes de todas as páginas
@@ -150,6 +151,8 @@ js/
   tipificacao/       tipificacao.js (página), dados.js (a tabela)
   roteiro/           roteiro.js (página), dados.js (as perguntas)
   contatos/          contatos.js (página), dados.js (a agenda)
+  anotacoes/         anotacoes.js (página), dados.js (a lista)
+    pdfs/            os PDFs em si, largados aqui a partir do Office
 
 tests/                     servidor.py, gerar.py, rodar.ps1, casos/
 functions/_middleware.js   Basic Auth + COOP/COEP em toda rota
@@ -926,3 +929,55 @@ erro nenhum, por não cair em grupo algum.
 
 **Agenda desatualizada custa mais caro que agenda nenhuma**, porque quem
 liga acredita nela. Está dito na própria página, endereçado a quem usa.
+
+## Anotações para imprimir (`anotacoes.html`)
+
+A estante de papéis da unidade: o formulário que se preenche à caneta, a
+folha que se entrega no balcão, a cola que fica na parede. Um cartão por
+PDF, agrupado por categoria, com o título, a descrição e quantas páginas
+o arquivo tem. Clicar no título abre o PDF numa aba nova; imprimir é o
+Ctrl+P do próprio navegador.
+
+**O cartão diz três coisas e para.** Não diz que é um PDF (todos são),
+nem quanto pesa (não muda o que a pessoa faz com ele), nem de quando é
+(a data envelhece sozinha e ninguém a atualiza). São **páginas**, e não
+folhas: a impressora faz frente e verso, então quantas folhas saem da
+bandeja depende de quem imprime escolher — isso o arquivo não sabe, e a
+lista não vai fingir que sabe.
+
+**A página não gera nem converte nada** — ela só ajuda a achar a folha
+certa. O visualizador de PDF do navegador já imprime melhor do que
+qualquer coisa que coubesse aqui, e a aba nova é de propósito: é
+navegação de topo, e não um `<iframe>` embutido. Sob
+`Cross-Origin-Embedder-Policy: require-corp`, que vale para o site todo,
+embutir o visualizador é exatamente o tipo de coisa em que este projeto
+já tropeçou duas vezes.
+
+**O conteúdo são duas metades, e sempre as duas:**
+
+1. o PDF, feito no Office e salvo em `js/anotacoes/pdfs/`;
+2. uma entrada em **`js/anotacoes/dados.js`** dizendo o que aquele
+   arquivo é.
+
+Um site estático não consegue listar um diretório — não há como varrer a
+pasta sozinho. Arquivo largado lá sem entrada não aparece na tela, e é
+assim que vai continuar.
+
+**A emenda entre as duas metades é conferida sozinha.** Ao carregar, cada
+arquivo declarado leva um `HEAD`. Se respondeu 404, o cartão ganha a
+linha "arquivo não encontrado" e o console avisa qual nome não existe na
+pasta; o cartão **fica** na tela, porque sumir seria esconder o erro
+justamente de quem pode corrigi-lo. Se não respondeu nada (`file://`,
+rede fora), o cartão fica como está: não dá para distinguir "não existe"
+de "não deu para perguntar". A conferência é assíncrona e não segura a
+tela.
+
+Todo campo é opcional menos `titulo`, `arquivo` e `categoria`. O que vale
+destacar é `paginas`, que existe porque esta é uma lista para
+**imprimir**: descobrir na bandeja que eram doze páginas é um cartucho e
+uma fila.
+
+Nome de arquivo é para copiar e colar, não para redigitar: espaço e
+acento funcionam (o endereço é montado com `encodeURI`, e "Auto de
+Prisão.pdf" abre), mas é aí que nasce o cartão morto. `tests/casos/anotacoes.js`
+pede cada arquivo ao servidor e falha quando a lista e a pasta divergem.

@@ -94,6 +94,13 @@
       descricao:
         "Telefone, WhatsApp e endereço do que se precisa durante o plantão.",
     },
+    {
+      arquivo: "anotacoes.html",
+      rotulo: "Anotações",
+      titulo: "Anotações para Imprimir",
+      descricao:
+        "A estante de PDFs da unidade: formulários, folhas de entrega e colas de balcão.",
+    },
   ];
 
   /** Nome do arquivo da página atual. "" (raiz) conta como a inicial. */

@@ -32,6 +32,7 @@ PAGINAS = {
     "orientacoes": "orientacoes.html",
     "roteiro": "roteiro.html",
     "contatos": "contatos.html",
+    "anotacoes": "anotacoes.html",
     "conversas": "conversas.html",
     "transcricao": "transcricao.html",
 }
