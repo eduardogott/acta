@@ -38,7 +38,7 @@ Sobre as ferramentas novas:
   com vinte, não dá, e aí o campo já está esperando.
 * **Contatos** — a agenda ainda está com placeholders, embora bem menos:
   os ramais `tbd` acabaram, e sobraram 17 campos `PREENCHER` (horário e
-  endereço) e 7 números `(00) 0000-0000`. Enquanto estiverem lá, o risco
+  endereço) e 6 números `(00) 0000-0000`. Enquanto estiverem lá, o risco
   não é a página quebrar — é alguém copiar um número que não existe e
   discar. O campo `site` é suportado
   pela página e nenhum contato o usa: no balcão se disca, não se navega.

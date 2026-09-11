@@ -374,11 +374,12 @@ window.CONTATOS = {
 
     // -------------------------------- TRÂNSITO E VEÍCULOS ---
     {
-      nome: "Detran",
+      nome: "Detran/CRVA",
       categoria: "transito",
-      horario: "PREENCHER",
-      telefones: ["(00) 0000-0000"],
-      busca: "veículo cnh licenciamento multa",
+      horario: "09h00 às 17h30, dias de semana",
+      telefones: ["(51) 3134-8840"],
+      endereco: "Rua Aimoré, 345, Bairro Centro, Campo Bom/RS",
+      busca: "veículo cnh licenciamento multa certidao registro",
     },
     {
       nome: "Pátio / CRD Trevo",
@@ -402,7 +403,7 @@ window.CONTATOS = {
     {
       nome: "SINE/Identidades",
       categoria: "servicos",
-      horario: "24 horas",
+      horario: "PREENCHER",
       telefones: ["(51) 3597-0823"],
       endereco: "Avenida dos Estados, 902, Bairro Centro, Campo Bom/RS",
       busca: "sine identidades igp",
