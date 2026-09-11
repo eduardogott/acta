@@ -36,11 +36,21 @@ Sobre as ferramentas novas:
   receptação. Cada fato tem o campo `busca` preenchido, mas nada o lê —
   não existe caixa de busca na página. Com sete fatos o seletor dá conta;
   com vinte, não dá, e aí o campo já está esperando.
-* **Contatos** — a agenda ainda está com os placeholders: 10 ramais com
-  nota `tbd`, 23 campos `PREENCHER` e 25 números `(00) 0000-0000`.
-  Enquanto estiverem lá, o risco não é a página quebrar — é alguém
-  copiar um número que não existe e discar. O campo `site` é suportado
+* **Contatos** — a agenda ainda está com placeholders, embora bem menos:
+  os ramais `tbd` acabaram, e sobraram 17 campos `PREENCHER` (horário e
+  endereço) e 7 números `(00) 0000-0000`. Enquanto estiverem lá, o risco
+  não é a página quebrar — é alguém copiar um número que não existe e
+  discar. O campo `site` é suportado
   pela página e nenhum contato o usa: no balcão se disca, não se navega.
+* **Anotações** — a estante nasceu com uma entrada de exemplo
+  (`js/anotacoes/pdfs/exemplo.pdf`), que sai junto com a primeira
+  anotação de verdade. Não há busca: com uma dúzia de papéis os títulos
+  se leem de relance. Quando a caixa de busca fizer falta aqui, ela é a
+  **terceira** página com busca — e é o gatilho combinado para extrair a
+  normalização de termos para `js/comum/` (ver IMPROVE, abaixo), em vez
+  de fazer a terceira cópia. Fica de fora, também de propósito:
+  visualizar o PDF dentro da página (`<iframe>`), que sob COEP
+  `require-corp` é justamente onde este projeto já tropeçou duas vezes.
 * **Texto gerado** — `tests/casos/texto.js` cobre perda (todos os
   subtipos) e estelionato (falso advogado e falso parente), mais as
   perguntas de fechamento. **Tipo novo em `js/gerador/tipos/` = cenário
@@ -50,11 +60,14 @@ Sobre as ferramentas novas:
   e um JPG de verdade, e sintetizá-los com `-f lavfi` amarraria o teste
   aos filtros do build do ffmpeg.
 * **Service worker** — gerador, orientações, conferidor, tipificação,
-  conversas, roteiro e contatos são páginas estáticas e funcionariam
-  offline; falta o service worker que as guarde em cache. A agenda é a
-  que mais pede isso: o momento de precisar de um número de emergência
-  não é o momento de descobrir que a rede caiu. Cuidado com COOP/COEP e
-  com a invalidação ao trocar de versão.
+  conversas, roteiro, contatos e anotações são páginas estáticas e
+  funcionariam offline; falta o service worker que as guarde em cache.
+  A agenda é a que mais pede isso: o momento de precisar de um número de
+  emergência não é o momento de descobrir que a rede caiu. As anotações
+  pedem o cuidado oposto: os PDFs somados pesam mais que todas as outras
+  páginas juntas, e cachear a estante inteira sem critério é outro
+  problema. Cuidado com COOP/COEP e com a invalidação ao trocar de
+  versão.
 * **Ponte conversor → transcrição** — hoje, para transcrever o áudio de um
   vídeo, é extrair, baixar e subir de novo na outra página. Um botão na
   linha de resultado poderia guardar o blob no IndexedDB e abrir a
@@ -151,3 +164,7 @@ Outras features (não são tipos novos, são capacidades do gerador):
   definição de pergunta em múltiplos arquivos de tipo.
 
 ## FIXME
+
+## IDEIAS
+
+* Página com ferramenta de caixa de seleção para as peças de APF/Kit Preso, etc
