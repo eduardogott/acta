@@ -56,24 +56,25 @@
  */
 window.ANOTACOES = {
   categorias: [
-    { chave: "balcao", label: "Para entregar no balcão" },
     { chave: "formularios", label: "Formulários para preencher" },
     { chave: "interno", label: "Uso interno" },
   ],
 
   itens: [
-    // -------------------------------------------------------------------
-    // APAGUE ESTA ENTRADA (e o arquivo js/anotacoes/pdfs/exemplo.pdf) ao
-    // cadastrar a primeira anotação de verdade. Ela existe para que a
-    // página nasça funcionando e para servir de molde — é um PDF de uma
-    // folha que não diz nada.
-    // -------------------------------------------------------------------
     {
-      titulo: "Exemplo",
-      arquivo: "exemplo.pdf",
+      titulo: "Kit Preso/APF",
+      arquivo: "kitpreso_apf.pdf",
       categoria: "interno",
       descricao:
-        "Modelo de entrada. Troque por uma anotação de verdade e apague o PDF da pasta.",
+        "Kit preso e lista de documentos para APF.",
+      paginas: 1,
+    },
+    {
+      titulo: "Kit Preso/APF mini",
+      arquivo: "kitpreso_apf_mini.pdf",
+      categoria: "interno",
+      descricao:
+        "Kit preso e lista de documentos para APF. Versão miniaturizada.",
       paginas: 1,
     },
   ],
