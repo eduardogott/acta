@@ -41,7 +41,7 @@
   }
 
   log.info(
-    "Roteiro pronto:", DADOS.fatos.length, "fatos,",
+    "Perguntas prontas:", DADOS.fatos.length, "fatos,",
     DADOS.fatos.reduce((n, f) => n + contarPerguntas(f), 0), "perguntas,",
     DADOS.comuns.perguntas.length, "comuns a todo atendimento."
   );
@@ -231,7 +231,7 @@
 
   el.btnLimpar.addEventListener("click", () => {
     estado.fato = null;
-    log.info("Roteiro limpo.");
+    log.info("Lista limpa.");
     renderTudo();
   });
 

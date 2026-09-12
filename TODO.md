@@ -29,7 +29,7 @@ Sobre as ferramentas novas:
   tela (`etapa`, `iniciar`, `acompanharEncode`, `argumentosDeCorte`,
   `duracaoDoTrabalho`) — mais acoplamento disfarçado, não menos. Fica
   para quando a interface encolher.
-* **Roteiro** — sete fatos, todos já apontando para uma folha de
+* **Perguntas** — sete fatos, todos já apontando para uma folha de
   orientações. Faltam, entre outros: perseguição (art. 147-A), crimes
   cibernéticos (invasão de dispositivo, imagem íntima divulgada sem
   consentimento), maus-tratos e crimes contra criança e adolescente,
@@ -60,7 +60,7 @@ Sobre as ferramentas novas:
   e um JPG de verdade, e sintetizá-los com `-f lavfi` amarraria o teste
   aos filtros do build do ffmpeg.
 * **Service worker** — gerador, orientações, conferidor, tipificação,
-  conversas, roteiro, contatos e anotações são páginas estáticas e
+  conversas, perguntas, contatos e anotações são páginas estáticas e
   funcionariam offline; falta o service worker que as guarde em cache.
   A agenda é a que mais pede isso: o momento de precisar de um número de
   emergência não é o momento de descobrir que a rede caiu. As anotações

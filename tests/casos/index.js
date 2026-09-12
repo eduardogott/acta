@@ -7,15 +7,15 @@
 
 var ORDEM = [
   "gerador.html",
-  "roteiro.html",
-  "conversor.html",
   "orientacoes.html",
+  "conversor.html",
   "transcricao.html",
-  "conversas.html",
-  "conferidor.html",
   "tipificacao.html",
-  "contatos.html",
+  "conferidor.html",
+  "conversas.html",
   "anotacoes.html",
+  "roteiro.html",
+  "contatos.html",
 ];
 
 function hrefs(seletor) {

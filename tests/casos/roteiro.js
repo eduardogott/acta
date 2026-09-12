@@ -1,4 +1,6 @@
-// Roteiro de atendimento: a escolha do fato e a lista que sai dela.
+// Perguntas de atendimento: a escolha do fato e a lista que sai dela.
+// O arquivo e as classes continuam roteiro/.roteiro-*: o nome do arquivo
+// é a URL, e renomeá-lo quebraria atalho salvo.
 
 function escolher(chave) {
   marcar('#opcoes-fato input[value="' + chave + '"]');
@@ -13,7 +15,7 @@ function acharFato(chave) {
   return window.ROTEIRO.fatos.filter(function (f) { return f.chave === chave; })[0];
 }
 
-ok("fatos no roteiro", window.ROTEIRO.fatos.length);
+ok("fatos na lista", window.ROTEIRO.fatos.length);
 igual("um rádio por fato",
       document.querySelectorAll('#opcoes-fato input[name="fato"]').length,
       window.ROTEIRO.fatos.length);

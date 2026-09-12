@@ -1,6 +1,6 @@
 /* =========================================================
    Estilos das ferramentas menores: conferidor, tipificação,
-   orientações, transcrição, roteiro, contatos e anotações.
+   orientações, transcrição, perguntas, contatos e anotações.
 
    Um arquivo só porque elas compartilham quase tudo — campo de
    busca, cartão de resultado, lista de itens — e porque seis
@@ -357,7 +357,7 @@
 }
 
 /* ---------------------------------------------------------
-   Roteiro de atendimento
+   Perguntas de atendimento
 
    Mesma anatomia da folha de orientações — título, grupos,
    lista numerada —, mas isto fica na TELA e é lido de pé,

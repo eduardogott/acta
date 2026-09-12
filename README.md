@@ -11,15 +11,15 @@ são bibliotecas e modelos, nunca o conteúdo do usuário.
 | --- | --- |
 | `index.html` | A porta de entrada: um cartão por ferramenta, montado da mesma lista que alimenta o menu. |
 | `gerador.html` | Gerador de texto de ocorrência: questionário dinâmico → um parágrafo de narrativa em 3ª pessoa ("Comunica que…", "Informa que…"). |
-| `roteiro.html` | As perguntas suplementares de cada fato — o que costuma ser lembrado tarde demais. |
+| `orientacoes.html` | Monta a folha de "o que fazer agora" para imprimir e entregar ao comunicante. |
 | `conversor.html` | Converte e comprime áudio, vídeo e imagem com ffmpeg.wasm; extrai áudio e quadros de vídeo. |
 | `transcricao.html` | Transcreve áudio em português com o Whisper, dentro do navegador. |
-| `conversas.html` | Formata a exportação do WhatsApp numa transcrição numerada. |
-| `orientacoes.html` | Monta a folha de "o que fazer agora" para imprimir e entregar ao comunicante. |
-| `conferidor.html` | Confere dígito verificador de CPF, CNPJ, IMEI, chassi, placa, título de eleitor e PIS. |
 | `tipificacao.html` | Consulta rápida de tipificação penal, pesquisável por fato ou artigo. |
-| `contatos.html` | A agenda da unidade: telefone, WhatsApp, e-mail e endereço, com busca. |
+| `conferidor.html` | Confere dígito verificador de CPF, CNPJ, IMEI, chassi, placa, título de eleitor e PIS. |
+| `conversas.html` | Formata a exportação do WhatsApp numa transcrição numerada. |
 | `anotacoes.html` | A estante de PDFs para imprimir: formulários, folhas de entrega e colas de balcão. |
+| `roteiro.html` | **Perguntas de atendimento**: as suplementares de cada fato — o que costuma ser lembrado tarde demais. |
+| `contatos.html` | A agenda da unidade: telefone, WhatsApp, e-mail e endereço, com busca. |
 
 "Acta" é o nome da **suíte**, não de nenhuma das ferramentas: aparece no
 cabeçalho, no título da aba (`Acta — <ferramenta>`) e no rodapé de todas
@@ -56,7 +56,7 @@ no próprio arquivo: declarar três URLs à mão é como uma fica para trás num
 troca de versão.
 
 **O que continua fora, de propósito:** o conteúdo (os `dados.js` das
-orientações, da tipificação, do roteiro, dos contatos e das anotações, e
+orientações, da tipificação, das perguntas, dos contatos e das anotações, e
 os tipos do gerador), o mapa do site
 (`PAGINAS`, em `js/comum/nav.js`) e os pesos de dígito verificador em
 `identificadores.js` — esses últimos não são preferência, são a definição
@@ -123,9 +123,9 @@ usa. As páginas ficam na raiz porque são as URLs do site — mexer nelas
 quebraria links já salvos.
 
 ```
-index.html (a inicial)  gerador.html  roteiro.html  conversor.html
-transcricao.html  conversas.html  orientacoes.html  conferidor.html
-tipificacao.html  contatos.html  anotacoes.html
+index.html (a inicial)  gerador.html  orientacoes.html  conversor.html
+transcricao.html  tipificacao.html  conferidor.html  conversas.html
+anotacoes.html  roteiro.html  contatos.html
 
 css/
   style.css          tokens e componentes de todas as páginas
@@ -150,6 +150,7 @@ js/
   conferidor/        conferidor.js
   tipificacao/       tipificacao.js (página), dados.js (a tabela)
   roteiro/           roteiro.js (página), dados.js (as perguntas)
+                     a ferramenta se chama Perguntas; a pasta e a URL, não
   contatos/          contatos.js (página), dados.js (a agenda)
   anotacoes/         anotacoes.js (página), dados.js (a lista)
     pdfs/            os PDFs em si, largados aqui a partir do Office
@@ -768,11 +769,20 @@ A data é sempre a de **hoje**, e não a do fato nem a do registro: o que
 ela data é a folha entregue agora. Recalculada também no `beforeprint`,
 que pega o Ctrl+P e a página que virou a noite aberta.
 
-## Roteiro de atendimento (`roteiro.html`)
+## Perguntas de atendimento (`roteiro.html`)
 
 Escolhe-se o fato e saem as perguntas suplementares daquele fato, mais as
 que valem para qualquer atendimento. Conteúdo em
 **`js/roteiro/dados.js`**; a página só escolhe e desenha.
+
+**A ferramenta se chama Perguntas; o arquivo, não.** `roteiro.html`,
+`js/roteiro/` e as classes `.roteiro-*` ficaram com o nome antigo, de
+propósito: o nome do arquivo é a URL do site, e há atalho salvo apontando
+para ela — é a mesma razão pela qual nenhuma página da raiz muda de nome.
+Quem procura "roteiro" no código acha a ferramenta; quem lê "Perguntas"
+na tela acha a mesma coisa. No dia em que a URL valer a troca, o caminho
+é renomear **e** deixar um `roteiro.html` de uma linha redirecionando,
+não renomear e torcer.
 
 **É o inverso das orientações.** A folha de orientações é o papel que o
 comunicante leva embora, escrita para ele. Isto fica na tela e é escrito

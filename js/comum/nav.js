@@ -39,11 +39,11 @@
         "Monta o texto da narrativa a partir de um questionário que se ajusta às respostas.",
     },
     {
-      arquivo: "roteiro.html",
-      rotulo: "Roteiro",
-      titulo: "Roteiro de Atendimento",
+      arquivo: "orientacoes.html",
+      rotulo: "Orientações",
+      titulo: "Orientações ao Comunicante",
       descricao:
-        "Mostra as perguntas suplementares que costumam fazer falta em cada fato.",
+        "Monta a folha do que fazer depois do registro, para imprimir e entregar em mãos.",
     },
     {
       arquivo: "conversor.html",
@@ -53,32 +53,11 @@
         "Converte e comprime áudio, vídeo e imagem até caberem no limite do destino.",
     },
     {
-      arquivo: "orientacoes.html",
-      rotulo: "Orientações",
-      titulo: "Orientações ao Comunicante",
-      descricao:
-        "Monta a folha do que fazer depois do registro, para imprimir e entregar em mãos.",
-    },
-    {
       arquivo: "transcricao.html",
       rotulo: "Transcrição",
       titulo: "Transcrição de Áudio",
       descricao:
         "Transcreve áudio e vídeo em português, sem que nada saia do computador.",
-    },
-    {
-      arquivo: "conversas.html",
-      rotulo: "Conversas",
-      titulo: "Transcrição de Conversas",
-      descricao:
-        "Transforma a conversa exportada do WhatsApp em transcrição numerada e datada.",
-    },
-    {
-      arquivo: "conferidor.html",
-      rotulo: "Conferidor",
-      titulo: "Conferidor de Identificadores",
-      descricao:
-        "Diz o que um número solto pode ser e se o dígito verificador fecha.",
     },
     {
       arquivo: "tipificacao.html",
@@ -88,11 +67,18 @@
         "Procura o artigo pelo nome do fato, pelo número ou pelo jeito que a pessoa contou.",
     },
     {
-      arquivo: "contatos.html",
-      rotulo: "Contatos",
-      titulo: "Contatos Úteis",
+      arquivo: "conferidor.html",
+      rotulo: "Conferidor",
+      titulo: "Conferidor de Identificadores",
       descricao:
-        "Telefone, WhatsApp e endereço do que se precisa durante o plantão.",
+        "Diz o que um número solto pode ser e se o dígito verificador fecha.",
+    },
+    {
+      arquivo: "conversas.html",
+      rotulo: "Conversas",
+      titulo: "Transcrição de Conversas",
+      descricao:
+        "Transforma a conversa exportada do WhatsApp em transcrição numerada e datada.",
     },
     {
       arquivo: "anotacoes.html",
@@ -100,6 +86,24 @@
       titulo: "Anotações para Imprimir",
       descricao:
         "A estante de PDFs da unidade: formulários, folhas de entrega e colas de balcão.",
+    },
+    {
+      // A ferramenta se chama Perguntas; o ARQUIVO continua roteiro.html,
+      // porque o nome do arquivo é a URL e há atalho salvo apontando para
+      // ela. Renomear o arquivo é quebrar o atalho de quem já a usa; o
+      // mesmo vale para js/roteiro/ e para as classes .roteiro-* do CSS.
+      arquivo: "roteiro.html",
+      rotulo: "Perguntas",
+      titulo: "Perguntas de Atendimento",
+      descricao:
+        "Mostra as perguntas suplementares que costumam fazer falta em cada fato.",
+    },
+    {
+      arquivo: "contatos.html",
+      rotulo: "Contatos",
+      titulo: "Contatos Úteis",
+      descricao:
+        "Telefone, WhatsApp e endereço do que se precisa durante o plantão.",
     },
   ];
 
