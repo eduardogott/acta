@@ -328,7 +328,7 @@ window.CONTATOS = {
       horario: "PREENCHER",
       telefones: [
         { valor: "(51) 3295-2860", nota: "Horário comercial" },
-        { valor: "(51) 93295-2860", nota: "Plantão" },
+        { valor: "(51) 3295-2860", nota: "Plantão" },
       ],
       whatsapp: ["(51) 93295-2860"],
       emails: [
