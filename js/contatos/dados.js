@@ -229,7 +229,7 @@ window.CONTATOS = {
       nome: "PML Canoas",
       categoria: "saude",
       horario: "SEGUNDA, TERÇA e SEXTA, 07h00 às 19h00",
-      telefones: ["(51) 3328-8515", "(51) 3347-8805", "(51) 9868-27055"],
+      telefones: ["(51) 3328-8515", "(51) 3347-8805", "(51) 98682-7055"],
       endereco: "Avenida Farroupilha, 8001, Bairro São José, Canoas/RS",
       busca: "legista corpo de delito perícia lesões canoas",
     },
