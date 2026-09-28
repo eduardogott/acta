@@ -328,14 +328,14 @@ window.CONTATOS = {
       horario: "PREENCHER",
       telefones: [
         { valor: "(51) 3295-2860", nota: "Horário comercial" },
-        { valor: "(51) 3295-2860", nota: "Plantão" },
+        { valor: "(51) 99992-5145", nota: "Plantão" },
       ],
-      whatsapp: ["(51) 93295-2860"],
       emails: [
         { valor:"mpcampobom@mprs.mp.br", nota: "Ministério Público de Campo Bom" },
         { valor:"ivanda@mprs.mp.br", nota: "Promotora Dra. Ivanda Grapiglia Valiati" },
       ],
       endereco: "Avenida dos Estados, 850, Bairro 25 de Julho, Campo Bom/RS",
+      obs: "Plantão só para urgência fora do expediente.",
       busca: "promotoria promotor mp",
     },
     {
