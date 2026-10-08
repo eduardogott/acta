@@ -7,20 +7,26 @@ Sobre as ferramentas novas:
 * **Transcrição** — não há progresso por trecho, só o tempo decorrido: a
   biblioteca não expõe callback de chunk. Fatiar o áudio nós mesmos daria
   progresso real, ao custo de possíveis cortes de palavra nas emendas.
-* **Tipificação** — a tabela cobre os fatos mais comuns de balcão. Faltam,
-  entre outros: crimes ambientais além de maus-tratos, Estatuto do Idoso
-  além do art. 102, crimes eleitorais, e os tipos da Lei 14.811/2024.
-  O campo `texto` (o teor do artigo, copiado do Planalto) está preenchido
-  em 5 das 86 entradas; onde falta, o botão "ver o texto do artigo"
-  simplesmente não nasce, então a linha fica igual ao que sempre foi.
-  Preencher é trabalho de copiar, não de decidir.
+* **Tipificação** — a tabela cobre o CP, a Lei de Drogas, a Maria da Penha
+  e o ECA, além das leis especiais mais comuns de balcão. Faltam, entre
+  outros: crimes ambientais além de maus-tratos, crimes eleitorais, abuso
+  de autoridade e os tipos autônomos da Lei 15.358/2026 (domínio social
+  estruturado). O campo `texto` (o teor do artigo, copiado do Planalto)
+  está preenchido em 5 das 235 entradas; onde falta, o botão "ver o texto
+  do artigo" simplesmente não nasce. A revisão de outubro de 2026 foi feita
+  sem acesso ao Planalto (o ambiente bloqueava o site), a partir de
+  comentários e quadros comparativos das leis novas — vale conferir no
+  texto compilado as linhas que citam leis de 2025 e 2026, em especial
+  a multa cumulativa do art. 136 e o rol de hediondos do ECA (Lei
+  15.487/2026, "nas modalidades mais graves"). Preencher o `texto` é
+  trabalho de copiar, não de decidir.
 * **Conferidor** — RENAVAM e CNH ficaram de fora por falta de algoritmo
   confiável. Se aparecer uma referência boa, entram em
   `js/comum/identificadores.js` e ganham linha em `TIPOS`.
 * **Orientações** — faltam tipos: acidente com vítima fatal, desaparecimento
   de pessoa, crimes contra criança e adolescente, maus-tratos a animais.
   Cada tipo novo pode ganhar entradas na tipificação pelo campo
-  `orientacoes` (a tabela já aponta 31 fatos para uma folha).
+  `orientacoes` (a tabela já aponta 64 fatos para uma folha).
 * **Conversas** — só reconhece os dois formatos de exportação do WhatsApp.
   Telegram e Signal exportam em JSON e HTML, que pediriam outro caminho de
   leitura. Se aparecer um caso real, guardar uma amostra do arquivo.

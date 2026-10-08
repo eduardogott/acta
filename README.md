@@ -864,10 +864,39 @@ usou ao contar. Alimentada por **`js/tipificacao/dados.js`**, um array de
 objetos com o formato documentado no cabeçalho do arquivo — acrescentar um
 fato é uma entrada nova, e nada na página precisa ser tocado.
 
+A tabela cobre o Código Penal (sem os artigos revogados e os que quase
+nunca chegam ao balcão), a Lei de Drogas, a Lei Maria da Penha e o ECA, e
+ainda contravenções, trânsito, armas, racismo, tortura, Estatuto da Pessoa
+Idosa, Estatuto da Pessoa com Deficiência e maus-tratos a animais. Está
+agrupada por tema (Vida, Honra, Patrimônio — furto…), e cada grupo ganha
+uma linha de título na tela. Qualificadoras e majorantes comuns no balcão
+têm linha própria, com o inciso (art. 121, § 2º, II; art. 155, § 4º, I),
+porque é o inciso que vai para o registro.
+
 O campo `busca` existe porque o nome jurídico raramente é a palavra que a
 pessoa usa: quem chega dizendo "mexeram no meu carro" procura por
 "arrombamento", não por "furto qualificado". A busca ignora acento e
 pontuação, e casa também com o termo colado (`art155` acha `Art. 155`).
+Ela alcança ainda a referência, as marcas e o nome curto da lei — "hediondo"
+e "maria da penha" acham alguma coisa. Os filtros juntam JECRIM, ação
+condicionada ou privada, violência doméstica e uma lei específica.
+
+**A referência compacta.** Cada entrada traz `ref` no formato dos sistemas
+de registro, `Art. 121, §2, II - DL2848` (parágrafo único é `p.u.`; o código
+do diploma — DL2848, L11343, L11340, L8069… — vem de
+`window.TIPIFICACAO_DIPLOMAS`). Na tela ela vira um botão que copia. A
+`ref` repete o `artigo` de propósito, um para ler e o outro para colar, e
+o teste confere que os dois apontam para o mesmo dispositivo e que o
+código bate com o diploma da entrada.
+
+**Marcas e fiança.** `marcas` põe etiquetas ao lado do nome: hediondo,
+equiparado a hediondo, inafiançável e violência doméstica (tipos próprios
+da violência contra a mulher). Embaixo da pena, a página deduz quem
+arbitra a fiança: termo circunstanciado no JECRIM, delegado até 4 anos de
+pena máxima (art. 322 do CPP), juiz acima disso, ninguém nos
+inafiançáveis; `fianca: "juiz"` força o juiz quando a lei manda (art. 24-A,
+§ 2º, da Lei Maria da Penha). É dedução da pena em abstrato, e a página diz
+que concurso de crimes e o art. 324 do CPP mudam a resposta.
 
 **O texto do artigo é opcional e fica escondido.** Quando a entrada traz
 o campo `texto`, a linha ganha um "ver o texto do artigo" que abre uma
@@ -891,12 +920,20 @@ abstrato pelo art. 109 do CP: uma expressão lê a maior faixa citada no
 campo `pena` (`penaMaximaEmMeses`) e a tabela do artigo faz o resto. Assim
 não há um segundo campo para manter em sincronia e envelhecer separado do
 primeiro. O campo `prescricao` só se escreve quando a fórmula não vale —
-crime imprescritível, prazo em lei própria (art. 30 da Lei de Drogas), ou
-pena que remete a outro tipo. O que o cálculo **não** considera está dito
-na página: causas de aumento e de diminuição, e o art. 115.
+crime imprescritível, prazo em lei própria (art. 30 da Lei de Drogas), pena
+só de multa (art. 114, I), ou pena que remete a outro tipo. Nas formas
+majoradas a `pena` já traz a faixa aumentada ("de 10 anos a 16 anos e 8
+meses" no roubo com arma de fogo), e o cálculo acerta sozinho. O que ele
+**não** considera está dito na página: as demais causas de aumento e de
+diminuição, e o art. 115.
 
 **Esta tabela é digitada à mão e envelhece a cada lei nova.** É um atalho
-para lembrar onde procurar, nunca a fonte.
+para lembrar onde procurar, nunca a fonte. A revisão de outubro de 2026
+alcançou as Leis 14.994/2024 (pacote antifeminicídio), 15.134, 15.159,
+15.163, 15.181, 15.234, 15.245 e 15.280/2025, e 15.358 (Antifacção), 15.383,
+15.384 (vicaricídio), 15.397 (furto, roubo, estelionato e receptação),
+15.438, 15.455, 15.487 e 15.517/2026. A linha cita a lei quando a pena
+mudou — fato anterior a ela segue a pena da época.
 
 ## Contatos úteis (`contatos.html`)
 

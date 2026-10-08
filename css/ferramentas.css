@@ -150,6 +150,13 @@
   color: var(--text-read);
 }
 .tabela-tipificacao tr:hover td { background: var(--accent-soft); }
+/* A coluna do fato carrega nome, etiquetas e ressalva: é a que mais
+   precisa de largura, e no celular a tabela rola de lado em vez de
+   espremê-la numa palavra por linha. */
+.tabela-tipificacao thead th:first-child {
+  width: 40%;
+  min-width: 220px;
+}
 .tipificacao-fato {
   color: var(--text);
   font-weight: 500;
@@ -159,6 +166,89 @@
   font-size: 12.5px;
   white-space: nowrap;
 }
+/* O nome do diploma pode ser longo ("Estatuto da Pessoa com Deficiência
+   (Lei 13.146/2015)"); sem quebrar, ele alargaria a coluna inteira. */
+.tipificacao-artigo .tipificacao-obs {
+  font-family: var(--sans);
+  white-space: normal;
+  min-width: 14ch;
+}
+
+/* O filtro de lei: um <select> vestido de .opcao-item, para a fileira de
+   filtros parecer uma coisa só. */
+.filtro-diploma select {
+  width: auto;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+.filtro-diploma select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Título de grupo (Vida, Honra, Patrimônio…). Um <th> numa linha própria:
+   o cabeçalho da tabela diz o que é cada coluna, este diz onde se está. */
+.tipificacao-grupo th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 22px 10px 7px;
+  border-bottom: 1px solid var(--accent);
+}
+.tipificacao-grupo-n {
+  margin-left: 8px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.tipificacao-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+/* A referência compacta, que se copia com um clique. Tem cara de
+   etiqueta de código, e não de botão, porque o texto É o conteúdo. */
+.tipificacao-ref {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 7px;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-read);
+  white-space: nowrap;
+  cursor: copy;
+}
+button.tipificacao-ref:hover,
+button.tipificacao-ref:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tipificacao-ref.btn-ok { border-style: solid; border-color: var(--accent); color: var(--accent); }
+.tipificacao-ref.btn-falhou { border-style: solid; border-color: var(--danger); color: var(--danger); white-space: normal; }
+.tipificacao-ref.exemplo { cursor: default; margin-top: 0; }
+
+/* Quem arbitra a fiança, logo abaixo da pena. Discreto: é dedução da
+   pena máxima, não decisão. Só o "inafiançável" pede atenção. */
+.tipificacao-fianca {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.tipificacao-fianca.inafiancavel { color: var(--danger); }
 .tipificacao-obs {
   display: block;
   font-size: 12px;
@@ -231,9 +321,14 @@
   border: 1px solid var(--border);
   white-space: nowrap;
 }
+.etiqueta.incondicionada { color: var(--text-muted); }
 .etiqueta.condicionada { border-color: var(--accent); color: var(--accent); }
 .etiqueta.privada { border-color: var(--danger); color: var(--danger); }
 .etiqueta.jecrim { border-color: var(--accent); color: var(--accent); }
+.etiqueta.hediondo,
+.etiqueta.equiparado { border-color: var(--danger); color: var(--danger); font-weight: 600; }
+.etiqueta.inafiancavel { border-color: var(--danger); border-style: dashed; color: var(--danger); }
+.etiqueta.domestica { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .sem-resultados {
   padding: 28px 0;
   color: var(--text-muted);

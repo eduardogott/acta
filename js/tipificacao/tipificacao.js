@@ -17,6 +17,10 @@
  * E abre o texto do artigo, quando a entrada o traz (campo `texto`) — a
  * página manda conferir no texto legal antes de tipificar, e é o mínimo
  * que ela tenha o texto à mão.
+ *
+ * A referência compacta (campo `ref`, "Art. 121, §2, II - DL2848") vira
+ * um botão que a copia: é o formato que se cola no sistema de registro,
+ * e redigitá-lo à mão é onde o parágrafo errado entra.
  * ---------------------------------------------------------------------------
  */
 (function () {
@@ -28,10 +32,14 @@
     busca: document.getElementById("busca"),
     jecrim: document.getElementById("filtro-jecrim"),
     condicionada: document.getElementById("filtro-condicionada"),
+    domestica: document.getElementById("filtro-domestica"),
+    diploma: document.getElementById("filtro-diploma"),
     corpo: document.getElementById("corpo-tabela"),
     contagem: document.getElementById("contagem"),
     semResultados: document.getElementById("sem-resultados"),
   };
+
+  const DIPLOMAS = window.TIPIFICACAO_DIPLOMAS || [];
 
   // -------------------------------------------------------------------
   // Ponte para as orientações
@@ -55,6 +63,7 @@
           '", que não existe em js/orientacoes/dados.js — a linha fica sem link.'
       );
     }
+    if (!e.ref) log.aviso(e.fato + " está sem `ref` — a linha fica sem o botão de copiar.");
   });
 
   /** Link para a folha do fato, ou null quando não há folha. */
@@ -76,9 +85,9 @@
   // envelhecer separado do primeiro.
   //
   // O que este cálculo NÃO considera, e está dito na página: causas de
-  // aumento e de diminuição, que mudam a pena máxima; e o art. 115, que
-  // reduz o prazo à metade para quem era menor de 21 ao tempo do fato ou
-  // maior de 70 na data da sentença.
+  // aumento e de diminuição que a entrada não trouxer já aplicadas na
+  // faixa; e o art. 115, que reduz o prazo à metade para quem era menor
+  // de 21 ao tempo do fato ou maior de 70 na data da sentença.
   // -------------------------------------------------------------------
 
   const MESES_POR_UNIDADE = { dia: 1 / 30, dias: 1 / 30, mes: 1, mês: 1, meses: 1, ano: 12, anos: 12 };
@@ -122,12 +131,59 @@
     return meses === null ? "—" : prazoDoArt109(meses);
   }
 
+  // -------------------------------------------------------------------
+  // Quem arbitra a fiança
+  //
+  // Deduzido, como a prescrição, da pena máxima: o delegado só concede
+  // fiança até 4 anos (art. 322 do CPP); acima disso, só o juiz. Hediondo,
+  // equiparado e o que a lei declara inafiançável não têm fiança nenhuma
+  // (art. 5º, XLII a XLIV, da Constituição; art. 323 do CPP). No JECRIM
+  // não há auto de prisão, há termo circunstanciado (art. 69 da Lei
+  // 9.099/1995). E a entrada pode forçar o juiz quando a lei manda.
+  //
+  // É o ponto de partida, não a decisão: o art. 324 do CPP e o concurso
+  // de crimes mudam a resposta no caso concreto, e a página diz isso.
+  // -------------------------------------------------------------------
+
+  const INAFIANCAVEIS = ["hediondo", "equiparado", "inafiancavel"];
+  const LIMITE_FIANCA_DELEGADO = 4 * 12;
+
+  /** { texto, classe } para a linha de baixo da pena, ou null. */
+  function fiancaDe(e) {
+    if (e.jecrim) return { texto: "termo circunstanciado", classe: "tc" };
+    if ((e.marcas || []).some((m) => INAFIANCAVEIS.includes(m))) {
+      return { texto: "inafiançável", classe: "inafiancavel" };
+    }
+    if (e.fianca === "juiz") return { texto: "fiança só pelo juiz", classe: "juiz" };
+    const meses = penaMaximaEmMeses(e.pena);
+    if (meses === null) return null;
+    return meses <= LIMITE_FIANCA_DELEGADO
+      ? { texto: "fiança pelo delegado", classe: "delegado" }
+      : { texto: "fiança só pelo juiz", classe: "juiz" };
+  }
+
+  // Sem o "pública" na frente: a coluna já se chama "Ação penal", e a
+  // etiqueta curta cabe sem empurrar a pena para fora da tela.
   const ROTULO_ACAO = {
-    incondicionada: "Pública incondicionada",
-    condicionada: "Pública condicionada",
-    privada: "Privada (queixa)",
+    incondicionada: "incondicionada",
+    condicionada: "condicionada",
+    privada: "privada (queixa)",
     outra: "—",
   };
+
+  // As marcas que viram etiqueta ao lado do nome, na ordem em que
+  // aparecem. "jecrim" não é marca da entrada (é o campo booleano), mas
+  // se desenha do mesmo jeito.
+  const ROTULO_MARCA = {
+    hediondo: "hediondo",
+    equiparado: "equiparado a hediondo",
+    inafiancavel: "inafiançável",
+    domestica: "violência doméstica",
+  };
+
+  /** Nome curto do diploma, para o filtro e para a busca. */
+  const CURTO = {};
+  DIPLOMAS.forEach((d) => { CURTO[d.nome] = d.curto; });
 
   /**
    * Tira acento, pontuação e caixa, para "art. 155", "Art 155" e
@@ -145,13 +201,15 @@
   }
 
   // Índice de busca montado uma vez: refazer a concatenação a cada tecla
-  // digitada seria refazer o mesmo trabalho oitenta vezes por letra.
+  // digitada seria refazer o mesmo trabalho duzentas vezes por letra.
   const INDICE = window.TIPIFICACAO.map((entrada) => {
     // O dispositivo entra na busca: quem lembra "coisa alheia móvel" e
-    // não lembra "furto" acha do mesmo jeito.
+    // não lembra "furto" acha do mesmo jeito. As marcas e o nome curto da
+    // lei também, para "hediondo" e "maria da penha" acharem alguma coisa.
     const texto = normalizar(
-      [entrada.fato, entrada.artigo, entrada.diploma, entrada.pena,
-       entrada.busca, entrada.obs, entrada.texto]
+      [entrada.fato, entrada.artigo, entrada.diploma, CURTO[entrada.diploma],
+       entrada.ref, entrada.grupo, entrada.pena, entrada.busca, entrada.obs,
+       entrada.texto, (entrada.marcas || []).map((m) => ROTULO_MARCA[m]).join(" ")]
         .filter(Boolean)
         .join(" ")
     );
@@ -176,7 +234,7 @@
 
   const abertos = new Set();
 
-  /** Quantas colunas a linha do texto precisa atravessar. */
+  /** Quantas colunas uma linha que atravessa a tabela precisa ocupar. */
   function colunas() {
     return document.querySelectorAll(".tabela-tipificacao thead th").length || 1;
   }
@@ -224,11 +282,38 @@
     return botao;
   }
 
+  /** O botão com a referência compacta, que a copia ao clicar. */
+  function criarBotaoDaRef(e) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "tipificacao-ref";
+    botao.textContent = e.ref;
+    botao.title = "Copiar a referência";
+    botao.addEventListener("click", () => window.Copiar.copiarComFeedback(botao, e.ref));
+    return botao;
+  }
+
   function criarEtiqueta(texto, classe) {
     const span = document.createElement("span");
     span.className = "etiqueta " + classe;
     span.textContent = texto;
     return span;
+  }
+
+  /** A linha de título de um grupo, com quantos fatos dele estão na tela. */
+  function criarLinhaDoGrupo(nome, quantos) {
+    const tr = document.createElement("tr");
+    tr.className = "tipificacao-grupo";
+    const th = document.createElement("th");
+    th.colSpan = colunas();
+    th.scope = "colgroup";
+    th.textContent = nome;
+    const n = document.createElement("span");
+    n.className = "tipificacao-grupo-n";
+    n.textContent = quantos;
+    th.appendChild(n);
+    tr.appendChild(th);
+    return tr;
   }
 
   /**
@@ -240,16 +325,26 @@
   function criarLinhas(e) {
     const fragmento = document.createDocumentFragment();
     const tr = document.createElement("tr");
+    if (e.ref) tr.dataset.ref = e.ref;
 
     const tdFato = document.createElement("td");
     const nome = document.createElement("span");
     nome.className = "tipificacao-fato";
     nome.textContent = e.fato;
     tdFato.appendChild(nome);
-    if (e.jecrim) {
-      tdFato.appendChild(document.createTextNode(" "));
-      tdFato.appendChild(criarEtiqueta("jecrim", "jecrim"));
+
+    const etiquetas = [];
+    if (e.jecrim) etiquetas.push(criarEtiqueta("jecrim", "jecrim"));
+    Object.keys(ROTULO_MARCA).forEach((m) => {
+      if ((e.marcas || []).includes(m)) etiquetas.push(criarEtiqueta(ROTULO_MARCA[m], m));
+    });
+    if (etiquetas.length) {
+      const linha = document.createElement("span");
+      linha.className = "tipificacao-etiquetas";
+      etiquetas.forEach((et) => linha.appendChild(et));
+      tdFato.appendChild(linha);
     }
+
     if (e.obs) {
       const obs = document.createElement("span");
       obs.className = "tipificacao-obs";
@@ -266,22 +361,30 @@
 
     const tdArtigo = document.createElement("td");
     tdArtigo.className = "tipificacao-artigo";
-    tdArtigo.textContent = e.artigo;
+    tdArtigo.appendChild(document.createTextNode(e.artigo));
     const diploma = document.createElement("span");
     diploma.className = "tipificacao-obs";
     diploma.textContent = e.diploma;
     tdArtigo.appendChild(diploma);
+    if (e.ref) tdArtigo.appendChild(criarBotaoDaRef(e));
 
     const tdPena = document.createElement("td");
-    tdPena.textContent = e.pena;
+    tdPena.appendChild(document.createTextNode(e.pena));
+    const fianca = fiancaDe(e);
+    if (fianca) {
+      const span = document.createElement("span");
+      span.className = "tipificacao-fianca " + fianca.classe;
+      span.textContent = fianca.texto;
+      tdPena.appendChild(span);
+    }
 
     const tdPrescricao = document.createElement("td");
     tdPrescricao.className = "tipificacao-artigo";
     tdPrescricao.textContent = prescricaoDe(e);
 
     const tdAcao = document.createElement("td");
-    if (e.acao === "incondicionada" || e.acao === "outra") {
-      tdAcao.textContent = ROTULO_ACAO[e.acao];
+    if (e.acao === "outra") {
+      tdAcao.textContent = ROTULO_ACAO.outra;
     } else {
       tdAcao.appendChild(criarEtiqueta(ROTULO_ACAO[e.acao], e.acao));
     }
@@ -297,19 +400,43 @@
     return fragmento;
   }
 
+  // O filtro de diploma só oferece o que a tabela tem: lei cadastrada em
+  // DIPLOMAS sem nenhuma entrada seria uma opção que sempre volta vazia.
+  const presentes = new Set(window.TIPIFICACAO.map((e) => e.diploma));
+  DIPLOMAS.filter((d) => presentes.has(d.nome)).forEach((d) => {
+    const opcao = document.createElement("option");
+    opcao.value = d.nome;
+    opcao.textContent = d.curto;
+    el.diploma.appendChild(opcao);
+  });
+
   function filtrar() {
     const termos = normalizar(el.busca.value).split(" ").filter(Boolean);
     const soJecrim = el.jecrim.checked;
     const soCondicionada = el.condicionada.checked;
+    const soDomestica = el.domestica.checked;
+    const diploma = el.diploma.value;
 
     const encontrados = INDICE.filter(({ entrada, texto, colado }) => {
       if (soJecrim && !entrada.jecrim) return false;
       if (soCondicionada && entrada.acao !== "condicionada" && entrada.acao !== "privada") return false;
+      if (soDomestica && !(entrada.marcas || []).includes("domestica")) return false;
+      if (diploma && entrada.diploma !== diploma) return false;
       return termos.every((termo) => texto.includes(termo) || colado.includes(termo));
     }).map((i) => i.entrada);
 
+    const porGrupo = {};
+    encontrados.forEach((e) => { porGrupo[e.grupo] = (porGrupo[e.grupo] || 0) + 1; });
+
     el.corpo.innerHTML = "";
-    encontrados.forEach((e) => el.corpo.appendChild(criarLinhas(e)));
+    let grupoAtual = null;
+    encontrados.forEach((e) => {
+      if (e.grupo && e.grupo !== grupoAtual) {
+        grupoAtual = e.grupo;
+        el.corpo.appendChild(criarLinhaDoGrupo(e.grupo, porGrupo[e.grupo]));
+      }
+      el.corpo.appendChild(criarLinhas(e));
+    });
 
     // O termo buscado é nome de crime, não dado de vítima — pode ir junto.
     log.debug('Busca "' + el.busca.value + '":', encontrados.length, "de", window.TIPIFICACAO.length);
@@ -330,6 +457,8 @@
   el.busca.addEventListener("input", filtrar);
   el.jecrim.addEventListener("change", filtrar);
   el.condicionada.addEventListener("change", filtrar);
+  el.domestica.addEventListener("change", filtrar);
+  el.diploma.addEventListener("change", filtrar);
 
   filtrar();
   el.busca.focus();
