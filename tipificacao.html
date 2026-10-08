@@ -33,12 +33,18 @@
   <div class="campo-busca">
     <label for="busca">Fato, artigo ou palavra da narrativa</label>
     <input type="text" id="busca" autocomplete="off" spellcheck="false"
-           placeholder="furto · art. 155 · arrombamento · som alto · pix" />
+           placeholder="furto · art. 155 · arrombamento · som alto · pix · hediondo" />
   </div>
 
   <div class="filtros-tipificacao" id="filtros">
+    <label class="opcao-item filtro-diploma">Lei
+      <select id="filtro-diploma">
+        <option value="">todas</option>
+      </select>
+    </label>
     <label class="opcao-item"><input type="checkbox" id="filtro-jecrim" /> Só JECRIM</label>
     <label class="opcao-item"><input type="checkbox" id="filtro-condicionada" /> Só ação condicionada ou privada</label>
+    <label class="opcao-item"><input type="checkbox" id="filtro-domestica" /> Só violência doméstica</label>
   </div>
 
   <p class="contagem-resultados" id="contagem"></p>
@@ -63,16 +69,37 @@
   <section class="nota-rodape">
     <h2>Como ler e como alimentar</h2>
     <ul>
-      <li><b>Ação penal:</b> sem etiqueta é pública incondicionada. <span class="etiqueta condicionada">condicionada</span>
-      exige representação da vítima, com prazo decadencial de seis meses.
-      <span class="etiqueta privada">privada</span> exige queixa-crime, no mesmo prazo.</li>
+      <li><b>Referência:</b> o botão embaixo do artigo (<span class="tipificacao-ref exemplo">Art. 121, §2, II - DL2848</span>)
+      copia o dispositivo no formato curto — artigo, parágrafo, inciso e diploma
+      (DL2848 é o Código Penal; L11343, a Lei de Drogas; L11340, a Maria da Penha; L8069, o ECA).</li>
+      <li><b>Ação penal:</b> <span class="etiqueta incondicionada">incondicionada</span> é pública e não
+      depende da vítima. <span class="etiqueta condicionada">condicionada</span> é pública mas
+      exige representação, com prazo decadencial de seis meses.
+      <span class="etiqueta privada">privada (queixa)</span> exige queixa-crime, no mesmo prazo.
+      Em violência doméstica e familiar contra a mulher, o prazo é de <b>doze meses</b>
+      (art. 103 do CP, Lei 15.438/2026).</li>
       <li><b>Prescrição:</b> é a da pretensão punitiva, calculada da pena máxima em abstrato
-      pelo art. 109 do CP. <b>Não</b> considera causas de aumento e de diminuição, que mudam a
-      pena máxima, nem o art. 115, que corta o prazo pela metade para quem era menor de 21 ao
-      tempo do fato ou maior de 70 na data da sentença.</li>
+      pelo art. 109 do CP. Nas formas majoradas, a faixa da tabela já vem aumentada; as demais
+      causas de aumento e de diminuição, que mudam a pena máxima, <b>não</b> entram. Nem o art. 115,
+      que corta o prazo pela metade para quem era menor de 21 ao tempo do fato ou maior de 70 na
+      data da sentença — e que não vale nos crimes de violência sexual contra a mulher
+      (Lei 15.160/2025).</li>
+      <li><b>Fiança:</b> deduzida da pena máxima. Até 4 anos, o delegado arbitra (art. 322 do CPP);
+      acima, só o juiz. Hediondos, equiparados, racismo e os crimes que a lei declara inafiançáveis
+      não têm fiança. Concurso de crimes, causas de aumento e o art. 324 do CPP mudam a resposta
+      no caso concreto.</li>
       <li><span class="etiqueta jecrim">jecrim</span> marca a infração de menor potencial ofensivo
-      (contravenção ou pena máxima até dois anos). Violência doméstica contra a mulher fica de
-      fora mesmo com pena baixa, por força do art. 41 da Lei 11.340/2006.</li>
+      (contravenção ou pena máxima até dois anos), que gera termo circunstanciado. Ficam de fora
+      mesmo com pena baixa: violência doméstica contra a mulher (art. 41 da Lei 11.340/2006),
+      crime contra criança ou adolescente (art. 226, § 1º, do ECA) e crime com violência contra
+      pessoa idosa (art. 94 do Estatuto da Pessoa Idosa).</li>
+      <li><span class="etiqueta hediondo">hediondo</span> e <span class="etiqueta equiparado">equiparado a hediondo</span>
+      seguem a Lei 8.072/1990: sem fiança, graça, anistia ou indulto, e com progressão mais lenta.
+      <span class="etiqueta domestica">violência doméstica</span> marca os tipos próprios da
+      violência contra a mulher — o filtro acima junta todos.</li>
+      <li><b>Leis novas não retroagem</b> quando pioram a situação do autor: para fato anterior a
+      uma mudança de pena (Leis 15.397/2026, 15.280/2025 e outras citadas nas linhas), vale a pena
+      da época.</li>
       <li><b>O texto do artigo</b> aparece atrás de "ver o texto do artigo", nas linhas
       que já o têm. Onde o link não aparece, o texto ainda não foi digitado — a pena e a
       prescrição da tabela continuam valendo.</li>
@@ -85,6 +112,7 @@
 
 <footer></footer>
 
+<script src="js/comum/copiar.js"></script>
 <script src="js/orientacoes/dados.js"></script>
 <script src="js/tipificacao/dados.js"></script>
 <script src="js/tipificacao/tipificacao.js"></script>
