@@ -7,26 +7,27 @@ Sobre as ferramentas novas:
 * **Transcrição** — não há progresso por trecho, só o tempo decorrido: a
   biblioteca não expõe callback de chunk. Fatiar o áudio nós mesmos daria
   progresso real, ao custo de possíveis cortes de palavra nas emendas.
-* **Tipificação** — a tabela cobre o CP, a Lei de Drogas, a Maria da Penha
-  e o ECA, além das leis especiais mais comuns de balcão. Faltam, entre
-  outros: crimes ambientais além de maus-tratos, crimes eleitorais, abuso
-  de autoridade e os tipos autônomos da Lei 15.358/2026 (domínio social
-  estruturado). O campo `texto` (o teor do artigo, copiado do Planalto)
-  está preenchido em 5 das 235 entradas; onde falta, o botão "ver o texto
-  do artigo" simplesmente não nasce. A revisão de outubro de 2026 foi feita
-  sem acesso ao Planalto (o ambiente bloqueava o site), a partir de
-  comentários e quadros comparativos das leis novas — vale conferir no
-  texto compilado as linhas que citam leis de 2025 e 2026, em especial
-  a multa cumulativa do art. 136 e o rol de hediondos do ECA (Lei
-  15.487/2026, "nas modalidades mais graves"). Preencher o `texto` é
-  trabalho de copiar, não de decidir.
+* **Tipificação** — as 329 linhas foram conferidas contra o texto
+  compilado do Planalto salvo em `docs/` (fora do git), e todas têm o
+  `texto` do artigo. Ficaram de fora leis que não estão em `docs/`: a
+  12.850/2013 (organização criminosa, art. 2º), a 9.504/1997 (boca de urna
+  e os outros crimes eleitorais fora do Código Eleitoral), a 1.521/1951
+  (economia popular: pirâmide, usura), a 8.137/1990 (ordem tributária e
+  relações de consumo), o CDC, a 9.296/1996 (interceptação), a 13.260/2016
+  (terrorismo) e o Dec.-Lei 6.259/1944 (jogo do bicho). Lei nova pede a
+  mesma passada: salvar o texto compilado em `docs/`, conferir as linhas
+  que a citam e recopiar o `texto` dos dispositivos que ela mudou. O link
+  para a folha de orientações saiu da linha; o campo `orientacoes` ficou,
+  conferido na carga, para se o link voltar.
 * **Conferidor** — RENAVAM e CNH ficaram de fora por falta de algoritmo
   confiável. Se aparecer uma referência boa, entram em
   `js/comum/identificadores.js` e ganham linha em `TIPOS`.
 * **Orientações** — faltam tipos: acidente com vítima fatal, desaparecimento
-  de pessoa, crimes contra criança e adolescente, maus-tratos a animais.
+  de pessoa, crimes contra criança e adolescente, maus-tratos a animais,
+  crimes cibernéticos (invasão de dispositivo, imagem íntima divulgada).
   Cada tipo novo pode ganhar entradas na tipificação pelo campo
-  `orientacoes` (a tabela já aponta 64 fatos para uma folha).
+  `orientacoes` (a tabela já aponta 67 fatos para uma folha, embora hoje
+  não mostre o link).
 * **Conversas** — só reconhece os dois formatos de exportação do WhatsApp.
   Telegram e Signal exportam em JSON e HTML, que pediriam outro caminho de
   leitura. Se aparecer um caso real, guardar uma amostra do arquivo.
@@ -48,9 +49,7 @@ Sobre as ferramentas novas:
   não é a página quebrar — é alguém copiar um número que não existe e
   discar. O campo `site` é suportado
   pela página e nenhum contato o usa: no balcão se disca, não se navega.
-* **Anotações** — a estante nasceu com uma entrada de exemplo
-  (`js/anotacoes/pdfs/exemplo.pdf`), que sai junto com a primeira
-  anotação de verdade. Não há busca: com uma dúzia de papéis os títulos
+* **Anotações** — não há busca: com uma dúzia de papéis os títulos
   se leem de relance. Quando a caixa de busca fizer falta aqui, ela é a
   **terceira** página com busca — e é o gatilho combinado para extrair a
   normalização de termos para `js/comum/` (ver IMPROVE, abaixo), em vez
@@ -171,6 +170,141 @@ Outras features (não são tipos novos, são capacidades do gerador):
 
 ## FIXME
 
+* **Orientações, prazo e representação na violência doméstica** — o item
+  de "Ameaça ou perseguição" diz que as duas dependem de representação,
+  em seis meses, e continua dizendo isso com o extra `vinculo_domestico`
+  marcado. Contra a mulher, ali a folha erra duas vezes: a ameaça por
+  razões da condição do sexo feminino (o que inclui a violência
+  doméstica) é de ação pública incondicionada (art. 147, § 2º, Lei
+  14.994/2024), e o prazo de representação ou queixa na violência
+  doméstica contra a mulher passou a 12 meses (art. 103, p.u., Lei
+  15.438/2026), o que alcança a perseguição. O item de "Em qualquer
+  registro" já diz "(ou 1 ano)"; os de calúnia e de dano simples dizem
+  seis meses sem ressalva. O extra vale também para vítima homem, então
+  a correção tem de separar os dois casos, não só trocar o número.
+
 ## IDEIAS
 
 * Página com ferramenta de caixa de seleção para as peças de APF/Kit Preso, etc
+
+Sugestões por ferramenta, levantadas em outubro de 2026 e ainda não
+escolhidas. O que já está em NEW (tipos e fatos faltantes, Telegram e
+Signal, service worker, ponte conversor → transcrição, progresso da
+transcrição, RENAVAM e CNH) não se repete aqui.
+
+* **Início** — busca única: "147" ou "IML" digitados na página inicial
+  levam ao resultado da tipificação ou dos contatos, sem precisar saber
+  antes em que página procurar. Seria a terceira página com busca, que é
+  o gatilho para extrair a normalização (ver IMPROVE).
+* **Gerador**
+  - **Ordem dos tipos novos.** Começar pelos que as outras páginas já
+    cobrem: furto e roubo, ameaça e perseguição, lesão, violência
+    doméstica. Esses têm folha de orientações e lista de perguntas, e só
+    o gerador falta — é onde a sequência perguntar → registrar →
+    entregar a folha se interrompe.
+  - **Link para as Perguntas ao escolher o fato**, antes de preencher. As
+    perguntas servem durante o atendimento, e hoje o gerador só aponta
+    para as orientações, no fim. `roteiro.html` já aceita `?fato=`; o
+    mapeamento iria no módulo do tipo, ao lado do campo `orientacoes`.
+  - **Prévia do texto enquanto se preenche**, para ver que resposta virou
+    que frase sem chegar ao botão Gerar.
+* **Orientações**
+  - **Prazo em data, não em duração.** Os prazos de seis meses (doze na
+    violência doméstica contra a mulher) contam do dia em que se soube
+    quem é o autor — e, quando o autor já é conhecido no registro, um
+    campo opcional com essa data deixaria a folha dizer "até 10/04/2027".
+    Uma data no papel se confere na folhinha; "seis meses" se esquece de
+    quando começou. Sem o campo, fica o texto de hoje.
+  - **Letra grande na impressão**: uma opção que aumenta o corpo da folha.
+    Boa parte de quem a recebe é idosa.
+* **Perguntas**
+  - **Marcar a pergunta já feita**: clicar risca a pergunta, só para a
+    aba aberta (`sessionStorage`, como o rascunho do gerador). Na lista
+    de violência doméstica, com quinze perguntas, mostra de relance o que
+    falta.
+  - **Formulário Nacional de Avaliação de Risco** (Lei 14.149/2021) no
+    grupo de violência doméstica: o PDF na estante de Anotações e um
+    lembrete na lista apontando para ele.
+* **Tipificação**
+  - **Copiar várias referências de uma vez**: caixa de marcar por linha e
+    um botão "copiar as N referências". Ocorrência raramente tem um crime
+    só — furto com dano, lesão com ameaça, tráfico com porte de arma.
+  - **Busca na URL** (`tipificacao.html?q=…`): atalho salvo de consulta
+    frequente, e Perguntas e Orientações podendo apontar para os artigos
+    do fato, como Perguntas já faz com `?fato=`.
+  - **Índice de grupos**: são 30 grupos e 329 linhas, e sem busca chegar
+    a "Crimes eleitorais" é rolar a página inteira. Uma fileira de
+    atalhos no topo, ou grupos que se recolhem.
+  - **Filtro por marca**: só hediondos, só JECRIM, só afiançáveis pela
+    autoridade policial.
+  - **Calculados, sem campo novo na tabela**: suspensão condicional do
+    processo (art. 89 da Lei 9.099, pena mínima de até 1 ano) e ANPP
+    (art. 28-A do CPP, pena mínima abaixo de 4 anos, sem violência nem
+    grave ameaça, fora da violência doméstica). A pena mínima sai do
+    campo `pena`, como a prescrição já sai da máxima; só a violência
+    pediria uma marca nova, `"violencia"`. E o prazo de representação ou
+    queixa, para `condicionada` e `privada`: seis meses do conhecimento
+    da autoria, doze na violência doméstica contra a mulher (art. 103 do
+    CP).
+  - **Campos novos na entrada**:
+    - `distinguir` — os fatos com que aquele se confunde (furto mediante
+      fraude e estelionato, roubo e extorsão, ameaça e constrangimento
+      ilegal, dano e pichação, lesão e vias de fato), como lista de
+      outros `fato`, que vira link dentro da tabela. É aqui que a
+      tipificação erra, mais do que na pena;
+    - `pericia` — o exame que o fato pede: corpo de delito, constatação
+      de droga, etilômetro, perícia de local;
+    - `competencia` — só quando não for a Justiça estadual: moeda falsa,
+      Correios, INSS, tráfico internacional. Evita encaminhar para o
+      lugar errado;
+    - marca `"permanente"` — tráfico, posse de arma, sequestro, cárcere
+      privado: o flagrante cabe enquanto a situação durar;
+    - `conferido` — data e fonte da última conferência no texto legal,
+      para o teste listar o que nunca foi conferido. Hoje as 329 foram
+      conferidas na mesma passada; o campo serve a partir da próxima lei.
+  - **Link para o Planalto**: uma `url` em cada diploma de
+    `TIPIFICACAO_DIPLOMAS`. Perdeu prioridade com o `texto` na própria
+    página, mas é por ele que se confere se a redação mudou.
+* **Conversor** — **SHA-256 do arquivo original**, calculado no navegador
+  e salvo num `.txt` ao lado do convertido (ou dentro do ZIP). A
+  conversão troca o arquivo, e hoje não sobra registro de qual foi o
+  recebido — é o elo da cadeia de custódia que a ferramenta quebra.
+  `crypto.subtle.digest` não lê em partes: arquivo de gigabytes pediria
+  uma implementação incremental.
+* **Transcrição**
+  - **Ouvir a partir do trecho**: clicar num `[mm:ss]` toca o áudio dali,
+    do próprio arquivo carregado. Revisar um trecho duvidoso hoje exige
+    abrir o arquivo em outro programa e procurar o minuto.
+  - **Cabeçalho no `.txt`**: nome do arquivo, duração, modelo usado e
+    SHA-256 — liga a transcrição ao arquivo de que ela saiu.
+* **Conversas**
+  - **Filtrar por período**: uma exportação traz anos de conversa, e o
+    registro trata de um ou dois dias. Decidir antes se a numeração
+    recomeça ou mantém a da conversa inteira.
+  - **SHA-256 da exportação no cabeçalho**, pelo mesmo motivo do
+    conversor. Hoje o conteúdo é colado, e o hash do texto colado não é o
+    do arquivo; teria de aceitar o `.txt` como arquivo.
+* **Conferidor**
+  - **Converter a placa entre os formatos**: ABC1234 ↔ ABC1C34. A vítima
+    lembra da placa antiga e o sistema registra a Mercosul, ou o
+    contrário.
+  - **Dizer o que o número revela**: a região fiscal pelo 9º dígito do
+    CPF (0 = RS, 8 = SP…), com o aviso de que é onde o CPF foi emitido,
+    não onde a pessoa mora; matriz ou filial pelo `/0001` do CNPJ.
+* **Contatos**
+  - **Não copiar contato provisório**: o botão de um `(00) 0000-0000` ou
+    de um "PREENCHER" avisa "não cadastrado" em vez de copiar. Hoje eles
+    estão na tela com cara de número de verdade.
+  - **"Conferido em mês/ano" por contato.** Nas Anotações a data saiu de
+    propósito; aqui é justamente o que falta saber — há quanto tempo
+    ninguém liga para aquele número.
+* **Anotações**
+  - **Conteúdo**: a estante tem só o Kit Preso/APF, nas duas versões.
+    Candidatos: termo de representação, termo de renúncia, auto
+    de entrega ou restituição de objeto, o formulário de avaliação de
+    risco (ver Perguntas).
+  - **Campo `fatos` em cada PDF**, para Perguntas e Orientações apontarem
+    o papel do caso.
+* **Em várias páginas** — uma função de SHA-256 em `js/comum/`, para as
+  três páginas que lidam com prova (conversor, transcrição, conversas),
+  em vez de três cópias — a mesma lógica da normalização em IMPROVE.
