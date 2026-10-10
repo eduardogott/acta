@@ -1,10 +1,11 @@
-// Tipificação: busca, a coluna de prescrição, a fiança, a referência
-// compacta e o texto do artigo.
+// Tipificação: busca e relevância, a coluna de prescrição, a fiança, a
+// referência compacta e a gaveta com o texto do artigo.
 
-// O corpo da tabela tem três tipos de <tr>: a do fato, a gaveta escondida
-// com o texto do artigo logo abaixo dela, e o título de cada grupo
-// (Vida, Honra…). Contar "tr" sem mais nada contaria as três.
-var LINHAS = "#corpo-tabela tr:not(.tipificacao-texto-linha):not(.tipificacao-grupo)";
+// O corpo da tabela tem quatro tipos de <tr>: a do fato, a gaveta
+// escondida logo abaixo dela, o título de cada grupo (Vida, Honra…) e a
+// linha que separa uma camada de relevância da seguinte. Contar "tr" sem
+// mais nada contaria as quatro.
+var LINHAS = "#corpo-tabela tr:not(.tipificacao-texto-linha):not(.tipificacao-grupo):not(.tipificacao-camada)";
 
 function buscar(termo) {
   digitar("busca", termo);
@@ -23,6 +24,47 @@ igual("busca pelo nome curto da lei", buscar("maria da penha") > 0, true);
 igual("busca pela referência", buscar("DL2848") > 0, true);
 igual("termo inexistente não traz nada", buscar("zzzznada"), 0);
 igual("aviso de vazio aparece", vis("sem-resultados"), true);
+
+// --- relevância ----------------------------------------------------------
+// "ameaça" está no texto de dezenas de artigos ("grave ameaça"). O que se
+// chama ameaça vem primeiro; o constrangimento ilegal, que vem antes na
+// tabela mas só casa pelo texto da lei, vem depois.
+function refsNaTela() {
+  return Array.prototype.map.call(document.querySelectorAll(LINHAS), function (tr) {
+    return tr.dataset.ref;
+  });
+}
+buscar("ameaça");
+var refs = refsNaTela();
+igual("o nome do fato vem primeiro", refs[0], "Art. 147 - DL2848");
+igual("o que só casa pelo texto da lei vem depois",
+      refs.indexOf("Art. 146 - DL2848") > refs.indexOf("Art. 147 - DL2848"), true);
+var camadas = Array.prototype.map.call(document.querySelectorAll("#corpo-tabela tr.tipificacao-camada"),
+  function (tr) { return tr.textContent; });
+igual("uma linha avisa onde começa o que só está no texto do artigo",
+      camadas.some(function (t) { return t.indexOf("texto do artigo") >= 0; }), true);
+buscar("");
+igual("sem busca, não há camada nenhuma",
+      document.querySelectorAll("#corpo-tabela tr.tipificacao-camada").length, 0);
+
+// --- realce ----------------------------------------------------------------
+// A busca casa sem acento, mas o realce cai no texto original, com acento.
+buscar("ameaca");
+var realce = document.querySelector("#corpo-tabela tr[data-ref='Art. 147 - DL2848'] .tipificacao-fato mark");
+igual("o termo aparece realçado no nome, com o acento original", realce && realce.textContent, "Ameaça");
+igual("com o termo à vista na linha, o botão não leva realce",
+      document.querySelector("#corpo-tabela tr[data-ref='Art. 147 - DL2848'] .tipificacao-ver-texto")
+        .classList.contains("com-termo"), false);
+buscar("coisa alheia movel");
+var furto = document.querySelector("#corpo-tabela tr[data-ref='Art. 155 - DL2848']");
+igual("quando o termo está só na gaveta, o botão dela leva o realce",
+      furto && furto.querySelector(".tipificacao-ver-texto").classList.contains("com-termo"), true);
+igual("e dentro da gaveta cada termo vem marcado",
+      furto && Array.prototype.map.call(furto.nextElementSibling.querySelectorAll(".tipificacao-texto mark"),
+        function (m) { return m.textContent; }).join("|"),
+      "coisa|alheia|móvel");
+buscar("");
+igual("sem busca, nada realçado", document.querySelectorAll("#corpo-tabela mark").length, 0);
 
 buscar("");
 marcar("#filtro-jecrim", true);
@@ -98,12 +140,20 @@ window.TIPIFICACAO.forEach(function (e) {
 igual("nenhuma ref repetida", repetidas, []);
 
 buscar("");
-igual("cada entrada rende um botão de copiar a ref",
+igual("cada entrada rende um artigo que copia a ref",
       document.querySelectorAll("#corpo-tabela .tipificacao-ref").length, window.TIPIFICACAO.length);
 var exemplo = document.querySelector('#corpo-tabela tr[data-ref="Art. 121, §2, II - DL2848"]');
 igual("a linha do exemplo do pedido existe", !!exemplo, true);
-igual("e o botão mostra a ref", exemplo && exemplo.querySelector(".tipificacao-ref").textContent,
-      "Art. 121, §2, II - DL2848");
+// Na coluna vai só o dispositivo e, embaixo, o diploma pelo número; a
+// ref inteira fica no título do botão, que é o que se copia.
+igual("o botão mostra só o artigo", exemplo && exemplo.querySelector(".tipificacao-ref").textContent,
+      "Art. 121, § 2º, II");
+igual("e leva a ref no título", exemplo && exemplo.querySelector(".tipificacao-ref").title,
+      "Copiar Art. 121, §2, II - DL2848");
+igual("o diploma vai pelo número", exemplo && exemplo.querySelector(".tipificacao-diploma").textContent,
+      "DL 2848");
+igual("a lei especial também", linhaDe("Art. 33 - L11343").querySelector(".tipificacao-diploma").textContent,
+      "L 11343");
 
 // --- campos fechados ---------------------------------------------------
 var ACOES = ["incondicionada", "condicionada", "privada", "outra"];
@@ -173,8 +223,9 @@ igual("violência doméstica vira etiqueta", !!ameacaMulher.querySelector(".etiq
 igual("a forma contra a mulher não é JECRIM", !!ameacaMulher.querySelector(".etiqueta.jecrim"), false);
 
 // --- ponte para as orientações ----------------------------------------
-// O mapa vive em js/tipificacao/dados.js e o alvo em
-// js/orientacoes/dados.js. Um tipo renomeado lá só apareceria no balcão.
+// O link para a folha saiu da linha, mas o mapa continua em
+// js/tipificacao/dados.js e o alvo em js/orientacoes/dados.js. Conferi-lo
+// mesmo sem link é o que deixa o mapa pronto para quando o link voltar.
 buscar("");
 var chaves = {};
 window.ORIENTACOES.tipos.forEach(function (t) { chaves[t.chave] = t.label; });
@@ -187,29 +238,67 @@ igual("toda folha apontada existe", quebrados, []);
 
 var comFolha = window.TIPIFICACAO.filter(function (e) { return e.orientacoes; }).length;
 igual("há fatos com folha", comFolha > 0, true);
-igual(
-  "cada um rende um link",
-  document.querySelectorAll("#corpo-tabela .tipificacao-folha").length,
-  comFolha
-);
-
-buscar("lesão corporal leve");
-var link = document.querySelector("#corpo-tabela .tipificacao-folha");
-igual("link aponta para a folha certa", link.getAttribute("href"), "orientacoes.html?tipo=lesao");
-igual("link diz qual folha é", link.textContent, "Orientações: Lesão corporal / agressão");
-buscar("");
+igual("mas a linha não mostra link para a folha",
+      document.querySelectorAll('#corpo-tabela a[href^="orientacoes.html"]').length, 0);
 
 // --- texto do artigo ---------------------------------------------------
-// O campo é opcional e a tabela é preenchida aos poucos: o que se confere
-// aqui é o mecanismo, não quantos artigos já foram digitados.
+// O campo é opcional: o que se confere aqui é o mecanismo, não quantos
+// artigos já foram copiados.
 var comTexto = window.TIPIFICACAO.filter(function (e) { return e.texto; }).length;
+
+// O texto abre pelo mesmo dispositivo da ref: entrada de parágrafo começa
+// pelo parágrafo ("§ 2º", "Parágrafo único"), entrada de caput não começa
+// por parágrafo nenhum. É o erro de colar o texto do vizinho na linha.
+var textoTrocado = [];
+window.TIPIFICACAO.forEach(function (e) {
+  if (!e.texto) return;
+  var m = /^Art\. [\dA-Z-]+(?:, (§(\d+)(?:-([A-Z]))?|p\.u\.))?/.exec(e.ref);
+  var abre = e.texto.split("\n")[0];
+  var certo;
+  if (!m[1]) certo = !/^(§|Parágrafo único)/.test(abre);
+  else if (m[1] === "p.u.") certo = /^Parágrafo único/.test(abre);
+  else certo = new RegExp("^§ " + m[2] + "º?" + (m[3] ? "-" + m[3] : "") + "(?![\\d-])").test(abre);
+  if (!certo) textoTrocado.push(e.ref + " → " + abre.slice(0, 30));
+});
+igual("o texto abre pelo mesmo dispositivo da ref", textoTrocado, []);
 igual("há fatos com o texto do artigo", comTexto > 0, true);
-igual("cada um rende um botão",
-      document.querySelectorAll("#corpo-tabela .tipificacao-ver-texto").length, comTexto);
-igual("e uma gaveta",
-      document.querySelectorAll("#corpo-tabela .tipificacao-texto-linha").length, comTexto);
+
+buscar("");
+var semBotao = [];
+window.TIPIFICACAO.forEach(function (e) {
+  if (!e.texto) return;
+  var tr = document.querySelector('#corpo-tabela tr[data-ref="' + e.ref + '"]');
+  if (!tr || !tr.querySelector(".tipificacao-ver-texto")) semBotao.push(e.ref);
+});
+igual("toda linha com o texto do artigo tem o botão da gaveta", semBotao, []);
+var botoes = document.querySelectorAll("#corpo-tabela .tipificacao-ver-texto").length;
+igual("cada botão, uma gaveta",
+      document.querySelectorAll("#corpo-tabela .tipificacao-texto-linha").length, botoes);
 igual("toda gaveta começa fechada",
-      document.querySelectorAll("#corpo-tabela .tipificacao-texto-linha.escondido").length, comTexto);
+      document.querySelectorAll("#corpo-tabela .tipificacao-texto-linha.escondido").length, botoes);
+
+// --- a observação na linha ---------------------------------------------
+// Na linha fica só a primeira frase da `obs`; o resto vai para a gaveta.
+var linhaFurto = linhaDe("Art. 155 - DL2848");
+igual("na linha, só a primeira frase da observação",
+      linhaFurto.querySelector(".tipificacao-obs").textContent,
+      "Repouso noturno (§ 1º): aumento de metade.");
+igual("o resto está na gaveta",
+      linhaFurto.nextElementSibling.querySelector(".tipificacao-detalhe").textContent.indexOf("Pena da Lei 15.397/2026") >= 0,
+      true);
+
+// A regra do cabeçalho do dados.js: a primeira frase é a que importa no
+// balcão, e a citação da lei vai no fim. Uma `obs` que abre com "Lei
+// 15.358/2026." mostraria só isso na linha.
+var FIM_DE_FRASE = /(?<=[.!?…])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ])/;
+var CITACAO = /^(?:Penas? (?:mínima )?da )?Lei [\d.]+\/\d{4}(?: \([^)]*\))?\.$/;
+var abremPelaLei = [];
+window.TIPIFICACAO.forEach(function (e) {
+  if (!e.obs) return;
+  var frases = e.obs.split(FIM_DE_FRASE);
+  if (frases.length > 1 && CITACAO.test(frases[0])) abremPelaLei.push(e.ref);
+});
+igual("nenhuma observação abre só com a citação da lei", abremPelaLei, []);
 
 buscar("art. 155");
 clicar("#corpo-tabela .tipificacao-ver-texto");
