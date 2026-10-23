@@ -787,9 +787,10 @@ não renomear e torcer.
 **É o inverso das orientações.** A folha de orientações é o papel que o
 comunicante leva embora, escrita para ele. Isto fica na tela e é escrito
 para quem atende. Por isso as duas páginas se linkam: são o mesmo
-atendimento, vistos dos dois lados do balcão — e a ponte funciona como a da
-tipificação, com a chave `orientacoes` da entrada e uma conferência na
-carga de que a folha apontada existe.
+atendimento, vistos dos dois lados do balcão — e a ponte é a chave
+`orientacoes` do fato, com uma conferência na carga de que a folha
+apontada existe. A tipificação guarda a mesma chave e faz a mesma
+conferência, mas hoje não mostra o link.
 
 **O que entra na lista, e o que não entra.** Quem usa já sabe atender, e
 uma lista que começasse por "pergunte o nome da vítima" seria fechada no
@@ -864,18 +865,69 @@ usou ao contar. Alimentada por **`js/tipificacao/dados.js`**, um array de
 objetos com o formato documentado no cabeçalho do arquivo — acrescentar um
 fato é uma entrada nova, e nada na página precisa ser tocado.
 
+A tabela tem 329 fatos. Cobre o Código Penal (sem os artigos revogados e
+os que quase nunca chegam ao balcão), a Lei de Drogas, a Lei Maria da
+Penha, o ECA e a Lei Henry Borel, e ainda contravenções, trânsito, armas,
+facções e milícias (Lei 15.358/2026), racismo, tortura, Estatuto da Pessoa
+Idosa, Estatuto da Pessoa com Deficiência, crimes ambientais, abuso de
+autoridade, lavagem de dinheiro, crimes contra o sistema financeiro e
+crimes eleitorais. Está agrupada por tema (Vida, Honra, Patrimônio —
+furto…), e cada grupo ganha uma linha de título na tela. Qualificadoras e majorantes comuns no balcão
+têm linha própria, com o inciso (art. 121, § 2º, II; art. 155, § 4º, I),
+porque é o inciso que vai para o registro.
+
 O campo `busca` existe porque o nome jurídico raramente é a palavra que a
 pessoa usa: quem chega dizendo "mexeram no meu carro" procura por
 "arrombamento", não por "furto qualificado". A busca ignora acento e
 pontuação, e casa também com o termo colado (`art155` acha `Art. 155`).
+Ela alcança ainda a referência, as marcas e o nome curto da lei — "hediondo"
+e "maria da penha" acham alguma coisa. Os filtros juntam JECRIM, ação
+condicionada ou privada, violência doméstica e uma lei específica.
 
-**O texto do artigo é opcional e fica escondido.** Quando a entrada traz
-o campo `texto`, a linha ganha um "ver o texto do artigo" que abre uma
-segunda `<tr>` com o dispositivo — o caput, ou o parágrafo, quando a
-entrada for de um. Escondido porque a tabela existe para *achar* o artigo:
-o dispositivo inteiro em toda linha empurraria as outras quatro colunas
-para fora da tela. O que estiver escrito ali também entra na busca, então
-quem lembra "coisa alheia móvel" e não lembra "furto" acha do mesmo jeito.
+**O resultado vem por relevância, em três camadas.** Com o texto do artigo
+em todas as linhas, "ameaça" achava também o roubo e o estupro ("grave
+ameaça" está no dispositivo), e a tabela os mostrava antes da própria
+ameaça, só por virem antes no Código. Cada termo é procurado camada por
+camada — (0) o nome do fato e a `busca`; (1) artigo, lei, grupo, pena,
+marcas e observação; (2) o texto do artigo —, e a linha vale pela pior
+camada de que precisou. Dentro de cada camada fica a ordem da tabela, com
+os títulos de grupo, e uma linha em itálico separa uma camada da seguinte
+("o termo só aparece no texto do artigo"). O termo buscado aparece
+realçado onde casou, com o acento original — a busca normaliza letra a
+letra, e a posição achada no texto normalizado é a mesma no original.
+Quando o termo não está à vista na linha mas está na gaveta, o botão da
+gaveta leva o mesmo realce.
+
+**A referência compacta.** Cada entrada traz `ref` no formato dos sistemas
+de registro, `Art. 121, §2, II - DL2848` (parágrafo único é `p.u.`; o código
+do diploma — DL2848, L11343, L11340, L8069… — vem de
+`window.TIPIFICACAO_DIPLOMAS`). Na tela, a coluna mostra só o `artigo` e,
+embaixo, o diploma pelo número (`DL 2848`, `L 11343` — o mesmo `codigo`,
+com um espaço); clicar no artigo copia a `ref`. A `ref` repete o `artigo`
+de propósito, um para ler e o outro para colar, e o teste confere que os
+dois apontam para o mesmo dispositivo e que o código bate com o diploma da
+entrada.
+
+**Marcas e fiança.** `marcas` põe etiquetas ao lado do nome: hediondo,
+equiparado a hediondo, inafiançável e violência doméstica (tipos próprios
+da violência contra a mulher). Embaixo da pena, a página deduz quem
+arbitra a fiança: termo circunstanciado no JECRIM, delegado até 4 anos de
+pena máxima (art. 322 do CPP), juiz acima disso, ninguém nos
+inafiançáveis; `fianca: "juiz"` força o juiz quando a lei manda (art. 24-A,
+§ 2º, da Lei Maria da Penha). É dedução da pena em abstrato, e a página diz
+que concurso de crimes e o art. 324 do CPP mudam a resposta.
+
+**A linha mostra pouco; a gaveta, o resto.** Da `obs` vai para a linha só
+a primeira frase — por isso ela é a que mais importa no balcão, e a
+citação da lei e a mudança de pena ficam no fim (o teste confere que
+nenhuma `obs` abre só com "Lei 15.358/2026."). O resto da observação e o
+texto do artigo ficam numa segunda `<tr>`, a gaveta, aberta por "ver mais
+e o texto do artigo". O texto é o dispositivo — o caput, ou o parágrafo,
+quando a entrada for de um. Escondido porque a tabela existe para *achar*
+o artigo: o dispositivo inteiro em toda linha empurraria as outras quatro
+colunas para fora da tela. O que estiver escrito ali também entra na
+busca, então quem lembra "coisa alheia móvel" e não lembra "furto" acha do
+mesmo jeito, só que no fim do resultado.
 Quais gavetas estão abertas é lembrado enquanto a página vive — sem isso,
 digitar mais uma letra na busca fecharia o artigo recém-aberto, já que a
 tabela é redesenhada inteira a cada tecla.
@@ -883,20 +935,35 @@ tabela é redesenhada inteira a cada tecla.
 O cabeçalho do `dados.js` traz a regra de ouro: **copiar literalmente do
 Planalto**, sem resumir. A página inteira pede para conferir no texto legal
 antes de tipificar, e uma paráfrase aqui seria exatamente o que ela manda
-evitar. O campo é opcional de propósito, e a tabela é preenchida aos
-poucos: entrada sem `texto` continua servindo, só não mostra o link.
+evitar. Hoje todas as entradas têm o texto, tirado do texto compilado de
+cada lei salvo em `docs/` (fora do git): a redação em vigor de cada
+dispositivo, sem as notas de edição do Planalto ("Redação dada pela
+Lei…"). Na entrada de um inciso vão a cabeça do caput ou do parágrafo, o
+inciso e a pena. O teste confere que o texto abre pelo mesmo dispositivo
+da `ref`. O campo continua opcional: entrada sem `texto` continua
+servindo, só não mostra o link.
 
 **A prescrição é calculada, não digitada.** A coluna sai da pena máxima em
 abstrato pelo art. 109 do CP: uma expressão lê a maior faixa citada no
 campo `pena` (`penaMaximaEmMeses`) e a tabela do artigo faz o resto. Assim
 não há um segundo campo para manter em sincronia e envelhecer separado do
 primeiro. O campo `prescricao` só se escreve quando a fórmula não vale —
-crime imprescritível, prazo em lei própria (art. 30 da Lei de Drogas), ou
-pena que remete a outro tipo. O que o cálculo **não** considera está dito
-na página: causas de aumento e de diminuição, e o art. 115.
+crime imprescritível, prazo em lei própria (art. 30 da Lei de Drogas), pena
+só de multa (art. 114, I), ou pena que remete a outro tipo. Nas formas
+majoradas a `pena` já traz a faixa aumentada ("de 10 anos a 16 anos e 8
+meses" no roubo com arma de fogo), e o cálculo acerta sozinho. O que ele
+**não** considera está dito na página: as demais causas de aumento e de
+diminuição, e o art. 115.
 
 **Esta tabela é digitada à mão e envelhece a cada lei nova.** É um atalho
-para lembrar onde procurar, nunca a fonte.
+para lembrar onde procurar, nunca a fonte. A revisão de outubro de 2026
+conferiu cada linha contra o texto compilado do Planalto e alcançou as
+Leis 14.994/2024 (pacote antifeminicídio), 15.123, 15.134, 15.150, 15.159,
+15.160, 15.163, 15.181, 15.190, 15.234, 15.245, 15.280 e 15.299/2025, e
+15.353, 15.355, 15.358 (Antifacção), 15.383, 15.384 (vicaricídio), 15.397
+(furto, roubo, estelionato e receptação), 15.410, 15.425, 15.438, 15.455,
+15.487 e 15.517/2026. A linha cita a lei quando a pena mudou — fato
+anterior a ela segue a pena da época.
 
 ## Contatos úteis (`contatos.html`)
 

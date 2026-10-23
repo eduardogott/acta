@@ -16,3 +16,5 @@ base/
 # Testes (gerados a cada execução)
 tests/build/
 tests/relato.txt
+
+docs/

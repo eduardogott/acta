@@ -15,7 +15,7 @@ conversor      PASSOU  (25 verificacoes)
 gerador        PASSOU  (33 verificacoes)
 orientacoes    PASSOU  (25 verificacoes)
 texto          PASSOU  (20 verificacoes)
-tipificacao    PASSOU  (29 verificacoes)
+tipificacao    PASSOU  (71 verificacoes)
 transcricao    PASSOU  (17 verificacoes)
 ```
 

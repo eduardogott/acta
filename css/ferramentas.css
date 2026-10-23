@@ -150,6 +150,13 @@
   color: var(--text-read);
 }
 .tabela-tipificacao tr:hover td { background: var(--accent-soft); }
+/* A coluna do fato carrega nome, etiquetas e ressalva: é a que mais
+   precisa de largura, e no celular a tabela rola de lado em vez de
+   espremê-la numa palavra por linha. */
+.tabela-tipificacao thead th:first-child {
+  width: 40%;
+  min-width: 220px;
+}
 .tipificacao-fato {
   color: var(--text);
   font-weight: 500;
@@ -159,30 +166,91 @@
   font-size: 12.5px;
   white-space: nowrap;
 }
+/* O diploma pelo número, embaixo do artigo ("DL 2848"). */
+.tipificacao-diploma {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* O filtro de lei: um <select> vestido de .opcao-item, para a fileira de
+   filtros parecer uma coisa só. */
+.filtro-diploma select {
+  width: auto;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+.filtro-diploma select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Título de grupo (Vida, Honra, Patrimônio…). Um <th> numa linha própria:
+   o cabeçalho da tabela diz o que é cada coluna, este diz onde se está. */
+.tipificacao-grupo th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 22px 10px 7px;
+  border-bottom: 1px solid var(--accent);
+}
+.tipificacao-grupo-n {
+  margin-left: 8px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.tipificacao-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+/* O artigo, que copia a referência compacta com um clique. Tem cara de
+   texto, e não de botão nem de etiqueta: a coluna mostra o dispositivo
+   uma vez só, e o clique é um atalho, não a ação principal da linha. */
+.tipificacao-ref {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: copy;
+}
+.tipificacao-ref:hover,
+.tipificacao-ref:focus-visible { color: var(--accent); }
+.tipificacao-ref.btn-ok { color: var(--accent); }
+.tipificacao-ref.btn-falhou { color: var(--danger); white-space: normal; }
+
+/* Quem arbitra a fiança, logo abaixo da pena. Discreto: é dedução da
+   pena máxima, não decisão. Só o "inafiançável" pede atenção. */
+.tipificacao-fianca {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.tipificacao-fianca.inafiancavel { color: var(--danger); }
 .tipificacao-obs {
   display: block;
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 3px;
 }
-/* Link para a folha de orientações do fato. Discreto de propósito: a
-   tabela existe para tipificar, e a folha é o passo seguinte, não o
-   principal. */
-.tipificacao-folha {
-  display: inline-block;
-  margin-top: 5px;
-  font-size: 12px;
-  color: var(--accent);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-}
-.tipificacao-folha:hover,
-.tipificacao-folha:focus-visible {
-  border-bottom-color: currentColor;
-}
-
-/* "ver o texto do artigo": um botão que se parece com o link acima, e
-   não com um botão — abrir uma gaveta na própria linha não é a ação
+/* "ver o texto do artigo": um botão que se parece com um link, e não
+   com um botão — abrir uma gaveta na própria linha não é a ação
    principal da tabela. */
 .tipificacao-ver-texto {
   display: block;
@@ -199,6 +267,42 @@
 .tipificacao-ver-texto:hover,
 .tipificacao-ver-texto:focus-visible {
   color: var(--accent);
+}
+/* O termo buscado está dentro da gaveta: o botão leva o mesmo realce
+   do termo, para avisar que a linha apareceu por algo fora da vista. */
+.tipificacao-ver-texto.com-termo {
+  padding: 0 3px;
+  border-radius: 2px;
+  background: var(--realce);
+  color: var(--text-read);
+}
+
+/* O termo buscado, onde ele casou. */
+.tabela-tipificacao mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--realce);
+  color: inherit;
+}
+
+/* A linha entre uma camada de relevância e a seguinte: "também casam
+   pelo artigo…", "só no texto do artigo". Mais discreta que o título de
+   grupo, porque não é lugar da tabela, é explicação do resultado. */
+.tipificacao-camada td {
+  padding: 26px 10px 6px;
+  border-bottom: 1px dashed var(--border);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+}
+.tabela-tipificacao tr.tipificacao-camada:hover td { background: none; }
+
+/* O resto da observação, no alto da gaveta. */
+.tipificacao-detalhe {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-read);
 }
 
 /* A linha da gaveta. Fundo próprio para não se confundir com o fato
@@ -231,9 +335,14 @@
   border: 1px solid var(--border);
   white-space: nowrap;
 }
+.etiqueta.incondicionada { color: var(--text-muted); }
 .etiqueta.condicionada { border-color: var(--accent); color: var(--accent); }
 .etiqueta.privada { border-color: var(--danger); color: var(--danger); }
 .etiqueta.jecrim { border-color: var(--accent); color: var(--accent); }
+.etiqueta.hediondo,
+.etiqueta.equiparado { border-color: var(--danger); color: var(--danger); font-weight: 600; }
+.etiqueta.inafiancavel { border-color: var(--danger); border-style: dashed; color: var(--danger); }
+.etiqueta.domestica { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .sem-resultados {
   padding: 28px 0;
   color: var(--text-muted);
