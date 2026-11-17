@@ -181,13 +181,39 @@
     });
   }
 
+  // `omitirCom` que aponta para um extra inexistente não dá erro: o item
+  // simplesmente nunca sai da folha, e a exceção que ele deveria ceder ao
+  // extra sai impressa junto com a regra. Daí conferir na carga.
+  DADOS.tipos.forEach((t) => {
+    const extras = (t.extras || []).map((x) => x.chave);
+    (t.itens || []).forEach((item) => {
+      if (item.omitirCom && !extras.includes(item.omitirCom)) {
+        log.aviso(
+          'Item de "' + t.chave + '" tem omitirCom "' + item.omitirCom +
+            '", que não é extra desse tipo — ele vai sair sempre na folha.'
+        );
+      }
+    });
+  });
+
+  /**
+   * Os itens do tipo que valem com os extras marcados: o que tem
+   * `omitirCom` sai quando aquele extra está marcado, porque o extra traz
+   * a sua própria versão (ver o cabeçalho de js/orientacoes/dados.js).
+   */
+  function itensDoTipo(tipo) {
+    return (tipo.itens || []).filter(
+      (item) => !(item.omitirCom && estado.extras.has(item.omitirCom))
+    );
+  }
+
   /** Os grupos que entram na folha, na ordem em que devem ser lidos. */
   function gruposDaFolha() {
     const tipo = tipoAtual();
     const grupos = [];
 
     if (tipo) {
-      grupos.push({ titulo: tipo.label, itens: tipo.itens || [] });
+      grupos.push({ titulo: tipo.label, itens: itensDoTipo(tipo) });
 
       const subtipo = (tipo.subtipos || []).find((s) => s.chave === estado.subtipo);
       if (subtipo) grupos.push({ titulo: subtipo.label, itens: subtipo.itens });

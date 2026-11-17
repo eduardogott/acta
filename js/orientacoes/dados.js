@@ -25,6 +25,18 @@
  * ao lado da frase — é o que a pessoa mais esquece e o que mais custa
  * caro quando esquece.
  *
+ * Item do tipo que deixa de valer quando um extra é marcado leva
+ * `omitirCom: "chave_do_extra"`, e o extra traz a sua própria versão:
+ *
+ *     { texto: "… O prazo é de seis meses.", prazo: "6 meses",
+ *       omitirCom: "vinculo_domestico" },
+ *
+ * É o caso da regra geral que tem exceção — ameaça é de representação em
+ * seis meses, menos na violência doméstica contra a mulher. Sem isso a
+ * folha sairia com as duas frases, e a pessoa levaria para casa o prazo
+ * errado impresso ao lado do certo. A chave tem de ser de um extra do
+ * mesmo tipo; a página avisa no console, e o teste falha, se não for.
+ *
  * Escreva os itens no imperativo e endereçados à pessoa que vai levar o
  * papel ("Peça ao banco…"), não ao policial que atende. É ela quem lê.
  * A exceção são os itens que ajustam expectativa ("este registro não
@@ -55,7 +67,7 @@ window.ORIENTACOES = {
       "Se aparecerem provas novas — imagens, testemunhas, mensagens, notas fiscais —, leve-as à delegacia para serem juntadas.",
       "Nunca pague nada a quem ligar oferecendo recuperar seu dinheiro, adiantar o processo ou liberar valores. Nenhum órgão público cobra por isso.",
       {
-        texto: "Se o crime for de ação penal condicionada ou privada, o prazo para representar ou dar queixa é de seis meses, contados do dia em que você soube quem foi o autor. Passado o prazo, o direito se perde. A exceção é para crimes de violência doméstica e familiar, onde o prazo é de um ano.",
+        texto: "Se o crime for de ação penal condicionada ou privada, o prazo para representar ou dar queixa é de seis meses, contados do dia em que você soube quem foi o autor. Passado o prazo, o direito se perde. A exceção é a violência doméstica e familiar contra a mulher, em que o prazo é de um ano.",
         prazo: "6 meses (ou 1 ano)",
       },
     ],
@@ -278,7 +290,7 @@ window.ORIENTACOES = {
               prazo:"imediatamente"
             },
             "Peça as segundas vias nos órgãos emissores, apresentando o boletim de ocorrência.",
-            "Cadastre alerta de CPF nos birôs de crédito (Serara e SPC); documento levado pode reaparecer em tentativa de crédito.",
+            "Cadastre alerta de CPF nos birôs de crédito (Serasa e SPC); documento levado pode reaparecer em tentativa de crédito.",
           ],
         },
       ],
@@ -296,14 +308,27 @@ window.ORIENTACOES = {
         {
           texto: "Ameaça e perseguição dependem da sua representação para o processo seguir. O prazo é de seis meses.",
           prazo: "6 meses",
+          // Na violência doméstica contra a mulher as duas regras mudam, e
+          // o extra abaixo traz a versão certa.
+          omitirCom: "vinculo_domestico",
         },
       ],
       extras: [
         {
+          // Só a vítima mulher. Com vítima homem e autor da família, ameaça
+          // e perseguição seguem a regra geral (representação, seis meses),
+          // e medida protetiva da Lei Maria da Penha não se aplica — então
+          // não há extra a marcar, e a folha sai certa sem ele.
           chave: "vinculo_domestico",
-          label: "O autor é cônjuge, companheiro, ex ou familiar",
+          label: "A vítima é mulher, e o autor é cônjuge, companheiro, ex ou familiar",
           itens: [
-            "Sendo violência doméstica contra a mulher, você tem direito a medidas protetivas de urgência — afastamento do lar, proibição de aproximação e de contato —, pedidas na delegacia sem advogado e sem custo. Se não pediu no registro, pode voltar e pedir a qualquer tempo.",
+            {
+              // Ameaça: art. 147, § 2º, do CP (Lei 14.994/2024). Prazo:
+              // art. 103, parágrafo único (Lei 15.438/2026).
+              texto: "Na violência doméstica contra a mulher, a ameaça não depende da sua representação: o processo segue mesmo que você mude de ideia. A perseguição ainda depende dela, e o prazo para representar é de um ano, contado do dia em que você soube quem foi o autor.",
+              prazo: "1 ano",
+            },
+            "Você tem direito a medidas protetivas de urgência — afastamento do lar, proibição de aproximação e de contato —, pedidas na delegacia sem advogado e sem custo. Se não pediu no registro, pode voltar e pedir a qualquer tempo.",
             "Descumprir medida protetiva é crime, com prisão em flagrante. Se acontecer, ligue 190 na hora e registre.",
             "Central de Atendimento à Mulher: 180, 24 horas, gratuito e sigiloso.",
           ],
@@ -363,8 +388,8 @@ window.ORIENTACOES = {
       label: "Calúnia, difamação ou injúria",
       itens: [
         {
-          texto: "Calúnia, difamação e injúria são de ação penal privada: o processo depende de queixa-crime, apresentada por advogado ou pela Defensoria Pública, no prazo de seis meses. Este registro sozinho não instaura o processo.",
-          prazo: "6 meses",
+          texto: "Calúnia, difamação e injúria são de ação penal privada: o processo depende de queixa-crime, apresentada por advogado ou pela Defensoria Pública, no prazo de seis meses — um ano, se for violência doméstica contra a mulher. Este registro sozinho não instaura o processo.",
+          prazo: "6 meses (ou 1 ano)",
         },
         "Preserve a publicação com o endereço completo (URL), data e hora, além do conteúdo.",
         "Para conteúdo publicado na internet, a ata notarial em cartório é a prova mais sólida, porque registra o que estava no ar naquele momento.",
@@ -381,8 +406,8 @@ window.ORIENTACOES = {
         "Fotografe o dano antes de consertar, de longe e de perto.",
         "Junte dois orçamentos de reparo: é o que dimensiona o prejuízo para efeito de ressarcimento.",
         {
-          texto: "No dano simples a ação é privada: depende de queixa-crime em seis meses, por advogado ou pela Defensoria.",
-          prazo: "6 meses",
+          texto: "No dano simples a ação é privada: depende de queixa-crime em seis meses — um ano, se for violência doméstica contra a mulher —, por advogado ou pela Defensoria.",
+          prazo: "6 meses (ou 1 ano)",
         },
         "O ressarcimento do prejuízo se busca no juizado cível, e não depende do resultado da apuração criminal.",
       ],
