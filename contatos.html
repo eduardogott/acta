@@ -28,7 +28,8 @@
     <h1 class="page-title"><b>Contatos</b> Úteis</h1>
     <p class="page-lead">Telefone, WhatsApp, e-mail e endereço do que se precisa durante
     o plantão. Procure pelo nome do órgão ou pelo que você quer resolver — "legista",
-    "abrigo", "plantão criança". Cada número tem um botão de copiar ao lado.</p>
+    "abrigo", "plantão criança". Cada número tem um botão de copiar ao lado, e cada
+    contato pode ser impresso — inteiro ou só as partes marcadas — para entregar.</p>
   </section>
 
   <div class="campo-busca">
@@ -43,13 +44,24 @@
 
   <p class="sem-resultados escondido" id="sem-resultados">Nada encontrado com esse termo.</p>
 
+  <!-- O papel de um contato, montado por js/contatos/contatos.js ao
+       imprimir. Não aparece na tela; no papel, aparece SÓ ele — e só
+       quando a impressão saiu do botão "imprimir" de um cartão (classe
+       imprimindo-contato no <body>). O Ctrl+P sem cartão escolhido
+       continua imprimindo a agenda. -->
+  <section class="contato-impresso" id="impressao-contato" aria-hidden="true"></section>
+
   <section class="nota-rodape">
     <h2>Sobre esta agenda</h2>
     <ul>
       <li><b>Nada é consultado na internet.</b> A lista está dentro da própria página e
       funciona com a rede fora do ar.</li>
-      <li><b>Os números com zeros — (00) 0000-0000 — são espaço reservado</b> e não
-      pertencem a ninguém. Onde aparecer "PREENCHER", o dado ainda não foi cadastrado.</li>
+      <li><b>"Não cadastrado" é dado que ainda falta na agenda</b>, e não um número que
+      deixou de existir. O botão de copiar dessas linhas avisa em vez de copiar, e elas
+      não saem na impressão.</li>
+      <li><b>Para entregar um contato</b>, use "imprimir" no cartão e desmarque o que não
+      interessa a quem vai levar — o ramal interno, o e-mail da vara. Sai só aquele
+      contato, num quadro para recortar, com a data de hoje.</li>
       <li><b>Agenda desatualizada custa mais caro que agenda nenhuma</b>, porque quem
       liga acredita nela. Achou um número que mudou, mudou de horário ou não atende
       mais? Avise quem cuida da ferramenta no mesmo dia.</li>

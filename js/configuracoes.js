@@ -433,6 +433,9 @@ globalThis.Config = (function () {
     // (wa.me/55DDNUMERO). Só isso: o resto da agenda é conteúdo, e mora
     // em js/contatos/dados.js.
     DDI: "55",
+    // Fecha o papel de um contato impresso, depois de "Entregue em
+    // {data}." — quem guarda o papel precisa saber que ele envelhece.
+    AVISO_IMPRESSO: "Horários e números mudam: se puder, confirme antes de ir.",
   };
 
   // =========================================================================

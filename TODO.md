@@ -18,7 +18,10 @@ Sobre as ferramentas novas:
   mesma passada: salvar o texto compilado em `docs/`, conferir as linhas
   que a citam e recopiar o `texto` dos dispositivos que ela mudou. O link
   para a folha de orientações saiu da linha; o campo `orientacoes` ficou,
-  conferido na carga, para se o link voltar.
+  conferido na carga, para se o link voltar. Em novembro de 2026 tentou-se
+  buscar as oito leis direto no Planalto a partir de uma sessão na nuvem, e
+  o servidor de lá recusou a conexão: os textos têm de vir do `docs/`
+  local, salvos à mão do navegador.
 * **Conferidor** — RENAVAM e CNH ficaram de fora por falta de algoritmo
   confiável. Se aparecer uma referência boa, entram em
   `js/comum/identificadores.js` e ganham linha em `TIPOS`.
@@ -45,10 +48,15 @@ Sobre as ferramentas novas:
   com vinte, não dá, e aí o campo já está esperando.
 * **Contatos** — a agenda ainda está com placeholders, embora bem menos:
   os ramais `tbd` acabaram, e sobraram 17 campos `PREENCHER` (horário e
-  endereço) e 6 números `(00) 0000-0000`. Enquanto estiverem lá, o risco
-  não é a página quebrar — é alguém copiar um número que não existe e
-  discar. O campo `site` é suportado
+  endereço) e 6 números `(00) 0000-0000`. O risco de alguém copiar um
+  número que não existe e discar caiu: a página agora os mostra como "não
+  cadastrado", o copiar avisa em vez de copiar, e a impressão os deixa de
+  fora. Mas continuam sendo buracos na agenda, e só se fecham com o dado
+  real. O campo `site` é suportado
   pela página e nenhum contato o usa: no balcão se disca, não se navega.
+  A impressão é de **um contato por vez**. Se começar a sair papel com
+  dois ou três (IML e Defensoria, CRAS e CREAS), o próximo passo é
+  marcar cartões e imprimir os escolhidos juntos, num quadro cada.
 * **Anotações** — não há busca: com uma dúzia de papéis os títulos
   se leem de relance. Quando a caixa de busca fizer falta aqui, ela é a
   **terceira** página com busca — e é o gatilho combinado para extrair a
@@ -170,18 +178,11 @@ Outras features (não são tipos novos, são capacidades do gerador):
 
 ## FIXME
 
-* **Orientações, prazo e representação na violência doméstica** — o item
-  de "Ameaça ou perseguição" diz que as duas dependem de representação,
-  em seis meses, e continua dizendo isso com o extra `vinculo_domestico`
-  marcado. Contra a mulher, ali a folha erra duas vezes: a ameaça por
-  razões da condição do sexo feminino (o que inclui a violência
-  doméstica) é de ação pública incondicionada (art. 147, § 2º, Lei
-  14.994/2024), e o prazo de representação ou queixa na violência
-  doméstica contra a mulher passou a 12 meses (art. 103, p.u., Lei
-  15.438/2026), o que alcança a perseguição. O item de "Em qualquer
-  registro" já diz "(ou 1 ano)"; os de calúnia e de dano simples dizem
-  seis meses sem ressalva. O extra vale também para vítima homem, então
-  a correção tem de separar os dois casos, não só trocar o número.
+Nada aberto. O último — a folha de ameaça e perseguição dizendo seis
+meses e representação também na violência doméstica contra a mulher —
+foi corrigido com `omitirCom` (ver o cabeçalho de
+`js/orientacoes/dados.js`), junto com a ressalva de um ano nos itens de
+calúnia e de dano simples.
 
 ## IDEIAS
 
@@ -292,9 +293,6 @@ transcrição, RENAVAM e CNH) não se repete aqui.
     CPF (0 = RS, 8 = SP…), com o aviso de que é onde o CPF foi emitido,
     não onde a pessoa mora; matriz ou filial pelo `/0001` do CNPJ.
 * **Contatos**
-  - **Não copiar contato provisório**: o botão de um `(00) 0000-0000` ou
-    de um "PREENCHER" avisa "não cadastrado" em vez de copiar. Hoje eles
-    estão na tela com cara de número de verdade.
   - **"Conferido em mês/ano" por contato.** Nas Anotações a data saiu de
     propósito; aqui é justamente o que falta saber — há quanto tempo
     ninguém liga para aquele número.
