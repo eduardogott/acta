@@ -89,6 +89,12 @@
  * antes de a página ir para o balcão. Os de três dígitos (190, 192, 193
  * e 153) são nacionais e já estão certos.
  *
+ * A página reconhece as duas formas de espaço reservado — número só de
+ * zeros e "PREENCHER" — e as mostra como "não cadastrado": não viram
+ * link, o copiar avisa em vez de copiar, e a impressão as deixa de fora.
+ * Use sempre uma das duas. Um "a confirmar" ou "xxxx" inventado na hora
+ * passaria por dado de verdade.
+ *
  * E confira de tempos em tempos: agenda desatualizada custa mais caro que
  * agenda inexistente, porque quem liga acredita nela.
  * ---------------------------------------------------------------------------

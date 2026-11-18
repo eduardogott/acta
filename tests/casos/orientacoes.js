@@ -178,3 +178,57 @@ igual("o que vale para qualquer registro vem junto", titulosDaFolha(),
 clicar("#btn-limpar");
 igual("limpar desabilita imprimir", document.getElementById("btn-imprimir").disabled, true);
 igual("limpar volta ao aviso de vazio", vis("saida-vazio"), true);
+
+// --- regra geral com exceção (omitirCom) -------------------------------
+// Ameaça e perseguição são de representação em seis meses — menos na
+// violência doméstica contra a mulher, em que a ameaça é incondicionada e
+// o prazo é de um ano. A folha já saiu com as duas frases, a geral e a
+// exceção, e era o prazo errado impresso ao lado do certo. Agora o item da
+// regra geral sai quando o extra que a excepciona é marcado.
+var omissoesTortas = [];
+window.ORIENTACOES.tipos.forEach(function (t) {
+  var extras = (t.extras || []).map(function (x) { return x.chave; });
+  (t.itens || []).forEach(function (item) {
+    if (item.omitirCom && extras.indexOf(item.omitirCom) < 0) {
+      omissoesTortas.push(t.chave + " -> " + item.omitirCom);
+    }
+  });
+});
+igual("todo omitirCom aponta para um extra do mesmo tipo", omissoesTortas, []);
+
+/** As etiquetas de prazo do grupo cujo título é `titulo`. */
+function prazosDoGrupo(titulo) {
+  var grupos = document.querySelectorAll("#saida-grupos .orientacoes-grupo");
+  for (var i = 0; i < grupos.length; i++) {
+    if (grupos[i].querySelector("h3").textContent === titulo) {
+      return [].map.call(grupos[i].querySelectorAll(".orientacoes-prazo"),
+                         function (e) { return e.textContent; });
+    }
+  }
+  return null;
+}
+var ameaca = window.ORIENTACOES.tipos.filter(function (t) { return t.chave === "ameaca"; })[0];
+var vd = ameaca.extras.filter(function (x) { return x.chave === "vinculo_domestico"; })[0];
+
+clicar("#btn-limpar");
+clicar('#opcoes-tipo input[value="ameaca"]');
+igual("ameaça, sem o extra: representação em seis meses",
+      prazosDoGrupo(ameaca.label), ["6 meses"]);
+var itensSemExtra = document.querySelectorAll("#saida-grupos li").length;
+
+clicar('#opcoes-extras input[value="vinculo_domestico"]');
+igual("com vítima mulher, o prazo de seis meses sai do grupo da ameaça",
+      prazosDoGrupo(ameaca.label), []);
+igual("e o do extra entra no lugar", prazosDoGrupo(vd.label), ["1 ano"]);
+igual("a folha perde um item e ganha os do extra",
+      document.querySelectorAll("#saida-grupos li").length,
+      itensSemExtra - 1 + vd.itens.length);
+igual("e a frase da regra geral não está em lugar nenhum da folha",
+      [].some.call(document.querySelectorAll("#saida-grupos li"), function (li) {
+        return li.textContent.indexOf("O prazo é de seis meses.") >= 0;
+      }),
+      false);
+
+clicar('#opcoes-extras input[value="vinculo_domestico"]');
+igual("desmarcar devolve a regra geral", prazosDoGrupo(ameaca.label), ["6 meses"]);
+clicar("#btn-limpar");

@@ -682,6 +682,15 @@ antes de serem sobrescritas, prazo de representação.
   por tipo de fato, com subtipos (escolha única) e situações adicionais
   (marcáveis em conjunto). Um item pode declarar `prazo`, que vira
   etiqueta ao lado da frase.
+- **Regra geral com exceção: `omitirCom`.** Um item do tipo pode declarar
+  `omitirCom: "<chave de um extra>"`, e sai da folha quando aquele extra é
+  marcado — o extra traz a sua versão. É o caso da ameaça: em regra,
+  representação em seis meses; na violência doméstica contra a mulher, a
+  ameaça é incondicionada (art. 147, § 2º, do CP) e o prazo de
+  representação ou queixa é de um ano (art. 103, parágrafo único). Sem
+  isso a folha saía com as duas frases, e a pessoa levava o prazo errado
+  impresso ao lado do certo. Chave que não é extra do tipo dá aviso no
+  console e falha no teste.
 - **`js/orientacoes/orientacoes.js`** — só monta e imprime; não tem conteúdo próprio.
 - A regra de escrita: imperativo, endereçado a **quem leva o papel**
   ("Peça ao banco…"), não ao policial que atende.
@@ -1003,6 +1012,26 @@ aparece "PREENCHER" o dado ainda não foi cadastrado. Os de três dígitos são
 nacionais e já estão certos. A página avisa no console quando um contato
 aponta para uma categoria que não existe: sem isso ele sumiria da tela sem
 erro nenhum, por não cair em grupo algum.
+
+**Provisório não tem cara de dado.** Na tela, o espaço reservado aparece
+como *não cadastrado*, em itálico, e não vira link; o botão de copiar da
+linha continua lá, mas avisa "Não cadastrado" em vez de copiar. O risco
+nunca foi a página quebrar — era alguém copiar um número que não existe e
+discar. A regra (`ehProvisorio()` em `contatos.js`) é a mesma convenção do
+cabeçalho do `dados.js`: número só de zeros, ou "PREENCHER".
+
+**Imprimir um contato para entregar.** Cada cartão tem um "imprimir", que
+abre no próprio cartão uma caixa por parte do contato — horário, cada
+número com a sua nota, e-mail, endereço, observação —, todas marcadas.
+Desmarca-se o que não interessa a quem vai levar (o ramal interno, o e-mail
+da vara) e imprime-se o resto. A parte provisória nem pode ser marcada:
+papel entregue com número inexistente é pior que papel nenhum. Sai só
+aquele contato, em letra grande, num quadro tracejado para recortar, com
+"Entregue em {data}" e o aviso de `Config.CONTATOS.AVISO_IMPRESSO`. Quem
+decide o que sai no papel é a classe `imprimindo-contato` no `<body>`:
+sem ela — o Ctrl+P sem cartão escolhido —, a impressão continua sendo a
+agenda inteira. Com um painel aberto, o Ctrl+P imprime o contato, como o
+botão.
 
 **Agenda desatualizada custa mais caro que agenda nenhuma**, porque quem
 liga acredita nela. Está dito na própria página, endereçado a quem usa.
